@@ -830,6 +830,94 @@ function getLanguage() {
   return localStorage.getItem("stasis_lang") || "en";
 }
 
+const LANG = {
+  en: {
+    nav_home:"Home",nav_practice:"Practice",nav_saved:"Saved",nav_stats:"Stats",nav_ranks:"Ranks",nav_games:"Games",nav_papers:"Papers",
+    home_heading:"Level Up Your CBSE Prep ⚡",home_sub:"AI-powered solutions for Classes 6–10",
+    new_user:"New User",learning_as:"Learning as:",today_xp:"Today XP",streak:"Streak",solved:"Solved",
+    subject:"Subject",class_label:"Class",chapter:"Chapter",select_chapter:"— Select Chapter —",
+    your_question:"Your Question",question_placeholder:"Type or paste your CBSE question here...",
+    upload_photo:"📷 Upload Question Photo",solve_btn:"Solve →",
+    save_answer:"Save Answer 💾",ask_another:"Ask Another",
+    daily_practice:"Daily Practice",completed:"Completed",change_chapter:"Change Chapter",
+    questions_for_level:"Questions adapted for your level:",
+    setup_practice:"Set Up Daily Practice 📚",setup_sub:"Choose your class, subject and chapter",
+    your_class:"Your Class",start_practice:"Start Practice ✨",
+    type_answer:"Type your answer...",submit_answer:"Submit Answer",
+    saved_answers:"Saved Answers",search_saved:"Search saved answers...",
+    nothing_saved:"Nothing saved yet. Go solve something!",
+    questions_solved:"Questions Solved",current_streak:"Current Streak",best_streak:"Best Streak",total_xp:"Total XP",
+    subject_breakdown:"Subject Breakdown",activity_30:"Activity (Last 30 Days)",weekly_xp:"Weekly XP",
+    update_score:"Update My Score",your_level:"Your Learning Level",
+    xp_to_next:"XP to next level",max_level:"Maximum level!",
+    leaderboard_title:"Leaderboard 🏆",
+    games_title:"Games 🎮",games_sub:"Select your chapter, then pick a game",
+    quiz_title:"CBSE Quiz",quiz_desc:"5 MCQ questions from your chapter. Test your knowledge!",quiz_xp:"+10 XP per correct answer",
+    scramble_title:"Word Scramble",scramble_desc:"Unscramble chapter vocabulary in 60 seconds!",scramble_xp:"+8 XP per correct word",
+    math_title:"Math Challenge",math_desc:"5 mental math problems. Speed bonus under 10 seconds!",math_xp:"+10–20 XP per problem",
+    resources_title:"📚 Resources",papers_tab:"📄 Papers",notes_tab:"📒 Notes",
+    onboard_title:"Let's Personalize Your Learning",
+    onboard_sub:"Tell us your last exam score so we can adapt your questions and explanations",
+    marks_scored:"Marks Scored",out_of:"Out of (Total Marks)",start_learning:"Start Learning →",
+  },
+  hi: {
+    nav_home:"होम",nav_practice:"अभ्यास",nav_saved:"सहेजे",nav_stats:"आँकड़े",nav_ranks:"रैंक",nav_games:"खेल",nav_papers:"प्रश्नपत्र",
+    home_heading:"अपनी CBSE तैयारी को बेहतर बनाएं ⚡",home_sub:"कक्षा 6–10 के लिए AI समाधान",
+    new_user:"नया उपयोगकर्ता",learning_as:"सीख रहे हैं:",today_xp:"आज XP",streak:"स्ट्रीक",solved:"हल किए",
+    subject:"विषय",class_label:"कक्षा",chapter:"अध्याय",select_chapter:"— अध्याय चुनें —",
+    your_question:"आपका प्रश्न",question_placeholder:"यहाँ अपना CBSE प्रश्न टाइप या पेस्ट करें...",
+    upload_photo:"📷 प्रश्न की फोटो अपलोड करें",solve_btn:"हल करें →",
+    save_answer:"उत्तर सहेजें 💾",ask_another:"दूसरा प्रश्न",
+    daily_practice:"दैनिक अभ्यास",completed:"पूर्ण",change_chapter:"अध्याय बदलें",
+    questions_for_level:"आपके स्तर के अनुसार प्रश्न:",
+    setup_practice:"दैनिक अभ्यास सेट करें 📚",setup_sub:"अपनी कक्षा, विषय और अध्याय चुनें",
+    your_class:"आपकी कक्षा",start_practice:"अभ्यास शुरू करें ✨",
+    type_answer:"अपना उत्तर टाइप करें...",submit_answer:"उत्तर जमा करें",
+    saved_answers:"सहेजे गए उत्तर",search_saved:"सहेजे गए उत्तर खोजें...",
+    nothing_saved:"अभी तक कुछ सहेजा नहीं। कुछ हल करें!",
+    questions_solved:"हल किए प्रश्न",current_streak:"वर्तमान स्ट्रीक",best_streak:"सर्वश्रेष्ठ स्ट्रीक",total_xp:"कुल XP",
+    subject_breakdown:"विषयवार विश्लेषण",activity_30:"गतिविधि (पिछले 30 दिन)",weekly_xp:"साप्ताहिक XP",
+    update_score:"स्कोर अपडेट करें",your_level:"आपका सीखने का स्तर",
+    xp_to_next:"XP और चाहिए अगले स्तर के लिए",max_level:"अधिकतम स्तर!",
+    leaderboard_title:"लीडरबोर्ड 🏆",
+    games_title:"खेल 🎮",games_sub:"अपना अध्याय चुनें, फिर खेल चुनें",
+    quiz_title:"CBSE प्रश्नोत्तरी",quiz_desc:"आपके अध्याय से 5 MCQ प्रश्न। अपनी जानकारी परखें!",quiz_xp:"+10 XP प्रति सही उत्तर",
+    scramble_title:"शब्द पहेली",scramble_desc:"60 सेकंड में अध्याय के शब्द सुलझाएं!",scramble_xp:"+8 XP प्रति सही शब्द",
+    math_title:"गणित चुनौती",math_desc:"5 मानसिक गणित समस्याएं। 10 सेकंड में बोनस XP!",math_xp:"+10–20 XP प्रति समस्या",
+    resources_title:"📚 संसाधन",papers_tab:"📄 प्रश्नपत्र",notes_tab:"📒 नोट्स",
+    onboard_title:"अपनी पढ़ाई को व्यक्तिगत बनाएं",
+    onboard_sub:"हमें अपना पिछला परीक्षा स्कोर बताएं ताकि हम प्रश्न आपके अनुसार ढाल सकें",
+    marks_scored:"प्राप्त अंक",out_of:"कुल अंक",start_learning:"पढ़ाई शुरू करें →",
+  }
+};
+
+function t(key) {
+  const lang = getLanguage();
+  return (LANG[lang] && LANG[lang][key]) || (LANG.en && LANG.en[key]) || key;
+}
+
+function applyNavLang() {
+  const map = {
+    home: t("nav_home"), practice: t("nav_practice"), saved: t("nav_saved"),
+    stats: t("nav_stats"), leaderboard: t("nav_ranks"), games: t("nav_games"), resources: t("nav_papers")
+  };
+  document.querySelectorAll(".nav-btn[data-page]").forEach(btn => {
+    const label = map[btn.dataset.page];
+    if (!label) return;
+    const spans = btn.querySelectorAll("span");
+    if (spans[1]) spans[1].textContent = label;
+  });
+  const hiFont = "'Noto Sans Devanagari', Inter, system-ui, sans-serif";
+  const baseFont = "Inter, system-ui, sans-serif";
+  const isHindi = getLanguage() === "hi";
+  document.querySelectorAll(".nav-btn").forEach(b => { b.style.fontFamily = isHindi ? hiFont : baseFont; });
+  if (isHindi) {
+    document.body.style.fontFamily = hiFont;
+  } else {
+    document.body.style.fontFamily = baseFont;
+  }
+}
+
 function showLanguageSplash(onDone) {
   const splash = document.createElement("div");
   splash.id = "lang-splash";
@@ -988,14 +1076,14 @@ function showOnboardingModal() {
   el.innerHTML = `
     <div class="glass modal-box" style="max-width:400px;width:100%;padding:28px 24px">
       <div style="font-size:2.2rem;text-align:center;margin-bottom:6px">🎯</div>
-      <div class="modal-title" style="text-align:center">Let's Personalize Your Learning</div>
-      <div class="modal-sub" style="text-align:center;margin-bottom:20px">Tell us your last exam score so we can adapt your questions and explanations</div>
-      <label class="form-label">Marks Scored</label>
+      <div class="modal-title" style="text-align:center">${t("onboard_title")}</div>
+      <div class="modal-sub" style="text-align:center;margin-bottom:20px">${t("onboard_sub")}</div>
+      <label class="form-label">${t("marks_scored")}</label>
       <input id="ob-scored" type="number" min="0" step="1" class="form-select mb-3" placeholder="e.g. 72" style="width:100%">
-      <label class="form-label">Out of (Total Marks)</label>
+      <label class="form-label">${t("out_of")}</label>
       <input id="ob-total" type="number" min="1" step="1" class="form-select mb-3" placeholder="e.g. 100" style="width:100%">
       <div id="ob-preview" style="min-height:64px;margin-bottom:16px"></div>
-      <button class="btn btn-primary w-full" onclick="submitOnboarding()">Start Learning →</button>
+      <button class="btn btn-primary w-full" onclick="submitOnboarding()">${t("start_learning")}</button>
     </div>
   `;
   document.body.appendChild(el);
@@ -1536,57 +1624,57 @@ function renderHome() {
 
   app.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-      <h1 class="gradient-heading section-heading" style="margin-bottom:0">Level Up Your CBSE Prep ⚡</h1>
-     <button onclick="switchUser()" style="display:flex;flex-direction:column;align-items:center;gap:3px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:8px 12px;cursor:pointer;color:var(--text-muted);font-size:0.65rem;font-weight:700;font-family:inherit;" title="New User">
+      <h1 class="gradient-heading section-heading" style="margin-bottom:0">${t("home_heading")}</h1>
+     <button onclick="switchUser()" style="display:flex;flex-direction:column;align-items:center;gap:3px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:8px 12px;cursor:pointer;color:var(--text-muted);font-size:0.65rem;font-weight:700;font-family:inherit;" title="${t("new_user")}">
         <span style="font-size:1.3rem">👤</span>
-        <span>New User</span>
+        <span>${t("new_user")}</span>
       </button>
     </div>
-    <p class="section-sub">AI-powered solutions for Classes 6–10</p>
+    <p class="section-sub">${t("home_sub")}</p>
     <div style="text-align:center;margin-bottom:10px">
-      <span style="display:inline-flex;align-items:center;gap:6px;padding:4px 14px;border-radius:20px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);font-size:0.8rem;color:var(--text-muted)">Learning as: <strong style="color:var(--text)">${perfDef.emoji} ${perfDef.name}</strong></span>
+      <span style="display:inline-flex;align-items:center;gap:6px;padding:4px 14px;border-radius:20px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);font-size:0.8rem;color:var(--text-muted)">${t("learning_as")} <strong style="color:var(--text)">${perfDef.emoji} ${perfDef.name}</strong></span>
     </div>
 
     <div class="stats-row glass mb-4">
       <div class="stat-mini">
         <div class="stat-mini-val">${S.activityLog[todayKey()] || 0}</div>
-        <div class="stat-mini-label">Today XP</div>
+        <div class="stat-mini-label">${t("today_xp")}</div>
       </div>
       <div class="stat-mini">
         <div class="stat-mini-val">${S.streak}🔥</div>
-        <div class="stat-mini-label">Streak</div>
+        <div class="stat-mini-label">${t("streak")}</div>
       </div>
       <div class="stat-mini">
         <div class="stat-mini-val">${S.totalSolved}</div>
-        <div class="stat-mini-label">Solved</div>
+        <div class="stat-mini-label">${t("solved")}</div>
       </div>
     </div>
 
     <div class="glass" style="padding:18px;margin-bottom:16px">
-      <label class="form-label">Subject</label>
+      <label class="form-label">${t("subject")}</label>
       <select id="subjectSel" class="form-select mb-3" onchange="onHomeSubjectChange()">
         ${subjects.map((s) => `<option value="${s}" ${S.subjectPreference === s ? "selected" : ""}>${s}</option>`).join("")}
       </select>
 
       <div id="hindiCourseWrap" style="display:${S.subjectPreference === "Hindi" ? "block" : "none"}">${hindiCourseToggle()}</div>
 
-      <label class="form-label">Class</label>
+      <label class="form-label">${t("class_label")}</label>
       <div class="class-pills mb-3" id="classPills">
-        ${classes.map((c) => `<button class="class-pill ${S.classPreference === c ? "active" : ""}" onclick="setClass('${c}')" data-class="${c}">Class ${c}</button>`).join("")}
+        ${classes.map((c) => `<button class="class-pill ${S.classPreference === c ? "active" : ""}" onclick="setClass('${c}')" data-class="${c}">${t("class_label")} ${c}</button>`).join("")}
       </div>
 
-      <label class="form-label">Chapter</label>
+      <label class="form-label">${t("chapter")}</label>
       <select id="chapterSel" class="form-select mb-3">
-        <option value="">— Select Chapter —</option>
+        <option value="">${t("select_chapter")}</option>
         ${chapters.map((ch) => `<option value="${ch}" ${S.chapterPreference === ch ? "selected" : ""}>${ch}</option>`).join("")}
       </select>
 
-      <label class="form-label">Your Question</label>
-      <textarea id="questionInput" class="form-textarea" placeholder="Type or paste your CBSE question here..." maxlength="500" oninput="updateCharCount(this)"></textarea>
+      <label class="form-label">${t("your_question")}</label>
+      <textarea id="questionInput" class="form-textarea" placeholder="${t("question_placeholder")}" maxlength="500" oninput="updateCharCount(this)"></textarea>
       <div class="char-counter"><span id="charCount">0</span>/500</div>
 
       <label for="img-upload-input" style="display:inline-flex;align-items:center;gap:8px;margin-top:10px;padding:9px 18px;border-radius:50px;border:1px dashed rgba(79,142,247,0.4);background:rgba(79,142,247,0.05);color:#4f8ef7;font-size:0.82rem;font-weight:700;cursor:pointer;">
-        📷 Upload Question Photo
+        ${t("upload_photo")}
       </label>
       <input id="img-upload-input" type="file" accept="image/*" style="display:none;" onchange="onImageSelected(this)">
       <div id="img-preview-wrap" style="display:none;margin-top:10px;position:relative;">
@@ -1595,7 +1683,7 @@ function renderHome() {
       </div>
 
       <button class="btn btn-primary w-full mt-3" onclick="solveQuestion()" id="solveBtn">
-        Solve →
+        ${t("solve_btn")}
       </button>
     </div>
 
@@ -1654,7 +1742,7 @@ function renderHome() {
     saveState();
     const chs = getChapters(S.classPreference, "Hindi");
     const opts =
-      `<option value="">— Select Chapter —</option>` +
+      `<option value="">${t("select_chapter")}</option>` +
       chs.map((ch) => `<option value="${ch}">${ch}</option>`).join("");
     ["hindiCourseWrap", "prefHindiCourseWrap", "gameHindiCourseWrap"].forEach(
       (id) => {
@@ -1681,7 +1769,7 @@ function renderHome() {
     const chs = getChapters(S.classPreference, S.subjectPreference);
     const sel = document.getElementById("chapterSel");
     sel.innerHTML =
-      `<option value="">— Select Chapter —</option>` +
+      `<option value="">${t("select_chapter")}</option>` +
       chs.map((ch) => `<option value="${ch}">${ch}</option>`).join("");
   };
 
@@ -1695,7 +1783,7 @@ function renderHome() {
     const chs = getChapters(c, document.getElementById("subjectSel").value);
     const sel = document.getElementById("chapterSel");
     sel.innerHTML =
-      `<option value="">— Select Chapter —</option>` +
+      `<option value="">${t("select_chapter")}</option>` +
       chs.map((ch) => `<option value="${ch}">${ch}</option>`).join("");
   };
 
@@ -1783,8 +1871,8 @@ function renderHome() {
           }
           ${memoryTrick ? `<div class="glass" style="margin-top:14px;padding:12px 14px;border-left:3px solid var(--purple);background:rgba(139,92,246,0.08)"><span style="font-size:1rem">🧠</span><span style="font-size:0.85rem;color:var(--text-muted);margin-left:6px;font-style:italic">${escapeHtml(memoryTrick)}</span></div>` : ""}
           <div class="flex gap-2 mt-4" style="flex-wrap:wrap">
-            <button class="btn btn-secondary btn-sm" id="saveAnswerBtn" onclick="saveAnswer()">Save Answer 💾</button>
-            <button class="btn btn-secondary btn-sm" onclick="document.getElementById('questionInput').value='';document.getElementById('solutionArea').innerHTML='';document.getElementById('charCount').textContent='0';window.removeImage&&removeImage()">Ask Another</button>
+            <button class="btn btn-secondary btn-sm" id="saveAnswerBtn" onclick="saveAnswer()">${t("save_answer")}</button>
+            <button class="btn btn-secondary btn-sm" onclick="document.getElementById('questionInput').value='';document.getElementById('solutionArea').innerHTML='';document.getElementById('charCount').textContent='0';window.removeImage&&removeImage()">${t("ask_another")}</button>
           </div>
         </div>
       `;
@@ -1801,7 +1889,7 @@ function renderHome() {
       area.innerHTML = `<div class="glass" style="padding:16px;color:var(--red)">Error: ${e.message}. Please try again.</div>`;
     }
     btn.disabled = false;
-    btn.innerHTML = "Solve →";
+    btn.innerHTML = t("solve_btn");
   };
 
   window.saveAnswer = () => {
@@ -1888,20 +1976,20 @@ function renderPractice() {
   app.innerHTML = `
     <div class="flex items-center justify-between mb-2">
       <div>
-        <div class="section-heading">Daily Practice</div>
+        <div class="section-heading">${t("daily_practice")}</div>
         <div class="section-sub">${new Date().toLocaleDateString("en-IN", { weekday: "long", month: "short", day: "numeric" })}</div>
       </div>
       <div style="text-align:center">
         <div style="font-size:1.4rem;font-weight:800">${done}/3</div>
-        <div style="font-size:0.7rem;color:var(--text-muted)">Completed</div>
+        <div style="font-size:0.7rem;color:var(--text-muted)">${t("completed")}</div>
       </div>
     </div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;align-items:center">
       ${subjectTag(S.subjectPreference)}
       ${chapterTag(S.practiceChapter)}
-      <button class="btn btn-secondary btn-sm" style="margin-left:auto" onclick="changePracticeChapter()">Change Chapter</button>
+      <button class="btn btn-secondary btn-sm" style="margin-left:auto" onclick="changePracticeChapter()">${t("change_chapter")}</button>
     </div>
-    <div style="margin-bottom:10px;font-size:0.8rem;color:var(--text-muted)">Questions adapted for your level: <strong style="color:var(--text)">${perfDef.emoji} ${perfDef.name}</strong></div>
+    <div style="margin-bottom:10px;font-size:0.8rem;color:var(--text-muted)">${t("questions_for_level")} <strong style="color:var(--text)">${perfDef.emoji} ${perfDef.name}</strong></div>
     <div class="progress-bar-top mb-4">
       <div class="progress-bar-top-inner" style="width:${Math.round((done / 3) * 100)}%"></div>
     </div>
@@ -1934,23 +2022,23 @@ function renderPracticeSetup() {
 
   app.innerHTML = `
     <div class="modal-box" style="margin:0 auto;max-width:100%">
-      <div class="modal-title">Set Up Daily Practice 📚</div>
-      <div class="modal-sub">Choose your class, subject and chapter</div>
-      <label class="form-label">Your Class</label>
+      <div class="modal-title">${t("setup_practice")}</div>
+      <div class="modal-sub">${t("setup_sub")}</div>
+      <label class="form-label">${t("your_class")}</label>
       <select id="pref-class" class="form-select mb-3" onchange="onPrefClassChange()">
         ${["6", "7", "8", "9", "10"].map((c) => `<option value="${c}" ${initClass === c ? "selected" : ""}>${c}</option>`).join("")}
       </select>
-      <label class="form-label">Subject</label>
+      <label class="form-label">${t("subject")}</label>
       <select id="pref-subject" class="form-select mb-3" onchange="onPrefSubjectChange()">
         ${subjects.map((s) => `<option value="${s}" ${initSubject === s ? "selected" : ""}>${s}</option>`).join("")}
       </select>
       <div id="prefHindiCourseWrap" style="display:${initSubject === "Hindi" ? "block" : "none"}">${hindiCourseToggle()}</div>
-      <label class="form-label">Chapter</label>
+      <label class="form-label">${t("chapter")}</label>
       <select id="pref-chapter" class="form-select mb-4">
-        <option value="">— Select Chapter —</option>
+        <option value="">${t("select_chapter")}</option>
         ${initChapters.map((ch) => `<option value="${ch}" ${S.practiceChapter === ch ? "selected" : ""}>${ch}</option>`).join("")}
       </select>
-      <button class="btn btn-primary w-full" onclick="savePracticePrefs()">Start Practice ✨</button>
+      <button class="btn btn-primary w-full" onclick="savePracticePrefs()">${t("start_practice")}</button>
     </div>
   `;
 
@@ -1959,7 +2047,7 @@ function renderPracticeSetup() {
     const subj = document.getElementById("pref-subject").value;
     const sel = document.getElementById("pref-chapter");
     sel.innerHTML =
-      `<option value="">— Select Chapter —</option>` +
+      `<option value="">${t("select_chapter")}</option>` +
       getChapters(cls, subj)
         .map((ch) => `<option value="${ch}">${ch}</option>`)
         .join("");
@@ -1971,7 +2059,7 @@ function renderPracticeSetup() {
     if (wrap) wrap.style.display = subj === "Hindi" ? "block" : "none";
     const sel = document.getElementById("pref-chapter");
     sel.innerHTML =
-      `<option value="">— Select Chapter —</option>` +
+      `<option value="">${t("select_chapter")}</option>` +
       getChapters(cls, subj)
         .map((ch) => `<option value="${ch}">${ch}</option>`)
         .join("");
@@ -2044,8 +2132,8 @@ function renderPracticeCards(questions) {
       ${
         !q.done
           ? `
-        <textarea class="form-textarea" id="pans-${i}" placeholder="Type your answer..." style="min-height:80px"></textarea>
-        <button class="btn btn-primary btn-sm mt-2" onclick="submitPractice(${i})">Submit Answer</button>
+        <textarea class="form-textarea" id="pans-${i}" placeholder="${t("type_answer")}" style="min-height:80px"></textarea>
+        <button class="btn btn-primary btn-sm mt-2" onclick="submitPractice(${i})">${t("submit_answer")}</button>
       `
           : `
         <div class="practice-result ${q.correct ? "correct" : "wrong"}">
@@ -2143,10 +2231,10 @@ function renderSaved() {
     "Hindi",
   ];
   app.innerHTML = `
-    <div class="section-heading mb-2">Saved Answers</div>
+    <div class="section-heading mb-2">${t("saved_answers")}</div>
     <div class="search-bar mb-3">
       <span class="search-icon">🔍</span>
-      <input type="search" class="form-input" id="savedSearch" placeholder="Search saved answers..." oninput="filterSaved()">
+      <input type="search" class="form-input" id="savedSearch" placeholder="${t("search_saved")}" oninput="filterSaved()">
     </div>
     <div class="filter-pills mb-4" id="savedFilters">
       ${subjects.map((s) => `<button class="filter-pill ${s === "All" ? "active" : ""}" onclick="setSavedFilter('${s}')" data-filter="${s}">${s}</button>`).join("")}
@@ -2194,7 +2282,7 @@ function renderSaved() {
 function renderSavedGrid(items) {
   const grid = document.getElementById("savedGrid");
   if (!items.length) {
-    grid.innerHTML = `<div class="empty-state"><div class="empty-state-icon">💡</div><div class="empty-state-text">Nothing saved yet. Go solve something!</div></div>`;
+    grid.innerHTML = `<div class="empty-state"><div class="empty-state-icon">💡</div><div class="empty-state-text">${t("nothing_saved")}</div></div>`;
     return;
   }
   grid.innerHTML = items
@@ -2285,30 +2373,30 @@ function renderStats() {
     </div>
     <div class="glass" style="padding:16px 18px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
       <div>
-        <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.04em">Your Learning Level</div>
+        <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.04em">${t("your_level")}</div>
         <div style="font-size:1.05rem;font-weight:700">${perfDef.emoji} ${perfDef.name} <span style="font-size:0.8rem;color:var(--text-muted);font-weight:400">(${perf.percentage}%)</span></div>
         <div style="font-size:0.78rem;color:var(--text-muted);font-style:italic;margin-top:2px">${perfDef.message}</div>
       </div>
-      <button class="btn btn-secondary btn-sm" onclick="updateMyLevel()">Update My Score</button>
+      <button class="btn btn-secondary btn-sm" onclick="updateMyLevel()">${t("update_score")}</button>
     </div>
     <div class="stats-grid mb-4">
-      <div class="glass stat-card"><div class="stat-val">${S.totalSolved}</div><div class="stat-label">Questions Solved</div></div>
-      <div class="glass stat-card"><div class="stat-val">${S.streak}🔥</div><div class="stat-label">Current Streak</div></div>
-      <div class="glass stat-card"><div class="stat-val">${S.bestStreak}</div><div class="stat-label">Best Streak</div></div>
-      <div class="glass stat-card"><div class="stat-val">${S.xp}</div><div class="stat-label">Total XP</div></div>
+      <div class="glass stat-card"><div class="stat-val">${S.totalSolved}</div><div class="stat-label">${t("questions_solved")}</div></div>
+      <div class="glass stat-card"><div class="stat-val">${S.streak}🔥</div><div class="stat-label">${t("current_streak")}</div></div>
+      <div class="glass stat-card"><div class="stat-val">${S.bestStreak}</div><div class="stat-label">${t("best_streak")}</div></div>
+      <div class="glass stat-card"><div class="stat-val">${S.xp}</div><div class="stat-label">${t("total_xp")}</div></div>
     </div>
     <div class="glass" style="padding:18px;margin-bottom:16px">
-      <div class="section-sub">Subject Breakdown</div>
+      <div class="section-sub">${t("subject_breakdown")}</div>
       <div class="bar-chart">
         ${subjects.map((s) => `<div class="bar-row"><div class="bar-subject">${s}</div><div class="bar-outer"><div class="bar-inner" style="width:${Math.round(((S.subjectCounts[s] || 0) / maxCount) * 100)}%"></div></div><div class="bar-count">${S.subjectCounts[s] || 0}</div></div>`).join("")}
       </div>
     </div>
     <div class="glass" style="padding:18px;margin-bottom:16px">
-      <div class="section-sub">Activity (Last 30 Days)</div>
+      <div class="section-sub">${t("activity_30")}</div>
       <div class="heatmap">${days30.map((d) => `<div class="heatmap-day heat-${d.heat}" title="${d.d}"></div>`).join("")}</div>
     </div>
     <div class="glass" style="padding:18px;margin-bottom:16px">
-      <div class="section-sub">Weekly XP</div>
+      <div class="section-sub">${t("weekly_xp")}</div>
       <div class="weekly-chart">
         ${S.weeklyXP.map((xp, i) => `<div class="weekly-bar-wrap"><div class="weekly-bar-outer"><div class="weekly-bar" style="height:${Math.round((xp / maxW) * 100)}%"></div></div><div class="weekly-day">${days[i]}</div></div>`).join("")}
       </div>
@@ -2460,7 +2548,7 @@ function renderLeaderboard() {
   const xpToRank9 = players[8].xp - myXP;
 
   app.innerHTML = `
-    <div class="section-heading mb-4">Leaderboard 🏆</div>
+    <div class="section-heading mb-4">${t("leaderboard_title")}</div>
     <div class="podium mb-4">
       <div class="podium-place"><div class="podium-block p2"><div class="podium-avatar">${avatars[1]}</div><div class="podium-name">${top3[1].name.split(" ")[0]}</div><div class="podium-xp">${top3[1].xp} XP</div></div><div style="font-size:0.8rem;color:var(--text-muted)">${crowns[1]}</div></div>
       <div class="podium-place"><div class="podium-block p1"><div class="podium-avatar">${avatars[0]}</div><div class="podium-name">${top3[0].name.split(" ")[0]}</div><div class="podium-xp">${top3[0].xp} XP</div></div><div style="font-size:0.8rem;color:var(--gold)">${crowns[0]}</div></div>
@@ -2500,41 +2588,41 @@ function renderGames() {
   const initChapters = getChapters(initClass, initSubject);
 
   app.innerHTML = `
-    <div class="section-heading mb-1">Games 🎮</div>
-    <div class="section-sub mb-3">Select your chapter, then pick a game</div>
+    <div class="section-heading mb-1">${t("games_title")}</div>
+    <div class="section-sub mb-3">${t("games_sub")}</div>
     <div class="glass" style="padding:16px;margin-bottom:16px">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
         <div>
-          <label class="form-label" style="margin-bottom:4px">Class</label>
+          <label class="form-label" style="margin-bottom:4px">${t("class_label")}</label>
           <select id="gameClass" class="form-select" onchange="onGameClassChange()">
             ${["6", "7", "8", "9", "10"].map((c) => `<option value="${c}" ${initClass === c ? "selected" : ""}>${c}</option>`).join("")}
           </select>
         </div>
         <div>
-          <label class="form-label" style="margin-bottom:4px">Subject</label>
+          <label class="form-label" style="margin-bottom:4px">${t("subject")}</label>
           <select id="gameSubject" class="form-select" onchange="onGameSubjectChange()">
             ${subjects.map((s) => `<option value="${s}" ${initSubject === s ? "selected" : ""}>${s}</option>`).join("")}
           </select>
         </div>
       </div>
       <div id="gameHindiCourseWrap" style="display:${initSubject === "Hindi" ? "block" : "none"}">${hindiCourseToggle()}</div>
-      <label class="form-label" style="margin-bottom:4px">Chapter</label>
+      <label class="form-label" style="margin-bottom:4px">${t("chapter")}</label>
       <select id="gameChapter" class="form-select">
-        <option value="">— Select Chapter —</option>
+        <option value="">${t("select_chapter")}</option>
         ${initChapters.map((ch) => `<option value="${ch}" ${S.chapterPreference === ch ? "selected" : ""}>${ch}</option>`).join("")}
       </select>
     </div>
     <div class="game-cards">
-      <div class="glass game-card" onclick="startGame('quiz')"><div class="game-icon">🧠</div><div class="game-info"><div class="game-title">CBSE Quiz</div><div class="game-desc">5 MCQ questions from your chapter. Test your knowledge!</div><div class="game-xp">+10 XP per correct answer</div></div><div style="color:var(--text-muted)">›</div></div>
-      <div class="glass game-card" onclick="startGame('scramble')"><div class="game-icon">🔤</div><div class="game-info"><div class="game-title">Word Scramble</div><div class="game-desc">Unscramble chapter vocabulary in 60 seconds!</div><div class="game-xp">+8 XP per correct word</div></div><div style="color:var(--text-muted)">›</div></div>
-      <div class="glass game-card" onclick="startGame('math')"><div class="game-icon">🧮</div><div class="game-info"><div class="game-title">Math Challenge</div><div class="game-desc">5 mental math problems. Speed bonus under 10 seconds!</div><div class="game-xp">+10–20 XP per problem</div></div><div style="color:var(--text-muted)">›</div></div>
+      <div class="glass game-card" onclick="startGame('quiz')"><div class="game-icon">🧠</div><div class="game-info"><div class="game-title">${t("quiz_title")}</div><div class="game-desc">${t("quiz_desc")}</div><div class="game-xp">${t("quiz_xp")}</div></div><div style="color:var(--text-muted)">›</div></div>
+      <div class="glass game-card" onclick="startGame('scramble')"><div class="game-icon">🔤</div><div class="game-info"><div class="game-title">${t("scramble_title")}</div><div class="game-desc">${t("scramble_desc")}</div><div class="game-xp">${t("scramble_xp")}</div></div><div style="color:var(--text-muted)">›</div></div>
+      <div class="glass game-card" onclick="startGame('math')"><div class="game-icon">🧮</div><div class="game-info"><div class="game-title">${t("math_title")}</div><div class="game-desc">${t("math_desc")}</div><div class="game-xp">${t("math_xp")}</div></div><div style="color:var(--text-muted)">›</div></div>
     </div>
   `;
 
   window.onGameClassChange = () => {
     const sel = document.getElementById("gameChapter");
     sel.innerHTML =
-      `<option value="">— Select Chapter —</option>` +
+      `<option value="">${t("select_chapter")}</option>` +
       getChapters(
         document.getElementById("gameClass").value,
         document.getElementById("gameSubject").value,
@@ -2548,7 +2636,7 @@ function renderGames() {
     if (wrap) wrap.style.display = subj === "Hindi" ? "block" : "none";
     const sel = document.getElementById("gameChapter");
     sel.innerHTML =
-      `<option value="">— Select Chapter —</option>` +
+      `<option value="">${t("select_chapter")}</option>` +
       getChapters(document.getElementById("gameClass").value, subj)
         .map((ch) => `<option value="${ch}">${ch}</option>`)
         .join("");
@@ -3097,10 +3185,10 @@ function renderStep(str) {
 function renderResources() {
   const app = document.getElementById("app");
   app.innerHTML = `
-    <h1 class="gradient-heading section-heading">📚 Resources</h1>
+    <h1 class="gradient-heading section-heading">${t("resources_title")}</h1>
     <div style="display:flex;gap:0;margin-bottom:20px;border-bottom:2px solid rgba(255,255,255,0.08)">
-      <button id="tab-papers" onclick="switchResourceTab('papers')" style="flex:1;padding:10px;background:none;border:none;color:#4f8ef7;font-weight:700;font-size:0.9rem;font-family:inherit;border-bottom:2px solid #4f8ef7;cursor:pointer;margin-bottom:-2px">📄 Papers</button>
-      <button id="tab-notes" onclick="switchResourceTab('notes')" style="flex:1;padding:10px;background:none;border:none;color:var(--text-muted);font-weight:700;font-size:0.9rem;font-family:inherit;border-bottom:2px solid transparent;cursor:pointer;margin-bottom:-2px">📒 Notes</button>
+      <button id="tab-papers" onclick="switchResourceTab('papers')" style="flex:1;padding:10px;background:none;border:none;color:#4f8ef7;font-weight:700;font-size:0.9rem;font-family:inherit;border-bottom:2px solid #4f8ef7;cursor:pointer;margin-bottom:-2px">${t("papers_tab")}</button>
+      <button id="tab-notes" onclick="switchResourceTab('notes')" style="flex:1;padding:10px;background:none;border:none;color:var(--text-muted);font-weight:700;font-size:0.9rem;font-family:inherit;border-bottom:2px solid transparent;cursor:pointer;margin-bottom:-2px">${t("notes_tab")}</button>
     </div>
     <div id="resource-tab-content"></div>
   `;
@@ -3705,6 +3793,7 @@ function init() {
   updateStreak();
   updateHeader();
   initBackground();
+  applyNavLang();
   navigate("home");
   window.S = S;
   if (!loadPerformance()) showOnboardingModal();
