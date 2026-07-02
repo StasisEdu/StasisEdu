@@ -755,7 +755,7 @@ function showNameSplash(onDone) {
           <label style="font-size:0.75rem;font-weight:700;color:#7a8aaa;text-transform:uppercase;letter-spacing:0.06em;">Language</label>
           <div style="display:flex;gap:10px;">
             <button id="lang-en-btn" style="flex:1;padding:12px;border-radius:14px;border:1px solid ${selectedLang==='en'?'rgba(79,142,247,0.5)':'rgba(255,255,255,0.08)'};background:${selectedLang==='en'?'rgba(79,142,247,0.15)':'rgba(255,255,255,0.03)'};color:${selectedLang==='en'?'#4f8ef7':'#7a8aaa'};font-size:0.9rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s;">🇬🇧 English</button>
-            <button id="lang-hi-btn" style="flex:1;padding:12px;border-radius:14px;border:1px solid ${selectedLang==='hi'?'rgba(155,109,255,0.5)':'rgba(255,255,255,0.08)'};background:${selectedLang==='hi'?'rgba(155,109,255,0.15)':'rgba(255,255,255,0.03)'};color:${selectedLang==='hi'?'#9b6dff':'#7a8aaa'};font-size:0.9rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s;">🇮🇳 हिंदी</button>
+            <button id="lang-hi-btn" style="flex:1;padding:12px;border-radius:14px;border:1px solid ${selectedLang==='hi'?'rgba(155,109,255,0.5)':'rgba(255,255,255,0.08)'};background:${selectedLang==='hi'?'rgba(155,109,255,0.15)':'rgba(255,255,255,0.03)'};color:${selectedLang==='hi'?'#9b6dff':'#7a8aaa'};font-size:0.9rem;font-weight:700;cursor:pointer;font-family:'Noto Sans Devanagari',Inter,system-ui,sans-serif;transition:all 0.15s;">🇮🇳 हिंदी</button>
           </div>
         </div>
 
