@@ -1,0 +1,86 @@
+tell the prompt and make it token saving
+
+Here's your Replit prompt — copy-paste this exactly:
+
+Upload this zip and restore my app exactly. Extract it, keeping the folder structure intact. The entry point is artifacts/edubot-india/index.html which loads src/main.js. Run pnpm install then start the dev server. Do not modify any files. Use the existing .replit config.
+
+That's it. Short, clear, no fluff. When it asks for secrets, add your GROQ_API_KEY in the Secrets tab.
+
+also in the prompt mention abt groq api keyy
+
+Here's the updated prompt:
+
+Upload this zip and restore my app exactly. Extract it, keeping the folder structure intact. The entry point is artifacts/edubot-india/index.html which loads src/main.js. Run pnpm install then start the dev server. Do not modify any files. Use the existing .replit config. Add my GROQ_API_KEY in the Secrets tab before running.
+
+make like in deailed prompt so that it runs the exact
+
+Here's the detailed prompt:
+
+I am uploading my complete source code zip. Restore my app exactly as it was — do not change anything.
+
+Setup steps:
+
+Extract the zip, preserving all folder structure
+The main app is inside artifacts/edubot-india/
+Go to the Secrets tab and add GROQ_API_KEY with my Groq API key
+Run pnpm install from the root to install all dependencies
+Start the app using the existing .replit config (just hit Run)
+Important:
+
+The frontend entry point is artifacts/edubot-india/index.html
+It loads src/main.js — this is a vanilla JS app, do NOT touch main.tsx or convert anything to React
+Do not modify any files at all — not index.html, not main.js, nothing
+The app also has a backend at artifacts/api-server/ — let that run as configured
+style.css and papers-data.js must stay exactly where they are
+The app should boot and show StasisEducation ⚡ with navbar, home page, practice, stats, games, leaderboard, and papers sections working.
+
+more details
+
+Here's the fully detailed prompt:
+
+I am uploading my complete source code zip called Edu-Bot-India-clean.zip. Your job is to restore my app exactly as it was. Do not change, delete, rename, or restructure any file under any circumstance.
+
+Step 1 — Extract
+
+Extract the zip preserving the exact folder structure
+The root folder is Edu-Bot-India/
+Everything lives inside it — do not flatten or move files
+Step 2 — Secrets
+
+Go to the Replit Secrets tab
+Add secret: GROQ_API_KEY = (I will provide the value)
+Without this the AI tutor features will not work
+Step 3 — Install dependencies
+
+Run pnpm install from the project root (Edu-Bot-India/)
+This installs dependencies for all workspaces including the frontend and api-server
+Do not use npm or yarn — only pnpm
+Step 4 — Run
+
+Use the existing .replit file to run — just press the Run button
+Do not create a new run command or overwrite .replit
+Frontend details:
+
+App is at artifacts/edubot-india/
+Entry point is artifacts/edubot-india/index.html
+That HTML file loads /src/main.js via <script type="module" src="/src/main.js">
+main.js is a large vanilla JavaScript file (136KB) — this is intentional
+There is also a main.tsx file in the same folder — ignore it completely, it is unused
+Do not convert anything to React or TypeScript
+style.css is at artifacts/edubot-india/src/style.css — do not touch it
+papers-data.js is at artifacts/edubot-india/src/papers-data.js — do not touch it
+The HTML has <main id="app"></main> — main.js renders into this element
+Backend details:
+
+API server is at artifacts/api-server/
+It has its own package.json and compiled output in dist/
+Routes are in artifacts/api-server/src/routes/edubot.ts
+Let it run as configured — do not change any routes or logic
+What the working app looks like:
+
+Title: StasisEducation ⚡
+Has a top header with XP bar, level pill, streak counter, and gems counter
+Has a bottom navigation bar with: Home, Practice, Saved, Stats, Ranks, Games, Papers
+Background has an animated canvas effect
+All 7 nav sections must be functional
+If anything looks broken after running, check the browser console for errors before changing any files — the most likely cause is a missing secret or a missed dependency install, not a code problem.

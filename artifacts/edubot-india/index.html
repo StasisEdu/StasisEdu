@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1"
+    />
+    <title>StasisEducation ⚡</title>
+    <meta
+      name="description"
+      content="StasisEducation — AI-powered CBSE tutor for Classes 6-10. Level up your learning with gamified practice."
+    />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:title" content="StasisEducation ⚡" />
+    <meta
+      property="og:description"
+      content="AI-powered CBSE tutor for Classes 6-10."
+    />
+    <meta property="og:type" content="website" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <canvas
+      id="bgCanvas"
+      style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: -1;
+      "
+    ></canvas>
+    <!-- Header -->
+    <header id="header">
+      <div class="header-left">
+        <span class="logo">StasisEducation ⚡</span>
+      </div>
+      <div class="header-right">
+        <div class="level-pill" id="levelPill">🌱 Rookie</div>
+        <div class="xp-bar-wrap">
+          <div class="xp-bar" id="xpBar" style="width: 0%"></div>
+        </div>
+        <div class="streak-wrap" id="streakWrap">
+          🔥 <span id="streakCount">0</span>
+        </div>
+        <div class="gems-wrap">💎 <span id="gemsCount">0</span></div>
+      </div>
+    </header>
+    <!-- Main Content -->
+    <main id="app"></main>
+    <!-- Bottom Nav -->
+    <nav id="bottomNav">
+      <button
+        class="nav-btn active"
+        data-page="home"
+        onclick="navigate('home')"
+      >
+        <span class="nav-icon">🏠</span>
+        <span>Home</span>
+      </button>
+      <button
+        class="nav-btn"
+        data-page="practice"
+        onclick="navigate('practice')"
+      >
+        <span class="nav-icon">📝</span>
+        <span>Practice</span>
+      </button>
+      <button class="nav-btn" data-page="saved" onclick="navigate('saved')">
+        <span class="nav-icon">💾</span>
+        <span>Saved</span>
+      </button>
+      <button class="nav-btn" data-page="stats" onclick="navigate('stats')">
+        <span class="nav-icon">📊</span>
+        <span>Stats</span>
+      </button>
+      <button
+        class="nav-btn"
+        data-page="leaderboard"
+        onclick="navigate('leaderboard')"
+      >
+        <span class="nav-icon">🏆</span>
+        <span>Ranks</span>
+      </button>
+      <button class="nav-btn" data-page="games" onclick="navigate('games')">
+        <span class="nav-icon">🎮</span>
+        <span>Games</span>
+      </button>
+      <button
+        class="nav-btn"
+        data-page="resources"
+        onclick="navigate('resources')"
+      >
+        <span class="nav-icon">📄</span>
+        <span>Papers</span>
+      </button>
+    </nav>
+    <!-- Level Up Overlay -->
+    <div id="levelUpOverlay" class="hidden">
+      <div class="levelup-content">
+        <div class="levelup-emoji" id="levelUpEmoji">🏆</div>
+        <div class="levelup-title">LEVEL UP!</div>
+        <div class="levelup-sub" id="levelUpSub">You reached Scholar!</div>
+      </div>
+      <canvas id="confettiCanvas"></canvas>
+    </div>
+    <!-- Badge Toast -->
+    <div id="badgeToast" class="hidden">
+      <div class="badge-toast-inner">
+        <span id="badgeToastEmoji">🎯</span>
+        <div>
+          <div class="badge-toast-title">Badge Unlocked!</div>
+          <div id="badgeToastName">First Solve</div>
+        </div>
+      </div>
+    </div>
+    <!-- XP Float -->
+    <div id="xpFloat" class="hidden"></div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
