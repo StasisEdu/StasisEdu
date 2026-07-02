@@ -647,42 +647,183 @@ window.switchUser = function () {
 };
 
 function showNameSplash(onDone) {
+  const existingName = localStorage.getItem("stasis_name");
+  const isReturning = !!existingName;
+
   const splash = document.createElement("div");
   splash.id = "name-splash";
   splash.style.cssText =
-    "position:fixed;inset:0;z-index:9999;background:#07070f;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;font-family:Inter,system-ui,sans-serif;padding:24px;";
-  splash.innerHTML = `
-    <div style="font-size:3.5rem;filter:drop-shadow(0 0 20px rgba(79,142,247,0.5))">🎓</div>
-    <div style="font-size:1.6rem;font-weight:900;background:linear-gradient(135deg,#4f8ef7,#9b6dff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-0.02em;">StasisEducation</div>
-    <div style="color:#7a8aaa;font-size:0.9rem;text-align:center;">Your personal AI study assistant</div>
-    <div style="width:100%;max-width:320px;display:flex;flex-direction:column;gap:10px;">
-      <label style="font-size:0.78rem;font-weight:600;color:#7a8aaa;text-transform:uppercase;letter-spacing:0.05em;">What's your name?</label>
-      <input id="name-input" type="text" placeholder="e.g. Arjun, Priya..." maxlength="30"
-        style="padding:14px 16px;border-radius:14px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:#eef2ff;font-size:1rem;font-family:inherit;outline:none;width:100%;box-sizing:border-box;">
-      <button id="name-btn" style="padding:14px;border-radius:50px;border:none;background:linear-gradient(135deg,#4f8ef7,#9b6dff);color:white;font-size:1rem;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 4px 20px rgba(79,142,247,0.3);">
-        Let's Go →
-      </button>
-    </div>
-  `;
-  document.body.appendChild(splash);
-  const input = document.getElementById("name-input");
-  const btn = document.getElementById("name-btn");
-  input.focus();
-  const proceed = () => {
-    const name = input.value.trim();
-    if (!name) {
-      input.style.borderColor = "var(--red)";
-      input.focus();
-      return;
-    }
-    localStorage.setItem("stasis_name", name);
-    splash.remove();
-    onDone();
-  };
-  btn.onclick = proceed;
-  input.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") proceed();
-  });
+    "position:fixed;inset:0;z-index:9999;background:#07070f;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:Inter,system-ui,sans-serif;padding:20px;overflow-y:auto;";
+
+  const selectedLang = localStorage.getItem("stasis_lang") || "en";
+  const selectedClass = (S && S.classPreference) || localStorage.getItem("stasis_signup_class") || "10";
+
+  const CLASSES = ["6","7","8","9","10"];
+
+  const logoBlock = `
+    <div style="text-align:center;margin-bottom:8px;">
+      <div style="font-size:3rem;filter:drop-shadow(0 0 24px rgba(79,142,247,0.6));margin-bottom:10px;">🎓</div>
+      <div style="font-size:1.7rem;font-weight:900;background:linear-gradient(135deg,#4f8ef7,#9b6dff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-0.02em;">StasisEducation ⚡</div>
+      <div style="color:#5a6a8a;font-size:0.85rem;margin-top:4px;">AI-powered CBSE tutor · Classes 6–10</div>
+    </div>`;
+
+  if (isReturning) {
+    const xp = (S && S.xp) || 0;
+    const classNum = selectedClass;
+    const lvlIdx = typeof getLevel === "function" ? getLevel(xp) : 0;
+    const LEVEL_NAMES = ["🌱 Rookie","📖 Scholar","💡 Thinker","🧠 Genius","⚔️ Champion","🏆 Legend"];
+    const lvlName = LEVEL_NAMES[lvlIdx] || "🌱 Rookie";
+    const initial = existingName.charAt(0).toUpperCase();
+    const colors = ["#4f8ef7","#9b6dff","#f7714f","#4fd9b3","#f7c74f"];
+    const avatarColor = colors[existingName.charCodeAt(0) % colors.length];
+
+    splash.innerHTML = `
+      <style>
+        #login-card { animation: loginFadeIn 0.4s ease; }
+        @keyframes loginFadeIn { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+        #continue-btn:hover { opacity:0.88; transform:scale(1.02); }
+        #switch-btn:hover { color:#eef2ff; }
+      </style>
+      ${logoBlock}
+      <div id="login-card" style="width:100%;max-width:360px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.09);border-radius:24px;padding:28px 24px;display:flex;flex-direction:column;align-items:center;gap:16px;">
+        <div style="width:72px;height:72px;border-radius:50%;background:${avatarColor}22;border:2px solid ${avatarColor}55;display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:900;color:${avatarColor};">
+          ${initial}
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:1.25rem;font-weight:800;color:#eef2ff;">Welcome back, ${escapeHtml(existingName)}!</div>
+          <div style="margin-top:8px;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;">
+            <span style="padding:4px 12px;border-radius:20px;background:rgba(79,142,247,0.12);border:1px solid rgba(79,142,247,0.25);color:#4f8ef7;font-size:0.78rem;font-weight:600;">🎓 Class ${classNum}</span>
+            <span style="padding:4px 12px;border-radius:20px;background:rgba(155,109,255,0.12);border:1px solid rgba(155,109,255,0.25);color:#9b6dff;font-size:0.78rem;font-weight:600;">${lvlName}</span>
+            <span style="padding:4px 12px;border-radius:20px;background:rgba(247,199,79,0.1);border:1px solid rgba(247,199,79,0.2);color:#f7c74f;font-size:0.78rem;font-weight:600;">⚡ ${xp} XP</span>
+          </div>
+        </div>
+        <button id="continue-btn" style="width:100%;padding:15px;border-radius:50px;border:none;background:linear-gradient(135deg,#4f8ef7,#9b6dff);color:white;font-size:1rem;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 4px 24px rgba(79,142,247,0.35);transition:opacity 0.2s,transform 0.2s;margin-top:4px;">
+          Continue Learning →
+        </button>
+        <button id="switch-btn" style="background:none;border:none;color:#5a6a8a;font-size:0.85rem;cursor:pointer;font-family:inherit;transition:color 0.2s;padding:4px 8px;">
+          Switch account
+        </button>
+      </div>`;
+
+    document.body.appendChild(splash);
+
+    document.getElementById("continue-btn").onclick = () => {
+      splash.style.opacity = "0";
+      splash.style.transition = "opacity 0.25s";
+      setTimeout(() => { splash.remove(); onDone(); }, 250);
+    };
+    document.getElementById("switch-btn").onclick = () => {
+      localStorage.removeItem("stasis_name");
+      localStorage.removeItem("stasis_performance");
+      localStorage.removeItem("stasis_state");
+      splash.remove();
+      showNameSplash(function () { location.reload(); });
+    };
+
+  } else {
+    const classPills = CLASSES.map(c =>
+      `<button class="class-pill" data-class="${c}" style="padding:10px 14px;border-radius:12px;border:1px solid rgba(255,255,255,0.1);background:${c===selectedClass?"linear-gradient(135deg,#4f8ef7,#9b6dff)":"rgba(255,255,255,0.04)"};color:${c===selectedClass?"#fff":"#7a8aaa"};font-size:0.9rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s;min-width:44px;">${c}</button>`
+    ).join("");
+
+    splash.innerHTML = `
+      <style>
+        #signup-card { animation: loginFadeIn 0.4s ease; }
+        @keyframes loginFadeIn { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+        #signup-btn:hover { opacity:0.88; transform:scale(1.02); }
+        .class-pill:hover { border-color:rgba(79,142,247,0.5)!important; color:#eef2ff!important; }
+        #signup-name:focus { border-color:rgba(79,142,247,0.6)!important; box-shadow:0 0 0 3px rgba(79,142,247,0.12); }
+      </style>
+      ${logoBlock}
+      <div id="signup-card" style="width:100%;max-width:360px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.09);border-radius:24px;padding:28px 24px;display:flex;flex-direction:column;gap:18px;">
+        <div style="text-align:center;">
+          <div style="font-size:1.1rem;font-weight:800;color:#eef2ff;">Create your account</div>
+          <div style="font-size:0.82rem;color:#5a6a8a;margin-top:3px;">Free · No password needed · All on device</div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <label style="font-size:0.75rem;font-weight:700;color:#7a8aaa;text-transform:uppercase;letter-spacing:0.06em;">Your Name</label>
+          <input id="signup-name" type="text" placeholder="e.g. Arjun, Priya…" maxlength="30" autocomplete="off"
+            style="padding:13px 16px;border-radius:14px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:#eef2ff;font-size:1rem;font-family:inherit;outline:none;width:100%;box-sizing:border-box;transition:border-color 0.2s,box-shadow 0.2s;">
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <label style="font-size:0.75rem;font-weight:700;color:#7a8aaa;text-transform:uppercase;letter-spacing:0.06em;">Class</label>
+          <div id="class-pills" style="display:flex;gap:8px;flex-wrap:wrap;">${classPills}</div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <label style="font-size:0.75rem;font-weight:700;color:#7a8aaa;text-transform:uppercase;letter-spacing:0.06em;">Language</label>
+          <div style="display:flex;gap:10px;">
+            <button id="lang-en-btn" style="flex:1;padding:12px;border-radius:14px;border:1px solid ${selectedLang==='en'?'rgba(79,142,247,0.5)':'rgba(255,255,255,0.08)'};background:${selectedLang==='en'?'rgba(79,142,247,0.15)':'rgba(255,255,255,0.03)'};color:${selectedLang==='en'?'#4f8ef7':'#7a8aaa'};font-size:0.9rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s;">🇬🇧 English</button>
+            <button id="lang-hi-btn" style="flex:1;padding:12px;border-radius:14px;border:1px solid ${selectedLang==='hi'?'rgba(155,109,255,0.5)':'rgba(255,255,255,0.08)'};background:${selectedLang==='hi'?'rgba(155,109,255,0.15)':'rgba(255,255,255,0.03)'};color:${selectedLang==='hi'?'#9b6dff':'#7a8aaa'};font-size:0.9rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s;">🇮🇳 हिंदी</button>
+          </div>
+        </div>
+
+        <div id="signup-err" style="color:#f7714f;font-size:0.83rem;text-align:center;min-height:18px;"></div>
+
+        <button id="signup-btn" style="width:100%;padding:15px;border-radius:50px;border:none;background:linear-gradient(135deg,#4f8ef7,#9b6dff);color:white;font-size:1rem;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 4px 24px rgba(79,142,247,0.35);transition:opacity 0.2s,transform 0.2s;margin-top:2px;">
+          Start Learning →
+        </button>
+      </div>`;
+
+    document.body.appendChild(splash);
+
+    let chosenClass = selectedClass;
+    let chosenLang = selectedLang;
+
+    document.getElementById("class-pills").addEventListener("click", (e) => {
+      const pill = e.target.closest(".class-pill");
+      if (!pill) return;
+      chosenClass = pill.dataset.class;
+      document.querySelectorAll(".class-pill").forEach(p => {
+        const active = p.dataset.class === chosenClass;
+        p.style.background = active ? "linear-gradient(135deg,#4f8ef7,#9b6dff)" : "rgba(255,255,255,0.04)";
+        p.style.color = active ? "#fff" : "#7a8aaa";
+        p.style.borderColor = active ? "transparent" : "rgba(255,255,255,0.1)";
+      });
+    });
+
+    const setLang = (lang) => {
+      chosenLang = lang;
+      const enBtn = document.getElementById("lang-en-btn");
+      const hiBtn = document.getElementById("lang-hi-btn");
+      enBtn.style.borderColor = lang==="en" ? "rgba(79,142,247,0.5)" : "rgba(255,255,255,0.08)";
+      enBtn.style.background = lang==="en" ? "rgba(79,142,247,0.15)" : "rgba(255,255,255,0.03)";
+      enBtn.style.color = lang==="en" ? "#4f8ef7" : "#7a8aaa";
+      hiBtn.style.borderColor = lang==="hi" ? "rgba(155,109,255,0.5)" : "rgba(255,255,255,0.08)";
+      hiBtn.style.background = lang==="hi" ? "rgba(155,109,255,0.15)" : "rgba(255,255,255,0.03)";
+      hiBtn.style.color = lang==="hi" ? "#9b6dff" : "#7a8aaa";
+    };
+    document.getElementById("lang-en-btn").onclick = () => setLang("en");
+    document.getElementById("lang-hi-btn").onclick = () => setLang("hi");
+
+    const proceed = () => {
+      const nameInput = document.getElementById("signup-name");
+      const errEl = document.getElementById("signup-err");
+      const name = nameInput.value.trim();
+      if (!name) {
+        errEl.textContent = "Please enter your name to continue.";
+        nameInput.style.borderColor = "rgba(247,113,79,0.6)";
+        nameInput.focus();
+        return;
+      }
+      localStorage.setItem("stasis_name", name);
+      localStorage.setItem("stasis_lang", chosenLang);
+      localStorage.setItem("stasis_signup_class", chosenClass);
+      if (S) { S.classPreference = chosenClass; S.subjectPreference = "Maths"; }
+      splash.style.opacity = "0";
+      splash.style.transition = "opacity 0.25s";
+      setTimeout(() => { splash.remove(); onDone(); }, 250);
+    };
+
+    document.getElementById("signup-btn").onclick = proceed;
+    document.getElementById("signup-name").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") proceed();
+      document.getElementById("signup-name").style.borderColor = "rgba(255,255,255,0.1)";
+      document.getElementById("signup-err").textContent = "";
+    });
+    setTimeout(() => document.getElementById("signup-name").focus(), 50);
+  }
 }
 
 function getLanguage() {
@@ -3569,8 +3710,4 @@ function init() {
   if (!loadPerformance()) showOnboardingModal();
 }
 
-if (!getName()) {
-  showNameSplash(init);
-} else {
-  init();
-}
+showNameSplash(init);
