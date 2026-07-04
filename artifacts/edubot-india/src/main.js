@@ -16,6 +16,26 @@ async function loadClerk() {
     const proxyUrl = import.meta.env.VITE_CLERK_PROXY_URL || undefined;
     _clerk = new Clerk(key, proxyUrl ? { proxyUrl } : undefined);
     await _clerk.load();
+
+    // If we're returning from a Google OAuth redirect (redirectUrl ===
+    // redirectUrlComplete === this same page, no dedicated /sso-callback
+    // route), Clerk needs an explicit handleRedirectCallback() call to
+    // finish creating the session from the pending sign-in — otherwise the
+    // sign-in resource stays pending, clerk.user never gets set, and the
+    // app loops back to the login screen.
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("__clerk_status") || params.has("__clerk_created_session")) {
+      try {
+        await _clerk.handleRedirectCallback();
+      } catch (redirectErr) {
+        console.error("Clerk handleRedirectCallback error:", redirectErr);
+      }
+      // Clean the Clerk OAuth params out of the URL so a later reload/back
+      // navigation doesn't try to re-process a stale callback.
+      const cleanUrl = window.location.pathname + window.location.hash;
+      window.history.replaceState({}, "", cleanUrl);
+    }
+
     _clerkUser = _clerk.user || null;
   } catch (e) {
     console.error("Clerk load error:", e);
