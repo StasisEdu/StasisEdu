@@ -17,8 +17,8 @@ async function loadClerk() {
   const isOAuthReturn =
     params.has("__clerk_status") ||
     params.has("__clerk_created_session") ||
-    params.has("__clerk_db_jwt") ||
-    window.location.hash.includes("clerk");
+    params.has("clerk_callback");
+  window.location.hash.includes("clerk");
   try {
     // proxyUrl is empty in dev (Clerk talks to the dev FAPI directly) and
     // auto-populated in prod, where Clerk must be routed through the app's
@@ -939,7 +939,7 @@ function showNameSplash(onDone) {
             }
             await _clerk.client.signIn.authenticateWithRedirect({
               strategy: "oauth_google",
-              redirectUrl: currentUrl,
+              redirectUrl: currentUrl + "?clerk_callback=1",
               redirectUrlComplete: currentUrl,
             });
           } catch (e) {
