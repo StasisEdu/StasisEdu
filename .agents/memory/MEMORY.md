@@ -1,0 +1,1 @@
+- [Clerk OAuth redirect loop](clerk-oauth-redirect-loop.md) — vanilla-JS Clerk integrations must snapshot URL params before `clerk.load()` and call the app's render function directly, not rely on falling through to normal splash/login logic.

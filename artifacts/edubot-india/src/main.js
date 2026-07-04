@@ -4,11 +4,17 @@ import { Clerk } from "@clerk/clerk-js";
 
 let _clerk = null;
 let _clerkUser = null;
+let _oauthCallbackHandled = false;
 
 async function loadClerk() {
   const key = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
   if (!key) return null;
   if (_clerk) return _clerk;
+  // Snapshot the OAuth callback params BEFORE Clerk's own load() has a
+  // chance to touch/strip the URL, so this check is reliable regardless of
+  // Clerk's internal URL cleanup timing.
+  const params = new URLSearchParams(window.location.search);
+  const isOAuthReturn = params.has("__clerk_status") || params.has("__clerk_created_session");
   try {
     // proxyUrl is empty in dev (Clerk talks to the dev FAPI directly) and
     // auto-populated in prod, where Clerk must be routed through the app's
@@ -23,8 +29,7 @@ async function loadClerk() {
     // finish creating the session from the pending sign-in — otherwise the
     // sign-in resource stays pending, clerk.user never gets set, and the
     // app loops back to the login screen.
-    const params = new URLSearchParams(window.location.search);
-    if (params.has("__clerk_status") || params.has("__clerk_created_session")) {
+    if (isOAuthReturn) {
       try {
         await _clerk.handleRedirectCallback();
       } catch (redirectErr) {
@@ -34,6 +39,25 @@ async function loadClerk() {
       // navigation doesn't try to re-process a stale callback.
       const cleanUrl = window.location.pathname + window.location.hash;
       window.history.replaceState({}, "", cleanUrl);
+
+      _clerkUser = _clerk.user || null;
+
+      const googleName = getClerkDisplayName();
+      if (googleName) {
+        if (!localStorage.getItem("stasis_name")) {
+          localStorage.setItem("stasis_name", googleName);
+          localStorage.setItem("stasis_lang", localStorage.getItem("stasis_lang") || "en");
+          const selectedClass = (S && S.classPreference) || localStorage.getItem("stasis_signup_class") || "10";
+          localStorage.setItem("stasis_signup_class", selectedClass);
+          if (S) { S.classPreference = selectedClass; S.subjectPreference = "Maths"; }
+        }
+        // Session is confirmed — enter the app immediately instead of
+        // falling through to the login/splash screen.
+        document.getElementById("name-splash")?.remove();
+        _oauthCallbackHandled = true;
+        init();
+      }
+      return _clerk;
     }
 
     _clerkUser = _clerk.user || null;
@@ -724,6 +748,10 @@ function showNameSplash(onDone) {
 
   (async () => {
     await loadClerk();
+
+    // loadClerk() already detected an OAuth return, completed the session,
+    // removed this splash, and called init() directly — nothing left to do.
+    if (_oauthCallbackHandled) return;
 
     const existingName = localStorage.getItem("stasis_name");
     const googleName = getClerkDisplayName();
