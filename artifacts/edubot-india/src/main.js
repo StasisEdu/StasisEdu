@@ -14,7 +14,11 @@ async function loadClerk() {
   // chance to touch/strip the URL, so this check is reliable regardless of
   // Clerk's internal URL cleanup timing.
   const params = new URLSearchParams(window.location.search);
-  const isOAuthReturn = params.has("__clerk_status") || params.has("__clerk_created_session");
+  const isOAuthReturn =
+    params.has("__clerk_status") ||
+    params.has("__clerk_created_session") ||
+    params.has("__clerk_db_jwt") ||
+    window.location.hash.includes("clerk");
   try {
     // proxyUrl is empty in dev (Clerk talks to the dev FAPI directly) and
     // auto-populated in prod, where Clerk must be routed through the app's
@@ -46,10 +50,19 @@ async function loadClerk() {
       if (googleName) {
         if (!localStorage.getItem("stasis_name")) {
           localStorage.setItem("stasis_name", googleName);
-          localStorage.setItem("stasis_lang", localStorage.getItem("stasis_lang") || "en");
-          const selectedClass = (S && S.classPreference) || localStorage.getItem("stasis_signup_class") || "10";
+          localStorage.setItem(
+            "stasis_lang",
+            localStorage.getItem("stasis_lang") || "en",
+          );
+          const selectedClass =
+            (S && S.classPreference) ||
+            localStorage.getItem("stasis_signup_class") ||
+            "10";
           localStorage.setItem("stasis_signup_class", selectedClass);
-          if (S) { S.classPreference = selectedClass; S.subjectPreference = "Maths"; }
+          if (S) {
+            S.classPreference = selectedClass;
+            S.subjectPreference = "Maths";
+          }
         }
         // Session is confirmed — enter the app immediately instead of
         // falling through to the login/splash screen.
@@ -743,7 +756,10 @@ function showNameSplash(onDone) {
   const dismiss = (cb) => {
     splash.style.opacity = "0";
     splash.style.transition = "opacity 0.25s";
-    setTimeout(() => { splash.remove(); cb(); }, 250);
+    setTimeout(() => {
+      splash.remove();
+      cb();
+    }, 250);
   };
 
   (async () => {
@@ -759,15 +775,21 @@ function showNameSplash(onDone) {
     const displayName = existingName || googleName || "";
 
     const selectedLang = localStorage.getItem("stasis_lang") || "en";
-    const selectedClass = (S && S.classPreference) || localStorage.getItem("stasis_signup_class") || "10";
-    const CLASSES = ["6","7","8","9","10"];
+    const selectedClass =
+      (S && S.classPreference) ||
+      localStorage.getItem("stasis_signup_class") ||
+      "10";
+    const CLASSES = ["6", "7", "8", "9", "10"];
 
     // ── If we just returned from Google OAuth and have no stored name, save it and launch ──
     if (!existingName && googleName && _clerkUser) {
       localStorage.setItem("stasis_name", googleName);
       localStorage.setItem("stasis_lang", selectedLang);
       localStorage.setItem("stasis_signup_class", selectedClass);
-      if (S) { S.classPreference = selectedClass; S.subjectPreference = "Maths"; }
+      if (S) {
+        S.classPreference = selectedClass;
+        S.subjectPreference = "Maths";
+      }
       dismiss(onDone);
       return;
     }
@@ -775,10 +797,17 @@ function showNameSplash(onDone) {
     if (isReturning) {
       const xp = (S && S.xp) || 0;
       const lvlIdx = typeof getLevel === "function" ? getLevel(xp) : 0;
-      const LEVEL_NAMES = ["🌱 Rookie","📖 Scholar","💡 Thinker","🧠 Genius","⚔️ Champion","🏆 Legend"];
+      const LEVEL_NAMES = [
+        "🌱 Rookie",
+        "📖 Scholar",
+        "💡 Thinker",
+        "🧠 Genius",
+        "⚔️ Champion",
+        "🏆 Legend",
+      ];
       const lvlName = LEVEL_NAMES[lvlIdx] || "🌱 Rookie";
       const initial = displayName.charAt(0).toUpperCase();
-      const colors = ["#4f8ef7","#9b6dff","#f7714f","#4fd9b3","#f7c74f"];
+      const colors = ["#4f8ef7", "#9b6dff", "#f7714f", "#4fd9b3", "#f7c74f"];
       const avatarColor = colors[displayName.charCodeAt(0) % colors.length];
       const avatarUrl = getClerkAvatarUrl();
       const avatarHtml = avatarUrl
@@ -814,23 +843,30 @@ function showNameSplash(onDone) {
       document.getElementById("continue-btn").onclick = () => dismiss(onDone);
       document.getElementById("switch-btn").onclick = async () => {
         if (_clerk && _clerkUser) {
-          try { await _clerk.signOut(); } catch(e) { /* ignore */ }
+          try {
+            await _clerk.signOut();
+          } catch (e) {
+            /* ignore */
+          }
           _clerkUser = null;
         }
         localStorage.removeItem("stasis_name");
         localStorage.removeItem("stasis_performance");
         localStorage.removeItem("stasis_state");
         splash.remove();
-        showNameSplash(function () { location.reload(); });
+        showNameSplash(function () {
+          location.reload();
+        });
       };
-
     } else {
-      const classPills = CLASSES.map(c =>
-        `<button class="class-pill" data-class="${c}" style="padding:10px 14px;border-radius:12px;border:1px solid rgba(255,255,255,0.1);background:${c===selectedClass?"linear-gradient(135deg,#4f8ef7,#9b6dff)":"rgba(255,255,255,0.04)"};color:${c===selectedClass?"#fff":"#7a8aaa"};font-size:0.9rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s;min-width:44px;">${c}</button>`
+      const classPills = CLASSES.map(
+        (c) =>
+          `<button class="class-pill" data-class="${c}" style="padding:10px 14px;border-radius:12px;border:1px solid rgba(255,255,255,0.1);background:${c === selectedClass ? "linear-gradient(135deg,#4f8ef7,#9b6dff)" : "rgba(255,255,255,0.04)"};color:${c === selectedClass ? "#fff" : "#7a8aaa"};font-size:0.9rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s;min-width:44px;">${c}</button>`,
       ).join("");
 
       const hasClerk = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
-      const googleBtn = hasClerk ? `
+      const googleBtn = hasClerk
+        ? `
         <button id="google-btn" style="width:100%;padding:13px;border-radius:14px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);color:#eef2ff;font-size:0.95rem;font-weight:600;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:10px;transition:background 0.15s,border-color 0.15s;">
           <svg width="18" height="18" viewBox="0 0 18 18"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/><path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>
           Continue with Google
@@ -839,7 +875,8 @@ function showNameSplash(onDone) {
           <div style="flex:1;height:1px;background:rgba(255,255,255,0.08);"></div>
           <span style="font-size:0.75rem;color:#4a5a78;font-weight:600;">or</span>
           <div style="flex:1;height:1px;background:rgba(255,255,255,0.08);"></div>
-        </div>` : "";
+        </div>`
+        : "";
 
       splash.innerHTML = `
         <style>
@@ -873,8 +910,8 @@ function showNameSplash(onDone) {
           <div style="display:flex;flex-direction:column;gap:8px;">
             <label style="font-size:0.75rem;font-weight:700;color:#7a8aaa;text-transform:uppercase;letter-spacing:0.06em;">Language</label>
             <div style="display:flex;gap:10px;">
-              <button id="lang-en-btn" style="flex:1;padding:12px;border-radius:14px;border:1px solid ${selectedLang==='en'?'rgba(79,142,247,0.5)':'rgba(255,255,255,0.08)'};background:${selectedLang==='en'?'rgba(79,142,247,0.15)':'rgba(255,255,255,0.03)'};color:${selectedLang==='en'?'#4f8ef7':'#7a8aaa'};font-size:0.9rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s;">🇬🇧 English</button>
-              <button id="lang-hi-btn" style="flex:1;padding:12px;border-radius:14px;border:1px solid ${selectedLang==='hi'?'rgba(155,109,255,0.5)':'rgba(255,255,255,0.08)'};background:${selectedLang==='hi'?'rgba(155,109,255,0.15)':'rgba(255,255,255,0.03)'};color:${selectedLang==='hi'?'#9b6dff':'#7a8aaa'};font-size:0.9rem;font-weight:700;cursor:pointer;font-family:'Noto Sans Devanagari',Inter,system-ui,sans-serif;transition:all 0.15s;">🇮🇳 हिंदी</button>
+              <button id="lang-en-btn" style="flex:1;padding:12px;border-radius:14px;border:1px solid ${selectedLang === "en" ? "rgba(79,142,247,0.5)" : "rgba(255,255,255,0.08)"};background:${selectedLang === "en" ? "rgba(79,142,247,0.15)" : "rgba(255,255,255,0.03)"};color:${selectedLang === "en" ? "#4f8ef7" : "#7a8aaa"};font-size:0.9rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s;">🇬🇧 English</button>
+              <button id="lang-hi-btn" style="flex:1;padding:12px;border-radius:14px;border:1px solid ${selectedLang === "hi" ? "rgba(155,109,255,0.5)" : "rgba(255,255,255,0.08)"};background:${selectedLang === "hi" ? "rgba(155,109,255,0.15)" : "rgba(255,255,255,0.03)"};color:${selectedLang === "hi" ? "#9b6dff" : "#7a8aaa"};font-size:0.9rem;font-weight:700;cursor:pointer;font-family:'Noto Sans Devanagari',Inter,system-ui,sans-serif;transition:all 0.15s;">🇮🇳 हिंदी</button>
             </div>
           </div>
 
@@ -909,7 +946,10 @@ function showNameSplash(onDone) {
             console.error("Google sign-in error:", e);
             btn.disabled = false;
             btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 18 18"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/><path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z" fill="#EA4335"/></svg> Continue with Google`;
-            document.getElementById("signup-err").textContent = e?.errors?.[0]?.longMessage || e?.message || "Google sign-in failed. Please try again.";
+            document.getElementById("signup-err").textContent =
+              e?.errors?.[0]?.longMessage ||
+              e?.message ||
+              "Google sign-in failed. Please try again.";
           }
         };
       }
@@ -918,11 +958,15 @@ function showNameSplash(onDone) {
         const pill = e.target.closest(".class-pill");
         if (!pill) return;
         chosenClass = pill.dataset.class;
-        document.querySelectorAll(".class-pill").forEach(p => {
+        document.querySelectorAll(".class-pill").forEach((p) => {
           const active = p.dataset.class === chosenClass;
-          p.style.background = active ? "linear-gradient(135deg,#4f8ef7,#9b6dff)" : "rgba(255,255,255,0.04)";
+          p.style.background = active
+            ? "linear-gradient(135deg,#4f8ef7,#9b6dff)"
+            : "rgba(255,255,255,0.04)";
           p.style.color = active ? "#fff" : "#7a8aaa";
-          p.style.borderColor = active ? "transparent" : "rgba(255,255,255,0.1)";
+          p.style.borderColor = active
+            ? "transparent"
+            : "rgba(255,255,255,0.1)";
         });
       });
 
@@ -930,12 +974,16 @@ function showNameSplash(onDone) {
         chosenLang = lang;
         const enBtn = document.getElementById("lang-en-btn");
         const hiBtn = document.getElementById("lang-hi-btn");
-        enBtn.style.borderColor = lang==="en" ? "rgba(79,142,247,0.5)" : "rgba(255,255,255,0.08)";
-        enBtn.style.background = lang==="en" ? "rgba(79,142,247,0.15)" : "rgba(255,255,255,0.03)";
-        enBtn.style.color = lang==="en" ? "#4f8ef7" : "#7a8aaa";
-        hiBtn.style.borderColor = lang==="hi" ? "rgba(155,109,255,0.5)" : "rgba(255,255,255,0.08)";
-        hiBtn.style.background = lang==="hi" ? "rgba(155,109,255,0.15)" : "rgba(255,255,255,0.03)";
-        hiBtn.style.color = lang==="hi" ? "#9b6dff" : "#7a8aaa";
+        enBtn.style.borderColor =
+          lang === "en" ? "rgba(79,142,247,0.5)" : "rgba(255,255,255,0.08)";
+        enBtn.style.background =
+          lang === "en" ? "rgba(79,142,247,0.15)" : "rgba(255,255,255,0.03)";
+        enBtn.style.color = lang === "en" ? "#4f8ef7" : "#7a8aaa";
+        hiBtn.style.borderColor =
+          lang === "hi" ? "rgba(155,109,255,0.5)" : "rgba(255,255,255,0.08)";
+        hiBtn.style.background =
+          lang === "hi" ? "rgba(155,109,255,0.15)" : "rgba(255,255,255,0.03)";
+        hiBtn.style.color = lang === "hi" ? "#9b6dff" : "#7a8aaa";
       };
       document.getElementById("lang-en-btn").onclick = () => setLang("en");
       document.getElementById("lang-hi-btn").onclick = () => setLang("hi");
@@ -953,16 +1001,22 @@ function showNameSplash(onDone) {
         localStorage.setItem("stasis_name", name);
         localStorage.setItem("stasis_lang", chosenLang);
         localStorage.setItem("stasis_signup_class", chosenClass);
-        if (S) { S.classPreference = chosenClass; S.subjectPreference = "Maths"; }
+        if (S) {
+          S.classPreference = chosenClass;
+          S.subjectPreference = "Maths";
+        }
         dismiss(onDone);
       };
 
       document.getElementById("signup-btn").onclick = proceed;
-      document.getElementById("signup-name").addEventListener("keydown", (e) => {
-        if (e.key === "Enter") proceed();
-        document.getElementById("signup-name").style.borderColor = "rgba(255,255,255,0.1)";
-        document.getElementById("signup-err").textContent = "";
-      });
+      document
+        .getElementById("signup-name")
+        .addEventListener("keydown", (e) => {
+          if (e.key === "Enter") proceed();
+          document.getElementById("signup-name").style.borderColor =
+            "rgba(255,255,255,0.1)";
+          document.getElementById("signup-err").textContent = "";
+        });
       setTimeout(() => document.getElementById("signup-name").focus(), 50);
     }
   })();
@@ -974,63 +1028,147 @@ function getLanguage() {
 
 const LANG = {
   en: {
-    nav_home:"Home",nav_practice:"Practice",nav_saved:"Saved",nav_stats:"Stats",nav_ranks:"Ranks",nav_games:"Games",nav_papers:"Papers",
-    home_heading:"Level Up Your CBSE Prep ⚡",home_sub:"AI-powered solutions for Classes 6–10",
-    new_user:"New User",learning_as:"Learning as:",today_xp:"Today XP",streak:"Streak",solved:"Solved",
-    subject:"Subject",class_label:"Class",chapter:"Chapter",select_chapter:"— Select Chapter —",
-    your_question:"Your Question",question_placeholder:"Type or paste your CBSE question here...",
-    upload_photo:"📷 Upload Question Photo",solve_btn:"Solve →",
-    save_answer:"Save Answer 💾",ask_another:"Ask Another",
-    daily_practice:"Daily Practice",completed:"Completed",change_chapter:"Change Chapter",
-    questions_for_level:"Questions adapted for your level:",
-    setup_practice:"Set Up Daily Practice 📚",setup_sub:"Choose your class, subject and chapter",
-    your_class:"Your Class",start_practice:"Start Practice ✨",
-    type_answer:"Type your answer...",submit_answer:"Submit Answer",
-    saved_answers:"Saved Answers",search_saved:"Search saved answers...",
-    nothing_saved:"Nothing saved yet. Go solve something!",
-    questions_solved:"Questions Solved",current_streak:"Current Streak",best_streak:"Best Streak",total_xp:"Total XP",
-    subject_breakdown:"Subject Breakdown",activity_30:"Activity (Last 30 Days)",weekly_xp:"Weekly XP",
-    update_score:"Update My Score",your_level:"Your Learning Level",
-    xp_to_next:"XP to next level",max_level:"Maximum level!",
-    leaderboard_title:"Leaderboard 🏆",
-    games_title:"Games 🎮",games_sub:"Select your chapter, then pick a game",
-    quiz_title:"CBSE Quiz",quiz_desc:"5 MCQ questions from your chapter. Test your knowledge!",quiz_xp:"+10 XP per correct answer",
-    scramble_title:"Word Scramble",scramble_desc:"Unscramble chapter vocabulary in 60 seconds!",scramble_xp:"+8 XP per correct word",
-    math_title:"Math Challenge",math_desc:"5 mental math problems. Speed bonus under 10 seconds!",math_xp:"+10–20 XP per problem",
-    resources_title:"📚 Resources",papers_tab:"📄 Papers",notes_tab:"📒 Notes",
-    onboard_title:"Let's Personalize Your Learning",
-    onboard_sub:"Tell us your last exam score so we can adapt your questions and explanations",
-    marks_scored:"Marks Scored",out_of:"Out of (Total Marks)",start_learning:"Start Learning →",
+    nav_home: "Home",
+    nav_practice: "Practice",
+    nav_saved: "Saved",
+    nav_stats: "Stats",
+    nav_ranks: "Ranks",
+    nav_games: "Games",
+    nav_papers: "Papers",
+    home_heading: "Level Up Your CBSE Prep ⚡",
+    home_sub: "AI-powered solutions for Classes 6–10",
+    new_user: "New User",
+    learning_as: "Learning as:",
+    today_xp: "Today XP",
+    streak: "Streak",
+    solved: "Solved",
+    subject: "Subject",
+    class_label: "Class",
+    chapter: "Chapter",
+    select_chapter: "— Select Chapter —",
+    your_question: "Your Question",
+    question_placeholder: "Type or paste your CBSE question here...",
+    upload_photo: "📷 Upload Question Photo",
+    solve_btn: "Solve →",
+    save_answer: "Save Answer 💾",
+    ask_another: "Ask Another",
+    daily_practice: "Daily Practice",
+    completed: "Completed",
+    change_chapter: "Change Chapter",
+    questions_for_level: "Questions adapted for your level:",
+    setup_practice: "Set Up Daily Practice 📚",
+    setup_sub: "Choose your class, subject and chapter",
+    your_class: "Your Class",
+    start_practice: "Start Practice ✨",
+    type_answer: "Type your answer...",
+    submit_answer: "Submit Answer",
+    saved_answers: "Saved Answers",
+    search_saved: "Search saved answers...",
+    nothing_saved: "Nothing saved yet. Go solve something!",
+    questions_solved: "Questions Solved",
+    current_streak: "Current Streak",
+    best_streak: "Best Streak",
+    total_xp: "Total XP",
+    subject_breakdown: "Subject Breakdown",
+    activity_30: "Activity (Last 30 Days)",
+    weekly_xp: "Weekly XP",
+    update_score: "Update My Score",
+    your_level: "Your Learning Level",
+    xp_to_next: "XP to next level",
+    max_level: "Maximum level!",
+    leaderboard_title: "Leaderboard 🏆",
+    games_title: "Games 🎮",
+    games_sub: "Select your chapter, then pick a game",
+    quiz_title: "CBSE Quiz",
+    quiz_desc: "5 MCQ questions from your chapter. Test your knowledge!",
+    quiz_xp: "+10 XP per correct answer",
+    scramble_title: "Word Scramble",
+    scramble_desc: "Unscramble chapter vocabulary in 60 seconds!",
+    scramble_xp: "+8 XP per correct word",
+    math_title: "Math Challenge",
+    math_desc: "5 mental math problems. Speed bonus under 10 seconds!",
+    math_xp: "+10–20 XP per problem",
+    resources_title: "📚 Resources",
+    papers_tab: "📄 Papers",
+    notes_tab: "📒 Notes",
+    onboard_title: "Let's Personalize Your Learning",
+    onboard_sub:
+      "Tell us your last exam score so we can adapt your questions and explanations",
+    marks_scored: "Marks Scored",
+    out_of: "Out of (Total Marks)",
+    start_learning: "Start Learning →",
   },
   hi: {
-    nav_home:"होम",nav_practice:"अभ्यास",nav_saved:"सहेजे",nav_stats:"आँकड़े",nav_ranks:"रैंक",nav_games:"खेल",nav_papers:"प्रश्नपत्र",
-    home_heading:"अपनी CBSE तैयारी को बेहतर बनाएं ⚡",home_sub:"कक्षा 6–10 के लिए AI समाधान",
-    new_user:"नया उपयोगकर्ता",learning_as:"सीख रहे हैं:",today_xp:"आज XP",streak:"स्ट्रीक",solved:"हल किए",
-    subject:"विषय",class_label:"कक्षा",chapter:"अध्याय",select_chapter:"— अध्याय चुनें —",
-    your_question:"आपका प्रश्न",question_placeholder:"यहाँ अपना CBSE प्रश्न टाइप या पेस्ट करें...",
-    upload_photo:"📷 प्रश्न की फोटो अपलोड करें",solve_btn:"हल करें →",
-    save_answer:"उत्तर सहेजें 💾",ask_another:"दूसरा प्रश्न",
-    daily_practice:"दैनिक अभ्यास",completed:"पूर्ण",change_chapter:"अध्याय बदलें",
-    questions_for_level:"आपके स्तर के अनुसार प्रश्न:",
-    setup_practice:"दैनिक अभ्यास सेट करें 📚",setup_sub:"अपनी कक्षा, विषय और अध्याय चुनें",
-    your_class:"आपकी कक्षा",start_practice:"अभ्यास शुरू करें ✨",
-    type_answer:"अपना उत्तर टाइप करें...",submit_answer:"उत्तर जमा करें",
-    saved_answers:"सहेजे गए उत्तर",search_saved:"सहेजे गए उत्तर खोजें...",
-    nothing_saved:"अभी तक कुछ सहेजा नहीं। कुछ हल करें!",
-    questions_solved:"हल किए प्रश्न",current_streak:"वर्तमान स्ट्रीक",best_streak:"सर्वश्रेष्ठ स्ट्रीक",total_xp:"कुल XP",
-    subject_breakdown:"विषयवार विश्लेषण",activity_30:"गतिविधि (पिछले 30 दिन)",weekly_xp:"साप्ताहिक XP",
-    update_score:"स्कोर अपडेट करें",your_level:"आपका सीखने का स्तर",
-    xp_to_next:"XP और चाहिए अगले स्तर के लिए",max_level:"अधिकतम स्तर!",
-    leaderboard_title:"लीडरबोर्ड 🏆",
-    games_title:"खेल 🎮",games_sub:"अपना अध्याय चुनें, फिर खेल चुनें",
-    quiz_title:"CBSE प्रश्नोत्तरी",quiz_desc:"आपके अध्याय से 5 MCQ प्रश्न। अपनी जानकारी परखें!",quiz_xp:"+10 XP प्रति सही उत्तर",
-    scramble_title:"शब्द पहेली",scramble_desc:"60 सेकंड में अध्याय के शब्द सुलझाएं!",scramble_xp:"+8 XP प्रति सही शब्द",
-    math_title:"गणित चुनौती",math_desc:"5 मानसिक गणित समस्याएं। 10 सेकंड में बोनस XP!",math_xp:"+10–20 XP प्रति समस्या",
-    resources_title:"📚 संसाधन",papers_tab:"📄 प्रश्नपत्र",notes_tab:"📒 नोट्स",
-    onboard_title:"अपनी पढ़ाई को व्यक्तिगत बनाएं",
-    onboard_sub:"हमें अपना पिछला परीक्षा स्कोर बताएं ताकि हम प्रश्न आपके अनुसार ढाल सकें",
-    marks_scored:"प्राप्त अंक",out_of:"कुल अंक",start_learning:"पढ़ाई शुरू करें →",
-  }
+    nav_home: "होम",
+    nav_practice: "अभ्यास",
+    nav_saved: "सहेजे",
+    nav_stats: "आँकड़े",
+    nav_ranks: "रैंक",
+    nav_games: "खेल",
+    nav_papers: "प्रश्नपत्र",
+    home_heading: "अपनी CBSE तैयारी को बेहतर बनाएं ⚡",
+    home_sub: "कक्षा 6–10 के लिए AI समाधान",
+    new_user: "नया उपयोगकर्ता",
+    learning_as: "सीख रहे हैं:",
+    today_xp: "आज XP",
+    streak: "स्ट्रीक",
+    solved: "हल किए",
+    subject: "विषय",
+    class_label: "कक्षा",
+    chapter: "अध्याय",
+    select_chapter: "— अध्याय चुनें —",
+    your_question: "आपका प्रश्न",
+    question_placeholder: "यहाँ अपना CBSE प्रश्न टाइप या पेस्ट करें...",
+    upload_photo: "📷 प्रश्न की फोटो अपलोड करें",
+    solve_btn: "हल करें →",
+    save_answer: "उत्तर सहेजें 💾",
+    ask_another: "दूसरा प्रश्न",
+    daily_practice: "दैनिक अभ्यास",
+    completed: "पूर्ण",
+    change_chapter: "अध्याय बदलें",
+    questions_for_level: "आपके स्तर के अनुसार प्रश्न:",
+    setup_practice: "दैनिक अभ्यास सेट करें 📚",
+    setup_sub: "अपनी कक्षा, विषय और अध्याय चुनें",
+    your_class: "आपकी कक्षा",
+    start_practice: "अभ्यास शुरू करें ✨",
+    type_answer: "अपना उत्तर टाइप करें...",
+    submit_answer: "उत्तर जमा करें",
+    saved_answers: "सहेजे गए उत्तर",
+    search_saved: "सहेजे गए उत्तर खोजें...",
+    nothing_saved: "अभी तक कुछ सहेजा नहीं। कुछ हल करें!",
+    questions_solved: "हल किए प्रश्न",
+    current_streak: "वर्तमान स्ट्रीक",
+    best_streak: "सर्वश्रेष्ठ स्ट्रीक",
+    total_xp: "कुल XP",
+    subject_breakdown: "विषयवार विश्लेषण",
+    activity_30: "गतिविधि (पिछले 30 दिन)",
+    weekly_xp: "साप्ताहिक XP",
+    update_score: "स्कोर अपडेट करें",
+    your_level: "आपका सीखने का स्तर",
+    xp_to_next: "XP और चाहिए अगले स्तर के लिए",
+    max_level: "अधिकतम स्तर!",
+    leaderboard_title: "लीडरबोर्ड 🏆",
+    games_title: "खेल 🎮",
+    games_sub: "अपना अध्याय चुनें, फिर खेल चुनें",
+    quiz_title: "CBSE प्रश्नोत्तरी",
+    quiz_desc: "आपके अध्याय से 5 MCQ प्रश्न। अपनी जानकारी परखें!",
+    quiz_xp: "+10 XP प्रति सही उत्तर",
+    scramble_title: "शब्द पहेली",
+    scramble_desc: "60 सेकंड में अध्याय के शब्द सुलझाएं!",
+    scramble_xp: "+8 XP प्रति सही शब्द",
+    math_title: "गणित चुनौती",
+    math_desc: "5 मानसिक गणित समस्याएं। 10 सेकंड में बोनस XP!",
+    math_xp: "+10–20 XP प्रति समस्या",
+    resources_title: "📚 संसाधन",
+    papers_tab: "📄 प्रश्नपत्र",
+    notes_tab: "📒 नोट्स",
+    onboard_title: "अपनी पढ़ाई को व्यक्तिगत बनाएं",
+    onboard_sub:
+      "हमें अपना पिछला परीक्षा स्कोर बताएं ताकि हम प्रश्न आपके अनुसार ढाल सकें",
+    marks_scored: "प्राप्त अंक",
+    out_of: "कुल अंक",
+    start_learning: "पढ़ाई शुरू करें →",
+  },
 };
 
 function t(key) {
@@ -1040,10 +1178,15 @@ function t(key) {
 
 function applyNavLang() {
   const map = {
-    home: t("nav_home"), practice: t("nav_practice"), saved: t("nav_saved"),
-    stats: t("nav_stats"), leaderboard: t("nav_ranks"), games: t("nav_games"), resources: t("nav_papers")
+    home: t("nav_home"),
+    practice: t("nav_practice"),
+    saved: t("nav_saved"),
+    stats: t("nav_stats"),
+    leaderboard: t("nav_ranks"),
+    games: t("nav_games"),
+    resources: t("nav_papers"),
   };
-  document.querySelectorAll(".nav-btn[data-page]").forEach(btn => {
+  document.querySelectorAll(".nav-btn[data-page]").forEach((btn) => {
     const label = map[btn.dataset.page];
     if (!label) return;
     const spans = btn.querySelectorAll("span");
@@ -1052,7 +1195,9 @@ function applyNavLang() {
   const hiFont = "'Noto Sans Devanagari', Inter, system-ui, sans-serif";
   const baseFont = "Inter, system-ui, sans-serif";
   const isHindi = getLanguage() === "hi";
-  document.querySelectorAll(".nav-btn").forEach(b => { b.style.fontFamily = isHindi ? hiFont : baseFont; });
+  document.querySelectorAll(".nav-btn").forEach((b) => {
+    b.style.fontFamily = isHindi ? hiFont : baseFont;
+  });
   if (isHindi) {
     document.body.style.fontFamily = hiFont;
   } else {
