@@ -10,10 +10,15 @@ async function loadClerk() {
   if (!key) return null;
   if (_clerk) return _clerk;
   try {
-    _clerk = new Clerk(key);
+    // proxyUrl is empty in dev (Clerk talks to the dev FAPI directly) and
+    // auto-populated in prod, where Clerk must be routed through the app's
+    // own proxy instead of hitting the custom FAPI domain directly.
+    const proxyUrl = import.meta.env.VITE_CLERK_PROXY_URL || undefined;
+    _clerk = new Clerk(key, proxyUrl ? { proxyUrl } : undefined);
     await _clerk.load();
     _clerkUser = _clerk.user || null;
   } catch (e) {
+    console.error("Clerk load error:", e);
     _clerk = null;
     _clerkUser = null;
   }
