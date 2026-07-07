@@ -1,5 +1,5 @@
 // StasisEducation - Full Application
-import { INAPP_PAPERS } from "./papers-data.js";
+import { INAPP_PAPERS, PDF_PAPERS } from "./papers-data.js";
 import { Clerk } from "@clerk/clerk-js";
 
 let _clerk = null;
@@ -3475,20 +3475,21 @@ function renderResources() {
     <h1 class="gradient-heading section-heading">${t("resources_title")}</h1>
     <div style="display:flex;gap:0;margin-bottom:20px;border-bottom:2px solid rgba(255,255,255,0.08)">
       <button id="tab-papers" onclick="switchResourceTab('papers')" style="flex:1;padding:10px;background:none;border:none;color:#4f8ef7;font-weight:700;font-size:0.9rem;font-family:inherit;border-bottom:2px solid #4f8ef7;cursor:pointer;margin-bottom:-2px">${t("papers_tab")}</button>
+      <button id="tab-pdfs" onclick="switchResourceTab('pdfs')" style="flex:1;padding:10px;background:none;border:none;color:var(--text-muted);font-weight:700;font-size:0.9rem;font-family:inherit;border-bottom:2px solid transparent;cursor:pointer;margin-bottom:-2px">📥 Board PDFs</button>
       <button id="tab-notes" onclick="switchResourceTab('notes')" style="flex:1;padding:10px;background:none;border:none;color:var(--text-muted);font-weight:700;font-size:0.9rem;font-family:inherit;border-bottom:2px solid transparent;cursor:pointer;margin-bottom:-2px">${t("notes_tab")}</button>
     </div>
     <div id="resource-tab-content"></div>
   `;
   window.switchResourceTab = (tab) => {
-    document.getElementById("tab-papers").style.color =
-      tab === "papers" ? "#4f8ef7" : "var(--text-muted)";
-    document.getElementById("tab-papers").style.borderBottomColor =
-      tab === "papers" ? "#4f8ef7" : "transparent";
-    document.getElementById("tab-notes").style.color =
-      tab === "notes" ? "#4f8ef7" : "var(--text-muted)";
-    document.getElementById("tab-notes").style.borderBottomColor =
-      tab === "notes" ? "#4f8ef7" : "transparent";
+    ["papers", "pdfs", "notes"].forEach((id) => {
+      const el = document.getElementById("tab-" + id);
+      if (!el) return;
+      const active = tab === id;
+      el.style.color = active ? "#4f8ef7" : "var(--text-muted)";
+      el.style.borderBottomColor = active ? "#4f8ef7" : "transparent";
+    });
     if (tab === "papers") renderPapersTab();
+    else if (tab === "pdfs") renderPdfPapersTab();
     else renderNotesTab();
   };
   switchResourceTab("papers");
@@ -3565,6 +3566,94 @@ function renderPapersTab() {
       );
       group.style.display = visible ? "block" : "none";
     });
+  };
+}
+
+function renderPdfPapersTab() {
+  const TAG_COLOR = { "Sample Paper": "#4f8ef7", PYQ: "#a78bfa" };
+  const SUBJECTS = [
+    "All",
+    "Maths",
+    "Science",
+    "Social Science",
+    "English",
+    "Hindi",
+  ];
+
+  const grouped = {};
+  PDF_PAPERS.forEach((p) => {
+    if (!grouped[p.tag]) grouped[p.tag] = [];
+    grouped[p.tag].push(p);
+  });
+
+  let html = `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px">
+    ${SUBJECTS.map((s, i) => `<button class="pdf-filter-pill${i === 0 ? " active" : ""}" data-subject="${s}" onclick="filterPdfPapers('${s}')" style="padding:6px 14px;border-radius:20px;border:1px solid ${i === 0 ? "#4f8ef7" : "rgba(255,255,255,0.12)"};background:${i === 0 ? "rgba(79,142,247,0.15)" : "rgba(255,255,255,0.05)"};color:${i === 0 ? "#4f8ef7" : "var(--text-muted)"};font-size:0.78rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s">${s}</button>`).join("")}
+  </div>`;
+
+  Object.entries(grouped).forEach(([tag, items]) => {
+    const color = TAG_COLOR[tag] || "#4f8ef7";
+    html += `<div class="pdf-papers-group" style="margin-bottom:20px">
+      <div style="font-size:0.72rem;font-weight:800;letter-spacing:0.08em;color:${color};text-transform:uppercase;margin-bottom:10px">${tag}s</div>
+      ${items
+        .map(
+          (p) => `
+        <div data-subject="${p.subject}" class="pdf-paper-card" onclick="openPdfModal('${p.id}')" style="margin-bottom:10px;cursor:pointer">
+          <div class="glass" style="padding:14px 16px;border:1px solid ${color}28;transition:all .2s" onmouseover="this.style.borderColor='${color}88';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='${color}28';this.style.transform=''">
+            <div style="display:flex;align-items:center;gap:10px;justify-content:space-between">
+              <div>
+                <div style="font-weight:700;color:var(--text);font-size:0.9rem;margin-bottom:3px">${p.label}</div>
+                <div style="font-size:0.75rem;color:var(--text-muted)">${p.year} · ${p.subject}</div>
+              </div>
+              <div style="flex-shrink:0;background:${color}18;border:1px solid ${color}44;border-radius:8px;padding:6px 14px;font-size:0.78rem;font-weight:700;color:${color}">Open PDF →</div>
+            </div>
+          </div>
+        </div>`,
+        )
+        .join("")}
+    </div>`;
+  });
+
+  document.getElementById("resource-tab-content").innerHTML = html;
+
+  window.filterPdfPapers = (subject) => {
+    document.querySelectorAll(".pdf-filter-pill").forEach((btn) => {
+      const active = btn.dataset.subject === subject;
+      btn.style.borderColor = active ? "#4f8ef7" : "rgba(255,255,255,0.12)";
+      btn.style.background = active
+        ? "rgba(79,142,247,0.15)"
+        : "rgba(255,255,255,0.05)";
+      btn.style.color = active ? "#4f8ef7" : "var(--text-muted)";
+    });
+    document.querySelectorAll(".pdf-paper-card").forEach((card) => {
+      card.style.display =
+        subject === "All" || card.dataset.subject === subject
+          ? "block"
+          : "none";
+    });
+    document.querySelectorAll(".pdf-papers-group").forEach((group) => {
+      group.style.display = [...group.querySelectorAll(".pdf-paper-card")].some(
+        (c) => c.style.display !== "none",
+      )
+        ? "block"
+        : "none";
+    });
+  };
+
+  window.openPdfModal = (id) => {
+    const paper = PDF_PAPERS.find((p) => p.id === id);
+    if (!paper) return;
+    const previewUrl = paper.url.replace("/view", "/preview");
+    const modal = document.createElement("div");
+    modal.id = "pdf-modal";
+    modal.style.cssText =
+      "position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;flex-direction:column;";
+    modal.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--card-bg);border-bottom:1px solid rgba(255,255,255,0.1)">
+        <div style="font-weight:700;color:var(--text);font-size:0.95rem">${paper.label}</div>
+        <button onclick="document.getElementById('pdf-modal').remove()" style="background:rgba(255,255,255,0.1);border:none;color:var(--text);border-radius:8px;padding:6px 14px;font-weight:700;cursor:pointer;font-family:inherit">✕ Close</button>
+      </div>
+      <iframe src="${previewUrl}" style="flex:1;border:none;width:100%" allowfullscreen></iframe>`;
+    document.body.appendChild(modal);
   };
 }
 
