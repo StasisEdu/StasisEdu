@@ -3642,18 +3642,7 @@ function renderPdfPapersTab() {
   window.openPdfModal = (id) => {
     const paper = PDF_PAPERS.find((p) => p.id === id);
     if (!paper) return;
-    const previewUrl = paper.url.replace("/view", "/preview");
-    const modal = document.createElement("div");
-    modal.id = "pdf-modal";
-    modal.style.cssText =
-      "position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;flex-direction:column;";
-    modal.innerHTML = `
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--card-bg);border-bottom:1px solid rgba(255,255,255,0.1)">
-        <div style="font-weight:700;color:var(--text);font-size:0.95rem">${paper.label}</div>
-        <button onclick="document.getElementById('pdf-modal').remove()" style="background:rgba(255,255,255,0.1);border:none;color:var(--text);border-radius:8px;padding:6px 14px;font-weight:700;cursor:pointer;font-family:inherit">✕ Close</button>
-      </div>
-      <iframe src="${previewUrl}" style="flex:1;border:none;width:100%" allowfullscreen></iframe>`;
-    document.body.appendChild(modal);
+    window.open(paper.url, "_blank");
   };
 }
 
