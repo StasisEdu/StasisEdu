@@ -4943,7 +4943,7 @@ function init() {
 showNameSplash(init);
 
 // ============================================================
-// NOVA CHATBOT — Floating widget, calls /api/chatbot (Groq)
+// NOVA CHATBOT — uses existing apiPost() helper
 // ============================================================
 (function initNovaChatbot() {
   let chatHistory = [];
@@ -5092,14 +5092,12 @@ showNameSplash(init);
   `;
   document.head.appendChild(style);
 
-  // FAB
   const fab = document.createElement("button");
   fab.id = "nova-fab";
   fab.title = "Chat with Nova";
   fab.innerHTML = `<svg width="26" height="26" viewBox="0 0 24 24" fill="white"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg>`;
   document.body.appendChild(fab);
 
-  // Panel
   const panel = document.createElement("div");
   panel.id = "nova-panel";
   panel.innerHTML = `
@@ -5115,10 +5113,10 @@ showNameSplash(init);
         <h3>Hey, I'm Nova!</h3>
         <p>Your general AI — not Stasis. Ask me anything: science, code, trivia, opinions. For CBSE homework, use the Home tab!</p>
         <div class="nw-chips">
-          <button class="nw-chip" data-q="Explain quantum entanglement simply">⚛️ Quantum physics</button>
-          <button class="nw-chip" data-q="Write a Python function to sort a list">🐍 Python help</button>
+          <button class="nw-chip" data-q="Explain quantum entanglement simply">⚛️ Quantum</button>
+          <button class="nw-chip" data-q="Write a Python bubble sort">🐍 Python</button>
           <button class="nw-chip" data-q="What's trending in AI right now?">🤖 AI news</button>
-          <button class="nw-chip" data-q="Give me a fun logic puzzle">🧩 Logic puzzle</button>
+          <button class="nw-chip" data-q="Give me a fun logic puzzle">🧩 Puzzle</button>
         </div>
       </div>
     </div>
@@ -5131,11 +5129,8 @@ showNameSplash(init);
   const msgsEl = panel.querySelector("#nova-msgs");
   const inputEl = panel.querySelector("#nova-input");
   const sendBtn = panel.querySelector("#nova-send");
-  const maxBtn = panel.querySelector("#nova-max-btn");
-  const closeBtn = panel.querySelector("#nova-close-btn");
 
-  // Markdown
-  function md(t) {
+  function renderMd(t) {
     return t
       .replace(
         /```[\w]*\n?([\s\S]*?)```/g,
@@ -5146,53 +5141,47 @@ showNameSplash(init);
       .replace(/\*([^*\n]+)\*/g, "<em>$1</em>")
       .replace(/^#{1,3} (.+)$/gm, "<strong>$1</strong>")
       .replace(/^[-*] (.+)$/gm, "<li>$1</li>")
-      .replace(/(<li>[\s\S]+?<\/li>)/g, "<ul>$1</ul>")
-      .replace(/<\/ul>\s*<ul>/g, "")
+      .replace(/(<li>.*<\/li>\n?)+/g, (m) => `<ul>${m}</ul>`)
       .replace(/\n{2,}/g, "</p><p>")
       .replace(/\n/g, "<br>");
   }
 
-  // Grade redirect — instant, no API call
   const GRADE_RE =
-    /\b(class|grade|std)\s*(6|7|8|9|10|six|seven|eight|nine|ten)\b|(cbse|ncert|board.?exam|syllabus)/i;
-  const HOMEWORK_RE =
-    /\b(solve|calculate|find the|prove that|derive|balance the equation|write a note on|what is the formula for)\b/i;
+    /\b(class|grade|std)\s*(6|7|8|9|10)\b|(cbse|ncert|board.?exam)/i;
+  const HW_RE =
+    /\b(solve|calculate|find the|prove that|derive|balance the equation|write a note on|what is the formula)\b/i;
   function isSchoolQ(t) {
-    return GRADE_RE.test(t) || HOMEWORK_RE.test(t);
+    return GRADE_RE.test(t) || HW_RE.test(t);
   }
 
-  function appendMsg(role, html, redir) {
-    const w = msgsEl.querySelector("#nova-welcome");
-    if (w) w.remove();
-    if (redir) {
+  function addMsg(role, html, asRedir) {
+    msgsEl.querySelector("#nova-welcome")?.remove();
+    if (asRedir) {
       const d = document.createElement("div");
       d.className = "nova-redir";
       d.innerHTML = html;
       msgsEl.appendChild(d);
-      msgsEl.scrollTop = msgsEl.scrollHeight;
-      return d;
+    } else {
+      const w = document.createElement("div");
+      w.className = `nmsg ${role}`;
+      w.innerHTML = `<div class="nbub">${html}</div>`;
+      msgsEl.appendChild(w);
     }
-    const wrap = document.createElement("div");
-    wrap.className = `nmsg ${role}`;
-    wrap.innerHTML = `<div class="nbub">${html}</div>`;
-    msgsEl.appendChild(wrap);
     msgsEl.scrollTop = msgsEl.scrollHeight;
-    return wrap;
   }
 
-  function showTyping() {
-    const w = msgsEl.querySelector("#nova-welcome");
-    if (w) w.remove();
-    const wrap = document.createElement("div");
-    wrap.className = "nmsg ai";
-    wrap.id = "nova-typing";
-    wrap.innerHTML = `<div class="nbub"><div class="nova-typing"><div class="nova-dot"></div><div class="nova-dot"></div><div class="nova-dot"></div></div></div>`;
-    msgsEl.appendChild(wrap);
+  function addTyping() {
+    msgsEl.querySelector("#nova-welcome")?.remove();
+    const w = document.createElement("div");
+    w.className = "nmsg ai";
+    w.id = "nova-typing";
+    w.innerHTML = `<div class="nbub"><div class="nova-typing"><div class="nova-dot"></div><div class="nova-dot"></div><div class="nova-dot"></div></div></div>`;
+    msgsEl.appendChild(w);
     msgsEl.scrollTop = msgsEl.scrollHeight;
-    return wrap;
+    return w;
   }
 
-  async function sendMessage(prefill) {
+  async function send(prefill) {
     const text = (prefill || inputEl.value).trim();
     if (!text || isLoading) return;
     inputEl.value = "";
@@ -5200,13 +5189,12 @@ showNameSplash(init);
     isLoading = true;
     sendBtn.disabled = true;
 
-    appendMsg("user", md(text));
+    addMsg("user", renderMd(text));
 
-    // Instant redirect for school questions
     if (isSchoolQ(text)) {
-      appendMsg(
+      addMsg(
         "ai",
-        `Looks like a school question! 🎯 Head to Home — Stasis is built exactly for CBSE.<br><button class="nova-redir-btn" onclick="navigate('home')">🏠 Go to Home</button>`,
+        `Looks like a school question! 🎯 Stasis handles CBSE perfectly — head to Home.<br><button class="nova-redir-btn" onclick="navigate('home')">🏠 Go to Home</button>`,
         true,
       );
       isLoading = false;
@@ -5214,31 +5202,22 @@ showNameSplash(init);
       return;
     }
 
-    const typingEl = showTyping();
-
+    const t = addTyping();
     try {
-      // Call backend /api/chatbot (same origin — no CORS issues)
-      const res = await fetch("/api/chatbot", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text, history: chatHistory }),
+      // Use the same apiPost() that all other routes use — defined at line ~1837
+      const data = await apiPost("/chatbot", {
+        message: text,
+        history: chatHistory,
       });
-
-      const data = await res.json();
-      typingEl.remove();
-
-      if (!res.ok || data.error) {
-        appendMsg("ai", "Hmm, Nova hit a snag. Try again! 🔌");
-      } else {
-        const reply = data.reply || "I didn't catch that, try again?";
-        appendMsg("ai", md(reply));
-        chatHistory.push({ role: "user", content: text });
-        chatHistory.push({ role: "assistant", content: reply });
-        if (chatHistory.length > 40) chatHistory = chatHistory.slice(-40);
-      }
-    } catch {
-      typingEl.remove();
-      appendMsg("ai", "Connection dropped. Give it another shot? 🔌");
+      t.remove();
+      const reply = data.reply || "Try again?";
+      addMsg("ai", renderMd(reply));
+      chatHistory.push({ role: "user", content: text });
+      chatHistory.push({ role: "assistant", content: reply });
+      if (chatHistory.length > 40) chatHistory = chatHistory.slice(-40);
+    } catch (e) {
+      t.remove();
+      addMsg("ai", `Error: ${e.message}. Is the server running? 🔌`);
     } finally {
       isLoading = false;
       sendBtn.disabled = false;
@@ -5246,26 +5225,27 @@ showNameSplash(init);
     }
   }
 
+  panel.querySelector("#nova-close-btn").addEventListener("click", () => {
+    isOpen = false;
+    panel.classList.remove("open");
+  });
+  panel.querySelector("#nova-max-btn").addEventListener("click", () => {
+    isMaximised = !isMaximised;
+    panel.classList.toggle("maximised", isMaximised);
+    const b = panel.querySelector("#nova-max-btn");
+    b.textContent = isMaximised ? "⤡" : "⤢";
+    b.title = isMaximised ? "Restore" : "Maximise";
+  });
   fab.addEventListener("click", () => {
     isOpen = !isOpen;
     panel.classList.toggle("open", isOpen);
     if (isOpen) setTimeout(() => inputEl.focus(), 260);
   });
-  closeBtn.addEventListener("click", () => {
-    isOpen = false;
-    panel.classList.remove("open");
-  });
-  maxBtn.addEventListener("click", () => {
-    isMaximised = !isMaximised;
-    panel.classList.toggle("maximised", isMaximised);
-    maxBtn.textContent = isMaximised ? "⤡" : "⤢";
-    maxBtn.title = isMaximised ? "Restore" : "Maximise";
-  });
-  sendBtn.addEventListener("click", () => sendMessage());
+  sendBtn.addEventListener("click", () => send());
   inputEl.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      sendMessage();
+      send();
     }
   });
   inputEl.addEventListener("input", () => {
@@ -5274,6 +5254,6 @@ showNameSplash(init);
   });
   panel.addEventListener("click", (e) => {
     const c = e.target.closest(".nw-chip");
-    if (c) sendMessage(c.dataset.q);
+    if (c) send(c.dataset.q);
   });
 })();
