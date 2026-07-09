@@ -3654,7 +3654,10 @@ function renderNotesTab() {
     "Chemistry",
     "History",
     "Geography",
+    "Civics",
+    "Economics",
     "English",
+    "Hindi",
   ];
   const activeClass = S.classPreference || "10";
   const activeSubject = S.subjectPreference || "Maths";
@@ -3663,186 +3666,937 @@ function renderNotesTab() {
     10: {
       Maths: {
         "Real Numbers": [
-          "Every integer is a rational number",
-          "HCF × LCM = Product of two numbers",
-          "√2, √3, π are irrational — cannot be expressed as p/q",
           "Euclid's Division Lemma: a = bq + r where 0 ≤ r < b",
-          "Fundamental Theorem of Arithmetic: every composite number has a unique prime factorisation",
+          "HCF by Euclid's algorithm: apply lemma repeatedly until r = 0",
+          "HCF × LCM = Product of two numbers (only for two numbers)",
+          "Fundamental Theorem of Arithmetic: every integer > 1 has unique prime factorisation",
+          "Irrational numbers: √2, √3, √5, π — cannot be expressed as p/q",
+          "Sum/product of rational and irrational is irrational",
+          "Decimal of rational number: terminating if denominator has only 2ⁿ × 5ᵐ factors",
+          "Non-terminating repeating decimal → rational · Non-terminating non-repeating → irrational",
         ],
         Polynomials: [
           "Degree of polynomial = highest power of variable",
-          "Zeroes of p(x) are values where p(x) = 0",
-          "Sum of zeroes (quadratic) = −b/a",
-          "Product of zeroes (quadratic) = c/a",
-          "A quadratic polynomial has at most 2 zeroes",
+          "Linear: degree 1 · Quadratic: degree 2 · Cubic: degree 3",
+          "Zeroes of p(x): values of x where p(x) = 0 (graphically: x-intercepts)",
+          "A polynomial of degree n has at most n zeroes",
+          "Sum of zeroes α+β = −b/a · Product of zeroes αβ = c/a (quadratic ax²+bx+c)",
+          "For cubic ax³+bx²+cx+d: α+β+γ = −b/a · αβ+βγ+γα = c/a · αβγ = −d/a",
+          "Division algorithm: p(x) = g(x)·q(x) + r(x), degree r < degree g",
+        ],
+        "Pair of Linear Equations in Two Variables": [
+          "General form: a₁x + b₁y + c₁ = 0 and a₂x + b₂y + c₂ = 0",
+          "Unique solution (consistent): a₁/a₂ ≠ b₁/b₂ → lines intersect",
+          "Infinite solutions (consistent, dependent): a₁/a₂ = b₁/b₂ = c₁/c₂ → lines coincide",
+          "No solution (inconsistent): a₁/a₂ = b₁/b₂ ≠ c₁/c₂ → lines parallel",
+          "Methods: Substitution, Elimination, Cross-multiplication, Graphical",
+          "Cross-multiplication: x/(b₁c₂−b₂c₁) = y/(c₁a₂−c₂a₁) = 1/(a₁b₂−a₂b₁)",
         ],
         "Quadratic Equations": [
-          "Standard form: ax² + bx + c = 0",
+          "Standard form: ax² + bx + c = 0, a ≠ 0",
+          "Methods: factorisation, completing the square, quadratic formula",
+          "Quadratic formula: x = (−b ± √(b²−4ac)) / 2a",
           "Discriminant D = b² − 4ac",
-          "D > 0 → two distinct real roots",
-          "D = 0 → two equal roots",
-          "D < 0 → no real roots",
-          "Quadratic formula: x = (−b ± √D) / 2a",
+          "D > 0 → two distinct real roots · D = 0 → two equal real roots · D < 0 → no real roots",
+          "Sum of roots = −b/a · Product of roots = c/a",
+          "Completing the square: x² + bx = (x + b/2)² − (b/2)²",
         ],
         "Arithmetic Progressions": [
-          "AP: a, a+d, a+2d, ...",
+          "AP: a, a+d, a+2d, ... where a = first term, d = common difference",
           "nth term: aₙ = a + (n−1)d",
+          "Last term l = a + (n−1)d",
           "Sum of n terms: Sₙ = n/2 × (2a + (n−1)d)",
-          "If last term l is known: Sₙ = n/2 × (a + l)",
-          "Common difference d = any term − previous term",
+          "If last term known: Sₙ = n/2 × (a + l)",
+          "d = aₙ − aₙ₋₁ (common difference = any term minus previous term)",
+          "If a, b, c are in AP then 2b = a + c",
+          "Sum of first n natural numbers: n(n+1)/2",
         ],
         Triangles: [
-          "AAA similarity: if all angles equal, triangles are similar",
-          "Basic Proportionality Theorem: line parallel to one side divides other two proportionally",
-          "Pythagoras: hypotenuse² = sum of squares of other two sides",
-          "Converse: if a² + b² = c², angle opposite c is 90°",
+          "Basic Proportionality Theorem (Thales): line parallel to one side divides other two proportionally",
+          "Converse of BPT: if a line divides two sides proportionally, it is parallel to third side",
+          "Criteria for similarity: AA, SSS, SAS",
+          "If triangles similar, ratio of areas = square of ratio of corresponding sides",
+          "Pythagoras Theorem: in right triangle, hyp² = base² + perp²",
+          "Converse: if a² + b² = c², the angle opposite c is 90°",
+          "Median divides triangle into two triangles of equal area",
+        ],
+        "Coordinate Geometry": [
+          "Distance formula: d = √((x₂−x₁)² + (y₂−y₁)²)",
+          "Section formula (internal): x = (m₁x₂+m₂x₁)/(m₁+m₂), y = (m₁y₂+m₂y₁)/(m₁+m₂)",
+          "Midpoint: ((x₁+x₂)/2, (y₁+y₂)/2)",
+          "Area of triangle = ½|x₁(y₂−y₃) + x₂(y₃−y₁) + x₃(y₁−y₂)|",
+          "Collinear points: area of triangle formed = 0",
+          "Slope of line = (y₂−y₁)/(x₂−x₁) = tan θ",
+        ],
+        "Introduction to Trigonometry": [
+          "sin θ = opp/hyp · cos θ = adj/hyp · tan θ = opp/adj",
+          "cosec θ = 1/sin θ · sec θ = 1/cos θ · cot θ = 1/tan θ",
+          "sin²θ + cos²θ = 1",
+          "1 + tan²θ = sec²θ",
+          "1 + cot²θ = cosec²θ",
+          "Values: sin 0°=0, sin 30°=½, sin 45°=1/√2, sin 60°=√3/2, sin 90°=1",
+          "cos decreases as angle increases (0° to 90°) · sin increases",
+          "tan 90° is undefined",
+        ],
+        "Some Applications of Trigonometry": [
+          "Angle of elevation: angle above horizontal to object",
+          "Angle of depression: angle below horizontal to object",
+          "In problems: draw diagram, identify right triangle, apply trig ratio",
+          "Height of object = distance × tan(angle of elevation)",
+          "Two observer problems: use angle of elevation and depression together",
+          "tan 30° = 1/√3 · tan 45° = 1 · tan 60° = √3",
         ],
         Circles: [
-          "Tangent ⊥ radius at point of contact",
-          "From external point, two tangents are equal in length",
-          "Angle in semicircle = 90°",
-          "Tangent-chord angle = inscribed angle on opposite side",
+          "Tangent to circle is perpendicular to radius at point of contact",
+          "From an external point, two tangents to circle are equal in length",
+          "Tangent-chord angle = inscribed angle in alternate segment",
+          "A line can intersect a circle at 0, 1 (tangent), or 2 points",
+          "Common tangents: 3 if circles touch externally, 1 if internally, 4 if separate",
+          "Length of tangent from external point P: PT² = PO² − r²",
+        ],
+        "Areas Related to Circles": [
+          "Circumference = 2πr · Area = πr²",
+          "Arc length = (θ/360°) × 2πr",
+          "Area of sector = (θ/360°) × πr²",
+          "Area of segment = Area of sector − Area of triangle",
+          "Area of minor segment + Area of major segment = πr²",
+          "Use π = 22/7 or 3.14 as directed",
+        ],
+        "Surface Areas and Volumes": [
+          "Cylinder: CSA = 2πrh · TSA = 2πr(r+h) · V = πr²h",
+          "Cone: CSA = πrl · TSA = πr(r+l) · V = ⅓πr²h · l = √(r²+h²)",
+          "Sphere: SA = 4πr² · V = (4/3)πr³",
+          "Hemisphere: CSA = 2πr² · TSA = 3πr² · V = (2/3)πr³",
+          "Frustum: CSA = π(r₁+r₂)l · V = ⅓πh(r₁²+r₂²+r₁r₂) · l = √(h²+(r₁−r₂)²)",
+          "Combination solids: add/subtract volumes as needed",
         ],
         Statistics: [
-          "Mean = sum of values / number of values",
-          "Median = middle value when arranged in order",
-          "Mode = most frequently occurring value",
-          "For grouped data use assumed mean or step deviation method",
+          "Mean (direct): x̄ = Σfᵢxᵢ / Σfᵢ",
+          "Mean (assumed mean): x̄ = a + Σfᵢdᵢ/Σfᵢ where dᵢ = xᵢ − a",
+          "Mean (step deviation): x̄ = a + (Σfᵢuᵢ/Σfᵢ) × h where uᵢ = (xᵢ−a)/h",
+          "Median = l + ((n/2 − cf)/f) × h",
+          "Mode = l + ((f₁−f₀)/(2f₁−f₀−f₂)) × h",
+          "Empirical relation: Mode = 3 Median − 2 Mean",
+          "Ogive: cumulative frequency graph · used to find median graphically",
         ],
         Probability: [
-          "P(E) = favourable outcomes / total outcomes",
+          "P(E) = number of favourable outcomes / total number of outcomes",
           "0 ≤ P(E) ≤ 1",
-          "P(E) + P(not E) = 1",
+          "P(E) + P(Ē) = 1",
           "Impossible event: P = 0 · Certain event: P = 1",
+          "Equally likely outcomes: each has same probability",
+          "Complementary events: P(not E) = 1 − P(E)",
+          "Sample space: set of all possible outcomes",
         ],
       },
       Physics: {
         "Light Reflection and Refraction": [
-          "Angle of incidence = Angle of reflection",
-          "Mirror formula: 1/f = 1/v + 1/u",
-          "Magnification m = −v/u",
-          "Convex mirror: always virtual, erect, diminished image",
+          "Laws of reflection: angle of incidence = angle of reflection, incident ray, normal and reflected ray are coplanar",
+          "Mirror formula: 1/f = 1/v + 1/u (sign convention: distances measured from pole)",
+          "Magnification m = −v/u = h'/h",
+          "Concave mirror: converging · used in torches, shaving mirrors, solar furnaces",
+          "Convex mirror: diverging · always virtual, erect, diminished image · used in rear-view mirrors",
           "Snell's Law: n₁ sin i = n₂ sin r",
-          "Refractive index n = speed of light in vacuum / speed in medium",
+          "Refractive index n = c/v = sin i / sin r",
+          "Lens formula: 1/f = 1/v − 1/u",
+          "Power of lens P = 1/f (in metres) · unit: dioptre (D)",
+          "Convex lens: converging · concave lens: diverging",
+          "Total internal reflection occurs when i > critical angle and ray goes from denser to rarer",
         ],
         Electricity: [
-          "Ohm's Law: V = IR",
-          "Series: R = R₁ + R₂ + R₃",
-          "Parallel: 1/R = 1/R₁ + 1/R₂",
-          "Power P = VI = I²R = V²/R",
-          "1 kWh = 3.6 × 10⁶ J",
+          "Electric current I = Q/t · unit: ampere (A)",
+          "Potential difference V = W/Q · unit: volt (V)",
+          "Ohm's Law: V = IR (at constant temperature)",
+          "Resistance R = ρl/A where ρ = resistivity",
+          "Series circuit: R = R₁+R₂+R₃ · current same throughout · voltage divides",
+          "Parallel circuit: 1/R = 1/R₁+1/R₂+1/R₃ · voltage same · current divides",
+          "Power P = VI = I²R = V²/R · unit: watt (W)",
+          "Electrical energy E = Pt = VIt · 1 kWh = 3.6 × 10⁶ J",
+          "Heating effect: H = I²Rt (Joule's law)",
+          "Fuse wire: high resistance, low melting point · protects circuit",
         ],
         "Magnetic Effects of Electric Current": [
-          "Right-hand thumb rule: thumb → current, fingers → field",
-          "Fleming's Left-Hand Rule: force on conductor (motors)",
-          "Fleming's Right-Hand Rule: induced current direction (generators)",
-          "AC changes direction periodically; DC flows one way only",
+          "Magnetic field around straight conductor: concentric circles",
+          "Right-hand thumb rule: thumb → current, curled fingers → field direction",
+          "Solenoid: behaves like a bar magnet when current flows",
+          "Electromagnet: soft iron core + solenoid",
+          "Fleming's Left-Hand Rule: force on current-carrying conductor in field (motor principle)",
+          "Fleming's Right-Hand Rule: direction of induced current (generator principle)",
+          "Electromagnetic induction: changing magnetic field induces EMF",
+          "DC (Direct current): flows in one direction · AC (Alternating current): reverses direction",
+          "AC frequency in India = 50 Hz",
+          "Electric motor: converts electrical → mechanical energy",
+          "Electric generator: converts mechanical → electrical energy",
         ],
         "Human Eye and Colourful World": [
-          "Near point = 25 cm · Far point = infinity",
-          "Myopia: concave lens correction",
-          "Hypermetropia: convex lens correction",
-          "Dispersion: white light → VIBGYOR through prism",
-          "Blue light scatters most → sky appears blue",
+          "Near point of normal eye = 25 cm · Far point = infinity",
+          "Accommodation: ability of eye lens to adjust focal length",
+          "Myopia (near-sightedness): image forms in front of retina · corrected by concave lens",
+          "Hypermetropia (far-sightedness): image forms behind retina · corrected by convex lens",
+          "Presbyopia: loss of accommodation with age · corrected by bifocal lens",
+          "Dispersion: splitting of white light into spectrum by prism (VIBGYOR)",
+          "Scattering: blue light scatters most (shortest wavelength) → sky appears blue",
+          "Tyndall effect: scattering of light by colloidal particles",
+          "Red sky at sunrise/sunset: light travels longer path, blue scattered away, red remains",
+          "Rainbow: dispersion + total internal reflection in water droplets",
         ],
       },
       Chemistry: {
         "Chemical Reactions and Equations": [
-          "Combination: A + B → AB",
-          "Decomposition: AB → A + B",
-          "Displacement: A + BC → AC + B",
-          "Double displacement: AB + CD → AD + CB",
-          "Oxidation = loss of electrons / gain of oxygen",
-          "Reduction = gain of electrons / loss of oxygen",
+          "Chemical equation: reactants → products",
+          "Balanced equation obeys law of conservation of mass",
+          "Types: Combination (A+B→AB) · Decomposition (AB→A+B) · Displacement (A+BC→AC+B) · Double displacement · Redox",
+          "Oxidation: gain of O₂ / loss of H₂ / loss of electrons",
+          "Reduction: loss of O₂ / gain of H₂ / gain of electrons",
+          "Redox reaction: oxidation and reduction occur simultaneously",
+          "Exothermic: releases energy · Endothermic: absorbs energy",
+          "Corrosion: slow oxidation of metals (e.g. rusting of iron)",
+          "Rancidity: oxidation of fats/oils in food · prevented by antioxidants, N₂ flushing",
         ],
         "Acids Bases and Salts": [
-          "Acids: sour, blue litmus → red, pH < 7",
-          "Bases: bitter, red litmus → blue, pH > 7",
+          "Acid: gives H⁺ ions in solution · turns blue litmus red · pH < 7",
+          "Base: gives OH⁻ ions · turns red litmus blue · pH > 7",
           "Neutralisation: Acid + Base → Salt + Water",
-          "Baking soda: NaHCO₃ · Washing soda: Na₂CO₃·10H₂O · Bleaching powder: CaOCl₂",
+          "pH scale: 0–14 · pH 7 = neutral · < 7 = acidic · > 7 = basic",
+          "Strong acid: fully dissociates (HCl, H₂SO₄, HNO₃)",
+          "Weak acid: partially dissociates (CH₃COOH, H₂CO₃)",
+          "Baking soda: NaHCO₃ · used in cooking, antacid",
+          "Washing soda: Na₂CO₃·10H₂O · used in glass, soap, paper making",
+          "Bleaching powder: CaOCl₂ · used as disinfectant, bleaching agent",
+          "Plaster of Paris: CaSO₄·½H₂O · used in moulds, fractures",
         ],
         "Metals and Non-metals": [
-          "Metals: lustrous, malleable, ductile, good conductors",
-          "Non-metals: brittle, poor conductors (except graphite)",
-          "Reactivity series: K > Na > Ca > Mg > Al > Zn > Fe > Pb > H > Cu > Ag > Au",
+          "Metals: lustrous, malleable, ductile, good conductors of heat and electricity",
+          "Non-metals: brittle, poor conductors (except graphite), non-lustrous",
+          "Reactivity series (high to low): K > Na > Ca > Mg > Al > Zn > Fe > Pb > H > Cu > Ag > Au",
+          "Metals above H in reactivity series displace H₂ from dilute acids",
+          "Ionic bond: metal loses electrons, non-metal gains electrons",
+          "Ore: rock/mineral containing metal compound in sufficient quantity",
+          "Refining: purification of impure metal (electrolytic refining most common)",
+          "Corrosion prevention: painting, galvanising, alloying, electroplating",
+          "Alloys: homogeneous mixture of metals (e.g. brass = Cu + Zn, steel = Fe + C)",
         ],
         "Carbon and its Compounds": [
-          "Carbon is tetravalent — forms 4 covalent bonds",
-          "Catenation: carbon bonds with other carbon atoms",
-          "Saturated: single bonds only (alkanes) · Unsaturated: double/triple bonds (alkenes/alkynes)",
-          "Functional groups: −OH (alcohol), −COOH (acid), −CHO (aldehyde)",
-          "Saponification: fat + NaOH → soap + glycerol",
+          "Carbon is tetravalent (valency 4) — forms 4 covalent bonds",
+          "Catenation: unique ability of carbon to bond with other carbon atoms in chains/rings",
+          "Saturated compounds: only single bonds (alkanes) · formula CₙH₂ₙ₊₂",
+          "Unsaturated: double bonds (alkenes CₙH₂ₙ) or triple bonds (alkynes CₙH₂ₙ₋₂)",
+          "Isomers: same molecular formula, different structural formula",
+          "Functional groups: −OH (alcohol), −COOH (carboxylic acid), −CHO (aldehyde), −CO− (ketone), −X (halide)",
+          "Ethanol (C₂H₅OH): drinking alcohol · Ethanoic acid (CH₃COOH): vinegar",
+          "Saponification: fat + NaOH → soap + glycerol (soap making)",
+          "Soaps: sodium salts of fatty acids · work poorly in hard water",
+          "Detergents: work well in hard water · branched chains are non-biodegradable",
         ],
       },
       Biology: {
         "Life Processes": [
-          "Photosynthesis: 6CO₂ + 6H₂O → C₆H₁₂O₆ + 6O₂",
-          "Aerobic respiration: glucose + O₂ → CO₂ + H₂O + 38 ATP",
-          "Anaerobic: glucose → lactic acid OR ethanol + CO₂ + less energy",
+          "Photosynthesis: 6CO₂ + 6H₂O + sunlight → C₆H₁₂O₆ + 6O₂ (in chloroplasts)",
           "Autotrophs make own food · Heterotrophs depend on others",
+          "Stomata: CO₂ enters leaf, O₂ exits · guard cells regulate opening",
+          "Aerobic respiration: glucose + O₂ → CO₂ + H₂O + 38 ATP",
+          "Anaerobic in yeast: glucose → ethanol + CO₂ + less energy",
+          "Anaerobic in muscle: glucose → lactic acid (causes cramps)",
+          "Nutrition types: holozoic, parasitic, saprophytic, autotrophic",
+          "Human digestive system: mouth → oesophagus → stomach → small intestine → large intestine",
+          "Enzymes: amylase (starch→sugar), pepsin (protein), lipase (fats)",
+          "Villi: finger-like projections in small intestine → increase surface area for absorption",
+          "Transpiration: loss of water from leaves as vapour through stomata",
+          "Double circulation: blood passes through heart twice per cycle (pulmonary + systemic)",
+          "Excretion: removal of metabolic wastes · kidney filters blood → urine",
+          "Nephron: functional unit of kidney · filtration → reabsorption → urine",
         ],
         "Control and Coordination": [
+          "Nervous system: brain + spinal cord (CNS) + peripheral nerves",
+          "Neuron: basic unit · dendrites receive signals, axon transmits",
+          "Synapse: junction between two neurons · signals cross via neurotransmitters",
           "Reflex arc: receptor → sensory nerve → spinal cord → motor nerve → effector",
-          "Adrenaline = fight or flight (adrenal gland)",
-          "Insulin lowers blood sugar · Glucagon raises it",
-          "Thyroxine (thyroid) controls metabolism",
+          "Reflex action: involuntary, fast response (e.g. withdrawing hand from fire)",
+          "Brain: cerebrum (thinking/memory), cerebellum (balance), medulla (involuntary actions)",
+          "Hormones: chemical messengers secreted by endocrine glands",
+          "Adrenaline (adrenal gland): fight or flight response",
+          "Insulin (pancreas): lowers blood sugar · Glucagon: raises blood sugar",
+          "Thyroxine (thyroid gland): controls metabolism · requires iodine",
+          "Growth hormone (pituitary): controls growth",
+          "Tropisms: plant movements in response to stimuli (phototropism, geotropism, hydrotropism, thigmotropism)",
+          "Auxin: plant hormone causing phototropism (shoot bends towards light)",
         ],
         "How do Organisms Reproduce": [
-          "Asexual: fission, budding, spore formation, fragmentation, vegetative propagation",
-          "Sexual: involves gametes (sperm + egg)",
-          "Menstrual cycle: 28 days · ovulation at day 14",
+          "Reproduction: production of new organisms of same kind",
+          "Asexual: fission (Amoeba, Paramoecium), budding (Hydra, yeast), spore formation (Rhizopus), fragmentation (Spirogyra), vegetative propagation (plants)",
+          "Binary fission: one organism splits into two",
+          "Vegetative propagation: new plant from roots, stems, or leaves (e.g. potato from tuber, rose from cutting)",
+          "Sexual reproduction involves gametes — sperm (male) + ovum (female)",
+          "Fertilisation: fusion of gametes to form zygote",
+          "In humans: internal fertilisation, development in uterus (~9 months)",
+          "Menstrual cycle: ~28 days · ovulation at day 14 · menstruation if no fertilisation",
+          "Puberty: physical changes due to sex hormones (testosterone/estrogen)",
+          "Contraception: physical (condoms), chemical (pills), surgical (vasectomy/tubectomy)",
+          "Sexually transmitted infections (STIs): HIV, gonorrhoea, syphilis",
+          "Flower parts: sepals, petals, stamens (anther + filament), pistil (stigma + style + ovary)",
+          "Pollination: self (within same flower) or cross (different flower/plant)",
+          "Seed: embryo + endosperm + seed coat · germination needs water, warmth, air",
         ],
         "Heredity and Evolution": [
-          "Dominant trait masks recessive",
-          "Genotype = genetic makeup · Phenotype = observable trait",
-          "Mendel's Laws: Segregation + Independent Assortment",
-          "Natural selection: favourable traits → more survival + reproduction",
+          "Heredity: passing of traits from parents to offspring",
+          "Mendel's Law of Segregation: two alleles for each trait separate during gamete formation",
+          "Mendel's Law of Independent Assortment: genes for different traits assort independently",
+          "Dominant allele (T) masks recessive (t) · TT and Tt show dominant trait, tt shows recessive",
+          "Genotype: genetic composition · Phenotype: observable expression",
+          "Monohybrid cross ratio: 3:1 (phenotype) · 1:2:1 (genotype)",
+          "Dihybrid cross ratio: 9:3:3:1",
+          "Sex determination: XX = female · XY = male · father determines sex of child",
+          "Evolution: gradual change in heritable characteristics of populations over time",
+          "Natural selection: organisms with favourable traits survive and reproduce more",
+          "Acquired traits (Lamarck) vs inherited traits (Darwin): only genetic changes are inherited",
+          "Homologous organs: same structure, different function (e.g. human arm, whale flipper, bat wing) → common ancestry",
+          "Analogous organs: different structure, same function (e.g. bat wing, insect wing) → convergent evolution",
+          "Fossils: remains of dead organisms → evidence of evolution",
+          "Speciation: formation of new species due to geographic isolation, genetic drift, natural selection",
+        ],
+        "Our Environment": [
+          "Ecosystem: biotic (living) + abiotic (non-living) components interacting",
+          "Food chain: producers → primary consumers → secondary consumers → tertiary consumers",
+          "Food web: interconnected food chains in an ecosystem",
+          "Energy flow: only 10% energy transfers to next trophic level (10% law)",
+          "Decomposers: bacteria and fungi break down dead organic matter",
+          "Biodegradable: can be broken down by microorganisms (e.g. food waste, paper)",
+          "Non-biodegradable: cannot be broken down (e.g. plastic, DDT, metal)",
+          "Ozone layer (stratosphere): absorbs harmful UV radiation",
+          "Ozone depletion: caused by CFCs (chlorofluorocarbons) → increase in UV → skin cancer, cataracts",
+          "Biological magnification: concentration of pollutants increases at higher trophic levels",
+          "Waste management: reduce, reuse, recycle (3 Rs)",
         ],
       },
       History: {
-        "Nationalism in India": [
-          "Non-Cooperation Movement: 1920–22 · called off after Chauri Chaura 1922",
-          "Civil Disobedience: 1930 · Salt March (Dandi) 385 km",
-          "Quit India Movement: August 1942 · 'Do or Die'",
-          "INC founded 1885 by A.O. Hume",
-          "Rowlatt Act 1919: detention without trial",
-        ],
         "The Rise of Nationalism in Europe": [
-          "French Revolution 1789: liberty, equality, fraternity",
-          "Napoleon spread revolutionary ideas across Europe",
-          "Germany unified 1871 under Bismarck",
-          "Italy unified 1861–70 (Garibaldi, Mazzini, Cavour)",
-          "Balkans = 'powder keg of Europe'",
+          "Nationalism: sense of common identity based on shared culture, language, history",
+          "French Revolution 1789: ideas of liberty, equality, fraternity spread across Europe",
+          "Napoleon: spread revolutionary ideas, introduced legal reforms (Napoleonic Code)",
+          "Romanticism: cultural movement that promoted nationalism through art, music, poetry",
+          "Giuseppe Mazzini: Italian nationalist · founded 'Young Italy' movement",
+          "Garibaldi: 'Red Shirts' · military campaign to unify Italy",
+          "Italy unified 1861 under Victor Emmanuel II, 1871 complete with Rome",
+          "Germany: Bismarck (Chancellor of Prussia) unified Germany 1866–71 through 'blood and iron' policy",
+          "Frankfurt Parliament 1848: first German national assembly · failed",
+          "Zollverein (1834): customs union → economic unity before political unity in Germany",
+          "Balkans: ethnic tensions due to multi-ethnic empires → 'powder keg of Europe'",
+          "Treaty of Vienna 1815: tried to restore old monarchies after Napoleon",
+          "1830 and 1848 revolutions swept through Europe demanding liberal constitutions",
+        ],
+        "Nationalism in India": [
+          "INC founded 1885 by A.O. Hume",
+          "Rowlatt Act 1919: detention without trial → Indian protests",
+          "Jallianwala Bagh massacre: April 13, 1919 · General Dyer ordered firing",
+          "Non-Cooperation Movement 1920–22: boycott of foreign goods, courts, schools",
+          "Called off after Chauri Chaura incident (Feb 1922): mob burned police station",
+          "Simon Commission 1927: no Indian member → protests and boycott",
+          "Civil Disobedience Movement 1930: Salt March (Dandi) 385 km by Gandhi",
+          "Gandhi-Irwin Pact 1931: CDM suspended",
+          "Round Table Conferences: 1930, 1931, 1932 — Gandhi attended 2nd",
+          "Quit India Movement: August 1942 · 'Do or Die' slogan",
+          "Swaraj = self-rule · Purna Swaraj declared 26 Jan 1930",
+          "Bhagat Singh, Sukhdev, Rajguru: revolutionary nationalists",
+          "Role of women: Sarojini Naidu, Kasturba Gandhi active in movements",
+          "Dalits: B.R. Ambedkar organised movement for their rights · Poona Pact 1932",
+        ],
+        "The Making of a Global World": [
+          "Silk Route: ancient trade routes connecting Asia, Middle East, Europe",
+          "Columbus reached America 1492 · Vasco da Gama reached India 1498",
+          "Colonisation of Americas → diseases killed large indigenous populations (smallpox etc.)",
+          "19th century: mass migration from Europe to Americas and Australia",
+          "Indentured labour system: Indian workers taken to Fiji, Mauritius, Caribbean as cheap labour",
+          "World War I (1914–18): disrupted global trade and finance",
+          "Rinderpest (cattle plague): devastated Africa in 1890s → land taken over by Europeans",
+          "The Great Depression (1929): stock market crash in USA → worldwide economic collapse",
+          "Bretton Woods Conference 1944: established IMF and World Bank",
+          "Post-WWII: decolonisation, new nations, new trade patterns",
+          "Globalisation: increasing interconnection of economies, cultures and societies",
+        ],
+        "The Age of Industrialisation": [
+          "Proto-industrialisation: production before factories — merchants gave raw material to rural families",
+          "First Industrial Revolution in Britain (late 18th century): textiles, iron, steam power",
+          "Richard Arkwright: spinning frame · James Watt: steam engine improvements",
+          "Cotton textile industry first to industrialise in Britain",
+          "Most workers worked in small workshops, not big factories even in 1850s",
+          "India: textile industry (Bombay), jute (Calcutta), iron & steel (Tata Steel, Jamshedpur 1912)",
+          "Colonialism affected Indian industry: cheap British imports destroyed traditional weavers",
+          "Swadeshi movement boosted Indian goods during nationalist period",
+          "Child and women labour was common in early factories",
+          "Merchant capital vs Industrial capital: merchants controlled early industry through putting-out system",
+        ],
+        "Print Culture and the Modern World": [
+          "Woodblock printing in China (9th century) · Gutenberg printing press (1440s, Germany)",
+          "Gutenberg: movable metal type printing press → mass production of books",
+          "Print capitalism: newspapers and books created shared language and national identity (Benedict Anderson)",
+          "Erasmus: used print to spread humanist ideas",
+          "Martin Luther's 95 Theses (1517): printed widely → Protestant Reformation",
+          "Newspapers in India: first printed 1780 (Bengal Gazette by James Augustus Hicky)",
+          "Raja Ram Mohan Roy used press to spread reform ideas",
+          "Print and women: novels gave women access to education and reform ideas",
+          "Print and poor: cheap books, pamphlets spread literacy among workers",
+          "Censorship: colonial govt censored Indian press (Vernacular Press Act 1878)",
+          "Bal Gangadhar Tilak: used Kesari newspaper to spread nationalist ideas",
+          "Print created public opinion — essential for freedom movement",
         ],
       },
       Geography: {
         "Resources and Development": [
-          "Resource = anything satisfying human needs with value",
-          "Land degradation causes: deforestation, overgrazing, mining, waterlogging",
-          "Soil conservation: crop rotation, contour ploughing, terrace farming, afforestation",
+          "Resource: anything available in environment satisfying human needs with technology and economic feasibility",
+          "Types: natural (renewable/non-renewable), human-made, human resources",
+          "Renewable: replenished naturally (solar, wind, water) · Non-renewable: finite (coal, petroleum, minerals)",
+          "Land use: forest, land under cultivation, fallow, unculturable land",
+          "Land degradation: deforestation, overgrazing, mining, waterlogging, soil erosion",
+          "Soil conservation methods: crop rotation, contour ploughing, terrace farming, afforestation, shelter belts",
+          "Soil types in India: alluvial (most fertile, river plains), black (cotton soil, Deccan), red/yellow (iron oxide), laterite, arid, forest soils",
+          "Sustainable development: meeting present needs without compromising future generations",
+          "Rio de Janeiro Summit 1992: Agenda 21 — sustainable development action plan",
+        ],
+        "Forest and Wildlife Resources": [
+          "India: 12% of world's biodiversity · 4th in plant diversity",
+          "IUCN categories: Normal, Vulnerable, Endangered, Extinct, Rare species",
+          "Deforestation causes: agriculture, mining, urbanisation, fuelwood collection",
+          "Wildlife Protection Act 1972 · Forest Conservation Act 1980",
+          "Project Tiger: started 1973 · successful in increasing tiger population",
+          "Reserved forests: fully protected by govt · Protected forests: limited use allowed",
+          "Community and private forests: managed by communities/private parties",
+          "Van Panchayats (Uttarakhand): village councils managing forests",
+          "Chipko Movement: villagers hugged trees to prevent felling (Uttarakhand, 1970s)",
+          "Beej Bachao Andolan (Tehri), Navdanya (Vandana Shiva): seed conservation",
+          "Biodiversity hotspots: areas with high endemic species under threat",
         ],
         "Water Resources": [
-          "Freshwater = 2.5% of total · most locked in glaciers",
-          "Multipurpose projects: irrigation, electricity, flood control",
-          "Rainwater harvesting: collecting and storing rainwater locally",
+          "Freshwater = 2.5% of Earth's total water · most locked in glaciers and groundwater",
+          "India receives most water through monsoons — highly uneven distribution",
+          "Water scarcity: due to growing population, over-exploitation, unequal distribution",
+          "Multipurpose river valley projects: irrigation, HEP, flood control, navigation, recreation",
+          "Major dams: Bhakra Nangal (Punjab), Hirakud (Odisha), Nagarjuna Sagar (Andhra Pradesh)",
+          "Opposition to large dams: displacement of people, loss of forests, silting, earthquakes",
+          "Narmada Bachao Andolan: protest against Sardar Sarovar Dam",
+          "Rainwater harvesting: tankas (Rajasthan), johads, stepwells (baolis), rooftop collection",
+          "Bambusbend (Bihar), Pyne (Bihar), Khadins (Rajasthan): traditional water harvesting",
+          "Groundwater depletion: due to over-irrigation, urbanisation → need for recharge",
+        ],
+        Agriculture: [
+          "India is primarily agricultural — employs ~50% of population",
+          "Types of farming: subsistence (for family), commercial (for market), plantation",
+          "Kharif crops: sown June-July, harvested September-October (rice, maize, cotton, soybean)",
+          "Rabi crops: sown October-November, harvested March-April (wheat, barley, mustard, peas)",
+          "Zaid crops: grown between rabi and kharif (watermelon, muskmelon, cucumber)",
+          "Green Revolution (1960s–70s): HYV seeds, fertilisers, irrigation → increased food production",
+          "White Revolution (Operation Flood): increased milk production",
+          "India's major crops: rice (West Bengal, UP), wheat (Punjab, Haryana), sugarcane, tea (Assam), coffee (Karnataka)",
+          "Problems: small landholdings, dependence on monsoon, debt, soil degradation",
+          "Land reforms: abolition of zamindari, land ceiling acts, cooperative farming",
+        ],
+        "Minerals and Energy Resources": [
+          "Mineral: naturally occurring substance with definite chemical composition",
+          "Metallic minerals: ferrous (iron ore, manganese) and non-ferrous (copper, bauxite, lead)",
+          "Non-metallic: limestone, mica, gypsum, salt",
+          "Iron ore: Jharkhand, Odisha, Chhattisgarh, Goa — major producers",
+          "Bauxite (aluminium ore): Odisha, Jharkhand",
+          "Mica: Jharkhand, Bihar, Rajasthan — used in electrical industries",
+          "Conventional energy: coal, petroleum, natural gas, thermal power, HEP",
+          "Coal fields: Jharia, Raniganj, Bokaro (Gondwana fields best quality)",
+          "Petroleum: Digboi (Assam), Mumbai High, delta regions (Godavari, Krishna)",
+          "Non-conventional: solar, wind, biogas, tidal, geothermal",
+          "Wind power: Tamil Nadu, Rajasthan, Gujarat — India is world leader in wind power",
+          "Solar: Rajasthan has highest solar potential",
+          "Mineral conservation: use judiciously, recycle, find substitutes",
+        ],
+        "Manufacturing Industries": [
+          "Manufacturing converts raw materials into finished goods → creates employment, wealth",
+          "Industries classified: agro-based, mineral-based, public sector, private sector, cottage/small/large-scale",
+          "Cotton textile: largest industry · Mumbai (Manchester of India), Ahmedabad",
+          "Jute textile: West Bengal (Hugli river belt) — India world's largest producer",
+          "Sugar: Uttar Pradesh and Bihar → shifting to Maharashtra and Karnataka",
+          "Iron & Steel: Jharkhand, Odisha, Chhattisgarh, West Bengal (Jamshedpur, Durgapur, Rourkela, Bhilai)",
+          "SAIL: Steel Authority of India Ltd (public sector)",
+          "Cement: Rajasthan, MP, Andhra Pradesh, Gujarat",
+          "IT industry: Bengaluru (Silicon Valley of India), Hyderabad, Pune, Chennai, Mumbai",
+          "Industrial pollution: air (smoke), water (effluents), land (solid waste), noise",
+          "Industrial estates and SEZs (Special Economic Zones) promote industrial development",
+        ],
+        "Lifelines of National Economy": [
+          "Transport: roadways, railways, pipelines, waterways, airways",
+          "Roadways: largest network · Golden Quadrilateral (Delhi-Mumbai-Chennai-Kolkata) 5,846 km",
+          "National Highways: NH-44 longest (Srinagar to Kanyakumari), maintained by NHAI",
+          "Railways: 2nd largest in Asia · Indian Railways under Zones",
+          "Broad gauge, metre gauge and narrow gauge tracks",
+          "Konkan Railway: 760 km, Mumbai to Mangalore through Western Ghats",
+          "Inland waterways: NW-1 (Ganga), NW-2 (Brahmaputra), NW-3 (Kerala)",
+          "Major sea ports: Mumbai (busiest), Chennai, Kolkata, Vishakhapatnam, Kandla",
+          "Airways: domestic (Air India) and international · Indira Gandhi International (Delhi) busiest",
+          "Oil and gas pipelines: Assam to Barauni, Gujarat to Jalandhar (major)",
+          "Communication: personal (telephone, internet) and mass (TV, radio, newspapers)",
+          "Trade: domestic (within country) and international (between countries)",
+          "India exports: gems, jewellery, engineering goods, software · imports: crude oil, machinery",
+        ],
+      },
+      Civics: {
+        "Power Sharing": [
+          "Power sharing: dividing power among different organs/levels of government",
+          "Belgium: Dutch-speaking majority vs French-speaking minority → equal representation in central govt",
+          "Sri Lanka: Sinhala Buddhist majority dominated → civil war with Tamil minority",
+          "Horizontal power sharing: among organs of government (legislature, executive, judiciary)",
+          "Vertical power sharing: among different levels of government (central, state, local)",
+          "Power sharing among political parties, pressure groups, social groups",
+          "Prudential reasons for power sharing: reduces conflict, ensures stability",
+          "Moral reasons: respects diversity, upholds democratic principles",
+        ],
+        Federalism: [
+          "Federalism: two or more levels of government — each with its own powers",
+          "India: federal system with central (union) government and state governments",
+          "Three lists: Union List (97 subjects, central govt), State List (66 subjects, state govts), Concurrent List (47 subjects, both)",
+          "Residual powers with central government in India",
+          "Linguistic reorganisation of states (1956): states formed on language basis",
+          "Panchayati Raj (73rd Amendment 1992): 3-tier local government in rural areas",
+          "Gram Panchayat → Panchayat Samiti → Zila Parishad",
+          "74th Amendment: urban local bodies (municipalities, municipal corporations)",
+          "Coalition government: when no single party gets majority",
+          "Decentralisation: transfer of power from central/state govt to local bodies",
+        ],
+        "Democracy and Diversity": [
+          "Social differences can be created by birth (race, gender) or choice (religion, politics)",
+          "Social division: when social difference becomes source of identity and conflict",
+          "Civil Rights Movement USA (1954–68): African Americans fought against racial discrimination",
+          "Overlapping differences → dangerous (reinforce each other) vs cross-cutting → manageable",
+          "Outcomes depend on: political representation, constitutional safeguards, people's attitudes",
+          "Affirmative action: reservations/quotas for marginalised groups",
+          "Black Power Movement: more militant arm of Civil Rights Movement",
+          "Identities are multiple and not singular — person can belong to multiple groups",
+        ],
+        "Gender Religion and Caste": [
+          "Gender division: not biological but social — society assigns roles to men and women",
+          "Patriarchy: male-dominated social system",
+          "Women's political representation in India: 33% reservation in Panchayats · less in Parliament",
+          "Feminist movements: sought equal rights for women",
+          "Religion: personal faith should be separated from state politics (secularism)",
+          "Communalism: when religious identity is used for political mobilisation",
+          "India is secular state: no official religion, equal treatment of all religions",
+          "Caste in politics: candidates and voters consider caste while voting",
+          "Caste system: hierarchical social division inherited at birth (unique to India)",
+          "Constitution abolished untouchability and caste discrimination",
+          "Dalit movement: fight against caste discrimination (B.R. Ambedkar)",
+        ],
+        "Popular Struggles and Movements": [
+          "Bolivia Water Wars 2000: govt privatised water → public protests → govt reversed decision",
+          "Nepal Movement 2006: alliance of parties + Maoists → king restored democracy",
+          "Pressure groups: organisations that influence government policies (FEDECOR in Bolivia)",
+          "Interest groups: promote interests of members (trade unions, business groups)",
+          "Movement groups: seek broader social goals (women's movement, environmental movement)",
+          "Sectional interest groups vs public interest groups",
+          "Methods: demonstrations, strikes, petitions, lobbying, media campaigns",
+          "Healthy democracy: requires active citizens and organised movements",
+        ],
+        "Political Parties": [
+          "Political party: group of people with shared ideology who contest elections and hold power",
+          "Functions: contest elections, form governments, make laws, shape public opinion",
+          "Party system: one-party (China), two-party (USA, UK), multi-party (India)",
+          "India: multi-party system with coalition governments",
+          "National parties: recognised in 4+ states (BJP, INC, BSP, NCP, CPM, CPI, NCP)",
+          "State parties: recognised in specific states",
+          "Challenges: dynasty politics, criminalisation, money power, lack of inner democracy",
+          "Reforms: Electoral Commission regulations, Right to Information Act, judicial activism",
+        ],
+        "Outcomes of Democracy": [
+          "Democracy produces accountable and legitimate government",
+          "Democratic government is responsive to citizens' needs",
+          "Economic outcomes: democracy doesn't necessarily produce faster economic growth",
+          "Reduction in inequality and poverty: mixed record — India's democracy has not eliminated poverty",
+          "Social outcomes: democracy respects dignity, accommodates diversity",
+          "Dignity and freedom: democracy respects individual rights (especially of women and minorities)",
+          "Transparency: citizens have right to information",
+          "Democracy better than alternatives: ensures peaceful transfer of power, protects rights",
+          "Evaluating democracy: regular free elections, rule of law, protection of rights, separation of powers",
+        ],
+        "Challenges to Democracy": [
+          "Foundational challenge: establishing democracy (countries under dictatorships)",
+          "Challenge of expansion: extending democratic rights to more citizens and areas",
+          "Challenge of deepening: strengthening institutions, ensuring equal participation",
+          "Political reform: improving quality of democracy",
+          "Redefining democracy: moving from formal to substantive democracy",
+          "Constitutional amendments to improve representation",
+          "Role of civil society: NGOs, social movements, media in deepening democracy",
+          "Citizens' capacity to monitor and evaluate government is essential",
+        ],
+      },
+      Economics: {
+        Development: [
+          "Development: improvement in quality of life and living standards",
+          "Different people have different development goals (national vs individual)",
+          "National Development: sustained improvement in per capita income and quality of life",
+          "Per Capita Income (PCI): total income ÷ total population",
+          "World Bank classifies countries by PCI: high income > $12,000, middle income, low income",
+          "Human Development Index (HDI): combines life expectancy, education, per capita income",
+          "Sustainable development: development that meets present needs without compromising future",
+          "Income is not the only indicator — literacy, health, gender equality also matter",
+          "Kerala vs Punjab: Kerala has lower income but better health and education indicators",
+        ],
+        "Sectors of the Indian Economy": [
+          "Primary sector: agriculture, mining, forestry, fishing — involves natural resources",
+          "Secondary sector: manufacturing and industry — transforms raw materials",
+          "Tertiary sector: services — banking, transport, communication, trade, IT",
+          "GDP (Gross Domestic Product): total value of goods and services produced in a year",
+          "In India: tertiary sector contributes most to GDP but primary employs most people",
+          "Disguised unemployment: more workers than needed (common in agriculture)",
+          "Unorganised sector: no fixed hours, no job security, low wages (80% of workers in India)",
+          "Organised sector: formal employment, regular wages, social security benefits",
+          "NREGA (National Rural Employment Guarantee Act): guarantees 100 days of employment per year",
+        ],
+        "Money and Credit": [
+          "Barter system: exchange goods without money · problems: double coincidence of wants",
+          "Money: medium of exchange, store of value, unit of account, standard of deferred payment",
+          "Currency: notes and coins issued by Reserve Bank of India (RBI)",
+          "Demand deposits: money deposited in banks, can be withdrawn anytime (cheques)",
+          "Credit: loan given to borrower · involves trust and repayment promise",
+          "Collateral: asset pledged against loan (land, vehicle, savings)",
+          "Formal credit: banks and cooperatives · regulated by RBI",
+          "Informal credit: moneylenders, relatives, traders · higher interest, exploitative",
+          "Self Help Groups (SHGs): groups of poor women who save together and access loans",
+          "Grameen Bank (Bangladesh): pioneer of microfinance/SHGs",
+        ],
+        "Globalisation and the Indian Economy": [
+          "Globalisation: integration of economies through trade, investment, technology",
+          "Multinational corporations (MNCs): companies operating in multiple countries",
+          "MNCs set up production where costs are low (labour, land) → India, China attractive",
+          "Foreign investment by MNCs increases productive capacity and employment",
+          "Liberalisation: removing government restrictions on trade and investment",
+          "Privatisation: transfer of public enterprises to private ownership",
+          "WTO (World Trade Organisation): promotes free trade, resolves trade disputes",
+          "India liberalised economy in 1991 (LPG reforms: Liberalisation, Privatisation, Globalisation)",
+          "Benefits: economic growth, employment, consumer choices, technology transfer",
+          "Concerns: small industries suffer competition from MNCs, unequal distribution of benefits",
+          "Fair globalisation: benefits should reach all sections, not just wealthy",
+        ],
+        "Consumer Rights": [
+          "Consumer: person who buys goods or services for personal use",
+          "Consumer exploitation: underweight goods, adulteration, false advertising, overpricing",
+          "Consumer Protection Act 1986 (amended 2019): protects consumer interests",
+          "Rights of consumers: right to safety, right to be informed, right to choose, right to be heard, right to redress, right to consumer education",
+          "Consumer Forum: District, State, and National levels for complaints",
+          "COPRA (Consumer Protection Act): framework for consumer redressal",
+          "RTI (Right to Information Act 2005): citizens can demand information from govt",
+          "ISO certification: international quality standard for products",
+          "Hallmark: quality certification for gold jewellery",
+          "AGMARK: quality certification for agricultural products",
+          "Consumer awareness: being a well-informed consumer is essential for protection",
         ],
       },
       English: {
         "A Letter to God": [
-          "Author: G.L. Fuentes · Lencho writes to God for money after hailstorm destroys crops",
-          "Post office employees collect money and send it · Lencho suspects them of stealing",
-          "Theme: faith vs irony · Lencho's blind faith contrasted with human kindness misunderstood",
+          "Author: G.L. Fuentes (Mexican) · Story set in rural Mexico",
+          "Lencho is a hardworking farmer — entire corn crop destroyed by hailstorm",
+          "Lencho writes a letter to God asking for 100 pesos to sow crops again",
+          "Post office employees collect 70 pesos among themselves and send it",
+          "Lencho receives money but thinks post office workers stole 30 pesos — writes to God again saying 'do not send by post office'",
+          "Theme: unshakeable faith vs dramatic irony · human kindness mistaken for dishonesty",
+          "Lencho's faith in God is innocent but blind",
         ],
         "Nelson Mandela Long Walk to Freedom": [
+          "Author: Nelson Mandela (autobiography excerpt)",
           "Mandela became South Africa's first Black president · sworn in 10 May 1994",
-          "Apartheid = racial segregation policy in South Africa",
-          "Twin obligations: to family AND to people",
-          "The oppressor is also a prisoner of hatred",
+          "Apartheid: policy of racial segregation in South Africa — ended in 1994",
+          "White minority had enslaved Black majority for decades",
+          "Twin obligations: to family AND to people (his community, his country)",
+          "Great men (Oliver Tambo, Walter Sisulu) made him see that his freedom was linked to his people's freedom",
+          "Oppressor also loses humanity by oppressing others — both oppressor and oppressed need liberation",
+          "Theme: courage, sacrifice, leadership, dignity",
+        ],
+        "Two Stories About Flying": [
+          "Part 1 — 'His First Flight' (Liam O'Flaherty): young seagull afraid to fly despite being fully grown",
+          "Seagull's family ignores him, mother tempts him with food held just out of reach",
+          "Hunger overcomes fear — he dives and flies successfully",
+          "Theme: courage, overcoming fear, taking the first step",
+          "Part 2 — 'Black Aeroplane' (Frederick Forsyth): pilot flying from Paris to England in night",
+          "Enters storm clouds, loses all instruments, fuel almost gone",
+          "Mysterious black aeroplane appears and guides him safely to landing",
+          "At airport he asks about the other plane — controllers saw no other plane on radar",
+          "Theme: mystery, faith, imagination vs reality",
         ],
         "From the Diary of Anne Frank": [
-          "Anne Frank: Jewish girl hiding from Nazis in Amsterdam 1942–44",
-          "She writes to imaginary friend 'Kitty' in her diary",
-          "Theme: loneliness, hope, courage under persecution",
+          "Author: Anne Frank · Jewish girl hiding from Nazis in Amsterdam 1942–44",
+          "Family hid in 'Secret Annexe' above her father's office",
+          "Writes diary as letters to imaginary friend 'Kitty'",
+          "Describes loneliness, daily life in hiding, hope for future",
+          "Anne finds it hard to write about feelings — does not have true friends she can confide in",
+          "Teachers notice students' chatter taking too much time — discusses homework/report cards",
+          "Theme: loneliness, courage, hope, resilience of human spirit",
+          "Anne was arrested in 1944 and died in Bergen-Belsen concentration camp aged 15",
+        ],
+        "The Hundred Dresses Part 1": [
+          "Author: Eleanor Estes",
+          "Characters: Wanda Petronski (poor Polish girl), Maddie and Peggy (classmates)",
+          "Wanda is teased about her name and wearing the same faded dress every day",
+          "She claims she has a hundred dresses in her closet — becomes a joke",
+          "Peggy leads the teasing · Maddie feels uncomfortable but doesn't speak up",
+          "Wanda is quiet, sits in corner, has no friends",
+          "Theme: bullying, empathy, social exclusion, moral courage",
+        ],
+        "The Hundred Dresses Part 2": [
+          "Wanda's father writes to school — they are moving as his children are teased about their Polish name",
+          "Drawing contest results announced — Wanda has won with designs of a hundred dresses",
+          "Miss Mason reads the letter — class feels ashamed of their treatment of Wanda",
+          "Peggy and Maddie write to Wanda asking forgiveness",
+          "Wanda replies warmly and says Peggy and Maddie can keep the drawings of the dresses",
+          "Maddie realises she should have spoken up — resolves never to stand by in silence when someone is bullied",
+          "Theme: remorse, forgiveness, standing up against injustice",
+        ],
+        "Glimpses of India": [
+          "Part 1 — 'A Baker from Goa' (Lucio Rodrigues): describes old Goan tradition of bread-making",
+          "Portuguese traders introduced bread culture · bakers called 'paders'",
+          "Baker's basket (jhadi) and his songs were familiar sounds in Goan childhood",
+          "Part 2 — 'Coorg' (Lokesh Abrol): Coorg (Kodagu), Karnataka — land of rolling hills, coffee, spices, forests",
+          "Coorgi people: martial tradition, fiercely independent, said to be of Greek or Arab origin",
+          "Kaveri River originates in Coorg",
+          "Part 3 — 'Tea from Assam' (Arup Kumar Datta): Pranjol and Rajvir travel through Assam tea gardens",
+          "Legend of tea: Chinese emperor Shen Nung or Indian Buddhist monk Bodhidharma",
+          "Assam and Darjeeling: India's major tea regions",
+        ],
+        "Mijbil the Otter": [
+          "Author: Gavin Maxwell",
+          "Maxwell acquires an otter in Iraq named Mijbil (a species later named Lutrogale perspicillata maxwelli)",
+          "Mijbil is playful, loves water, invents his own games",
+          "Maxwell had to take Mijbil to England on a plane — struggled to get permission",
+          "Plane journey: Mijbil escapes his box during the flight, causing panic among passengers",
+          "In London, Mijbil becomes famous — people ask strange questions about what animal he is",
+          "Theme: bond between humans and animals, animal intelligence, responsibility of pet ownership",
+        ],
+        "Madam Rides the Bus": [
+          "Author: Vallikkannan",
+          "Valli is an 8-year-old girl who longs to ride the town bus she sees from her front door",
+          "Saves money secretly, plans trip carefully by listening to adults",
+          "Boards the bus alone during afternoon — enjoys the journey through the countryside",
+          "Sees a dead cow on the return journey — reality of death saddens her",
+          "Returns home safely before mother wakes from nap — keeps her adventure secret",
+          "Theme: childhood curiosity, independence, encounter with reality of life and death",
+        ],
+        "The Sermon at Benares": [
+          "Author: Betty Renshaw",
+          "Kisa Gotami's son dies — she refuses to accept death and asks for medicine",
+          "Goes to Buddha · Buddha asks her to bring mustard seed from house where no one has died",
+          "She goes from house to house — everyone has lost someone · she understands death is universal",
+          "Returns to Buddha, accepts son's death, becomes his disciple",
+          "Buddha's teaching: sorrow is caused by one's longing for the living and grief for the dead",
+          "Theme: acceptance of death, grief, wisdom, impermanence of life",
+        ],
+        "The Proposal": [
+          "Author: Anton Chekhov (Russian playwright)",
+          "One-act comedy/farce",
+          "Characters: Ivan Lomov (neighbour), Natalya Stepanovna, and her father Chubukov",
+          "Lomov comes to propose marriage but every conversation turns into a quarrel (about Oxen Meadows, then dogs)",
+          "Despite quarrelling over trivial matters, both families want the marriage",
+          "Lomov faints during argument — Natalya panics wanting to know if he has proposed",
+          "They are quickly married despite beginning another quarrel",
+          "Theme: satire on petty disputes, marriage for status/land, human irrationality",
+        ],
+        "Grammar: Determiners": [
+          "Determiners specify and identify nouns",
+          "Articles: a/an (indefinite), the (definite)",
+          "Demonstratives: this, that, these, those",
+          "Possessives: my, your, his, her, our, their",
+          "Quantifiers: some, any, many, few, little, much, several",
+          "Numbers: one, two, first, second etc.",
+          "Use 'a' before consonant sounds, 'an' before vowel sounds",
+        ],
+        "Grammar: Tenses": [
+          "Simple present: habitual/universal truths · Present continuous: action happening now",
+          "Present perfect: action completed with present relevance (have/has + V3)",
+          "Simple past: completed action in past · Past continuous: ongoing past action",
+          "Past perfect: action completed before another past action (had + V3)",
+          "Future: will/shall + V1 · Future perfect: will have + V3",
+          "Signal words: always/usually (present) · yesterday/ago (past) · tomorrow/soon (future)",
+        ],
+        "Grammar: Modals": [
+          "Can: ability/permission (present) · Could: ability (past)/polite request",
+          "Will: future intention · Would: past habit/polite request",
+          "Shall: first person future/offers · Should: advice/obligation",
+          "May: possibility/permission (formal) · Might: lesser possibility",
+          "Must: strong obligation/logical conclusion · Need not: not necessary",
+          "Ought to: moral obligation · Used to: past habit (no longer)",
+        ],
+        "Grammar: Subject-Verb Concord": [
+          "Singular subject → singular verb · Plural subject → plural verb",
+          "Collective nouns (army, team) → singular verb (as a unit)",
+          "Either/Neither + singular noun → singular verb",
+          "Either/Neither + plural noun → plural verb (or verb agrees with nearer noun)",
+          "Each/Every + singular noun → singular verb",
+          "There is/are: verb agrees with the noun that follows",
+          "Titles of books, films → singular verb",
+        ],
+        "Grammar: Reported Speech": [
+          "Direct: the speaker's exact words in inverted commas",
+          "Indirect: reports what was said without inverted commas",
+          "Tense changes: is→was, am→was, are→were, will→would, can→could, may→might",
+          "Pronoun changes: I→he/she, we→they, you→I/he/she/they (context dependent)",
+          "Time/place changes: now→then, today→that day, here→there, tomorrow→next day",
+          "Reporting verbs: said, told, asked, replied, admitted, denied, suggested, promised",
+          "Questions in indirect speech: if/whether (yes/no) · question word retained (wh-questions)",
+        ],
+      },
+      Hindi: {
+        Surdas: [
+          "भक्तिकाल के प्रमुख कवि · सगुण भक्ति धारा (कृष्ण भक्ति)",
+          "बचपन से नेत्रहीन थे पर भगवान कृष्ण के अनन्य भक्त",
+          "सूरसागर, सूरसारावली, साहित्यलहरी — प्रमुख ग्रंथ",
+          "पाठ में माता यशोदा श्रीकृष्ण को माखन चुराने पर उलाहना देती हैं",
+          "कृष्ण के बाल रूप का सजीव चित्रण — वात्सल्य रस की प्रधानता",
+          "भाषा: ब्रजभाषा · काव्य रूप: पद",
+        ],
+        Tulsidas: [
+          "भक्तिकाल कवि · रामभक्ति धारा",
+          "रामचरितमानस, विनय पत्रिका, कवितावली — प्रमुख रचनाएँ",
+          "पाठ में राम के लक्ष्मण को उपदेश — अच्छे मित्र की पहचान",
+          "सच्चा मित्र वही जो विपत्ति में सहायता करे और सत्य बोले",
+          "भाषा: अवधी और ब्रजभाषा · काव्य रूप: चौपाई और दोहे",
+        ],
+        Dev: [
+          "रीतिकाल के कवि · श्रृंगार रस की प्रधानता",
+          "प्रकृति का मानवीकरण — सावन के बादलों से कृष्ण की तुलना",
+          "भाषा: ब्रजभाषा · काव्य में चित्रात्मकता और संगीतात्मकता",
+          "उद्धव-गोपी संवाद — विरह और योग-ज्ञान का विरोध",
+        ],
+        "Jayashankar Prasad": [
+          "छायावाद के चार प्रमुख स्तम्भों में से एक (प्रसाद, निराला, पंत, महादेवी)",
+          "कामायनी (महाकाव्य), चन्द्रगुप्त (नाटक), आँसू (काव्य) — प्रमुख रचनाएँ",
+          "पाठ 'आत्मकथ्य' में कवि जीवन के दर्द और रहस्य को शब्दों में नहीं बाँधना चाहते",
+          "जीवन के गहरे दुखों को छिपाकर मुस्कान बनाए रखने का भाव",
+          "भाषा: खड़ी बोली · विशेषता: सौंदर्यबोध, प्रकृति चित्रण",
+        ],
+        "Suryakant Tripathi Nirala": [
+          "छायावाद के प्रमुख कवि · 'महाप्राण निराला' के नाम से प्रसिद्ध",
+          "मुक्त छंद के जनक — पारम्परिक काव्य नियमों से मुक्ति",
+          "पाठ 'उत्साह' — बादलों से गर्जन-तर्जन करने, नई क्रांति लाने का आह्वान",
+          "पाठ 'अट नहीं रही है' — वसंत की सुंदरता का वर्णन",
+          "समाज के शोषित-पीड़ित वर्ग के प्रति सहानुभूति",
+        ],
+        Nagarjun: [
+          "प्रगतिशील काव्यधारा के कवि · जनकवि कहलाते हैं",
+          "किसान, मजदूर, शोषित जन के कवि",
+          "पाठ 'यह दंतुरित मुस्कान' — शिशु की मुस्कान से मृतप्राय हृदय में जीवन का संचार",
+          "पाठ 'फसल' — फसल किसान के श्रम, प्रकृति (नदियाँ, सूरज, हवा, मिट्टी) का सामूहिक परिणाम",
+          "भाषा: सरल, जनभाषा · बिंब और प्रतीकों का सहज प्रयोग",
+        ],
+        "Girija Kumar Mathur": [
+          "पाठ 'छाया मत छूना' — बीते सुखों की याद दुख बढ़ाती है · वर्तमान में जीने का संदेश",
+          "जो बीत गया उसकी छाया से दूर रहो — उसे याद करने से पीड़ा बढ़ती है",
+          "भाषा: खड़ी बोली · भाव: निराशावाद से उठकर वर्तमान में जीने की प्रेरणा",
+        ],
+        Rituraj: [
+          "पाठ 'कन्यादान' — माँ बेटी को विदाई के समय सीख देती है",
+          "माँ: बेटी को सुंदरता पर गर्व न करने, गहनों के बंधन से बचने की सलाह",
+          "नारी शक्ति का स्वाभिमान — अन्याय का विरोध करने का साहस",
+          "भाषा: सरल खड़ी बोली · स्त्री-विमर्श की दृष्टि महत्त्वपूर्ण",
+        ],
+        "Manglesh Dabral": [
+          "समकालीन हिंदी कवि · सामाजिक-राजनीतिक चेतना",
+          "पाठ 'संगतकार' — गायक के साथ गाने वाला संगतकार मुख्य कलाकार की प्रसिद्धि में सहायक",
+          "संगतकार अपनी आवाज़ जानबूझकर धीमी रखता है — विनम्रता और समर्पण",
+          "थीम: सहयोगी की भूमिका, अहंकारहीनता, साथ देने का महत्त्व",
+        ],
+        "Swayam Prakash": [
+          "पाठ 'नेताजी का चश्मा' — छोटे कस्बे में नेताजी सुभाष की मूर्ति पर असली चश्मा नहीं",
+          "हालदार साहब हर बार देखते हैं कि कैप्टन (अपाहिज चश्मेवाला) मूर्ति को चश्मा लगाता है",
+          "एक दिन कैप्टन नहीं रहा — बच्चों ने सरकंडे का चश्मा लगाया",
+          "थीम: देशभक्ति · छोटे लोगों का बड़ा देशप्रेम",
+        ],
+        "Ramvriksha Benipuri": [
+          "पाठ 'बालगोबिन भगत' — रेखाचित्र · साधु स्वभाव के किसान जो कबीरपंथी हैं",
+          "पुत्र की मृत्यु पर रोने की बजाय भजन गाते हैं — आत्मा परमात्मा से मिली",
+          "पतोहू को दूसरी शादी करने के लिए खुद भेजते हैं",
+          "थीम: वैराग्य, सांसारिक मोह से मुक्ति, सामाजिक कुरीतियों का विरोध",
+        ],
+        Yashpal: [
+          "पाठ 'लखनवी अंदाज़' — नवाबी संस्कृति पर व्यंग्य",
+          "लेखक सेकंड क्लास में बैठे नवाब को देखता है — नवाब खीरे को नमक-मिर्च लगाकर खिड़की से फेंकते हैं",
+          "नवाब अंदाज़ और दिखावे में विश्वास रखते हैं — वास्तव में भूखे थे",
+          "थीम: दिखावटी जीवन, सामंती मानसिकता पर व्यंग्य",
+        ],
+        "Sarveshwar Dayal Saxena": [
+          "पाठ 'मानवीय करुणा की दिव्य चमक' — फादर बुल्के पर संस्मरण",
+          "फादर बुल्के: बेल्जियम के ईसाई पादरी जो हिंदी से प्रेम करते थे",
+          "रामकथा पर शोध किया · अंग्रेज़ी-हिंदी शब्दकोश बनाया",
+          "थीम: मानवीयता, करुणा, सांस्कृतिक एकता",
+        ],
+        "Manu Bhandari": [
+          "पाठ 'एक कहानी यह भी' — आत्मकथ्य",
+          "लेखिका के पिता देशभक्त और स्वाभिमानी पर घर में तानाशाह",
+          "मन्नू अपनी छात्र राजनीति, पिता की अपेक्षाओं और अपनी पहचान के बीच संघर्ष",
+          "थीम: नारी स्वतंत्रता, पारिवारिक दबाव, आत्मनिर्भरता",
+        ],
+        "Mahavir Prasad Dwivedi": [
+          "पाठ 'स्त्री शिक्षा के विरोधी कुतर्कों का खंडन' — तर्कपूर्ण निबंध",
+          "स्त्री शिक्षा के विरोधियों के तर्कों को एक-एक कर खंडित करते हैं",
+          "प्रमाण देते हैं कि प्राचीन भारत में स्त्रियाँ शिक्षित थीं (गार्गी, मैत्रेयी)",
+          "थीम: स्त्री शिक्षा का समर्थन, सामाजिक कुरीतियों का विरोध",
+        ],
+        "Mata ka Anchal": [
+          "लेखक: शिवपूजन सहाय · संस्मरण",
+          "बच्चे का पिता के साथ खेलना, राम-भजन सुनना, पिता का भक्त बनाने का प्रयास",
+          "साँप का डर लगने पर बच्चा माँ की गोद में जा छुपता है — माँ का आँचल सबसे सुरक्षित",
+          "थीम: माँ का ममत्व, बचपन की निश्चिंतता, माँ-बच्चे का अटूट रिश्ता",
+        ],
+        "George Pancham ki Naak": [
+          "लेखक: कमलेश्वर · व्यंग्य रचना",
+          "ब्रिटेन की रानी के भारत आगमन से पहले जॉर्ज पंचम की मूर्ति की टूटी नाक ठीक करने की समस्या",
+          "देश भर में नाक ढूँढी जाती है — कोई नाक नहीं मिलती",
+          "अंत में जीवित व्यक्ति की नाक लगाने का सुझाव",
+          "थीम: उपनिवेशवादी मानसिकता, आत्मसम्मान की कमी पर तीखा व्यंग्य",
+        ],
+        "Sana Sana Haath Jodi": [
+          "लेखिका: मधु कांकरिया · यात्रा वृत्तांत",
+          "सिक्किम और गंगटोक की यात्रा का सजीव वर्णन",
+          "प्रकृति का अद्भुत सौंदर्य — हिमालय, बौद्ध मठ, कवि रवीन्द्रनाथ की पंक्तियाँ",
+          "पर्यावरण प्रदूषण की चिंता, पहाड़ी जीवन की कठिनाइयाँ",
+          "थीम: प्रकृति प्रेम, पर्यटन, पर्यावरण संरक्षण",
+        ],
+        "Ehi Thaiya Jhulani Herani Ho Rama": [
+          "लेखक: शिवप्रसाद मिश्र 'रुद्र' · काशी की संस्कृति पर",
+          "दुलारी और टुन्नू की कहानी — काशी के लोकगीत, विदेशी कपड़ों का बहिष्कार",
+          "टुन्नू की देशभक्ति — विदेशी कपड़े छोड़ता है, ब्रिटिश अधिकारी द्वारा मारा जाता है",
+          "दुलारी टुन्नू के मरने के बाद उसका खद्दर का कपड़ा ओढ़कर जुलूस में शामिल होती है",
+          "थीम: देशभक्ति, स्वदेशी आंदोलन, त्याग",
+        ],
+        "Main Kyun Likhta Hoon": [
+          "लेखक: अज्ञेय (सच्चिदानंद हीरानंद वात्स्यायन)",
+          "लेखन की प्रेरणा पर विचार — आत्म-अभिव्यक्ति और स्वतंत्रता के लिए",
+          "लिखना अनुभव को पाठक तक पहुँचाना है — लेखक का दायित्व",
+          "अज्ञेय: प्रयोगवाद के प्रवर्तक · 'तारसप्तक' का संपादन",
+          "थीम: साहित्य का उद्देश्य, लेखन की प्रेरणा और स्वतंत्रता",
+        ],
+        "Vyakaran: Rachna ke Aadhar par Vaakya Bhed": [
+          "सरल वाक्य: एक उद्देश्य + एक विधेय (मैं खाता हूँ)",
+          "संयुक्त वाक्य: दो या अधिक सरल वाक्य + संयोजक (और, परंतु, किंतु, इसलिए)",
+          "मिश्र वाक्य: एक प्रधान + एक या अधिक आश्रित उपवाक्य (जब...तब, यद्यपि...तथापि)",
+          "उपवाक्य: वाक्य का वह भाग जिसमें कर्ता और क्रिया हो",
+          "मिश्र वाक्य में संज्ञा उपवाक्य, विशेषण उपवाक्य, क्रियाविशेषण उपवाक्य",
+        ],
+        "Vyakaran: Vaachya": [
+          "कर्तृवाच्य: क्रिया कर्ता के अनुसार (राम खाना खाता है)",
+          "कर्मवाच्य: क्रिया कर्म के अनुसार (राम द्वारा खाना खाया जाता है)",
+          "भाववाच्य: क्रिया भाव के अनुसार — अकर्मक क्रिया (मुझसे चला नहीं जाता)",
+          "कर्तृवाच्य से कर्मवाच्य बनाना: कर्ता + 'द्वारा/से' · कर्म की विभक्ति हटाएँ · क्रिया बदलें",
+          "भाववाच्य में बहुधा नकारात्मकता का भाव होता है",
+        ],
+        "Vyakaran: Pad Parichay": [
+          "पद परिचय: वाक्य में प्रत्येक शब्द का व्याकरणिक विश्लेषण",
+          "संज्ञा: प्रकार, लिंग, वचन, कारक, क्रिया से संबंध",
+          "सर्वनाम: प्रकार, पुरुष, लिंग, वचन, कारक",
+          "विशेषण: प्रकार, लिंग, वचन, विशेष्य",
+          "क्रिया: प्रकार (सकर्मक/अकर्मक), काल, वाच्य, कर्ता",
+          "क्रियाविशेषण: प्रकार, जिस क्रिया का विशेषण",
+          "अव्यय: प्रकार (संबंधबोधक, समुच्चयबोधक, विस्मयादिबोधक)",
+        ],
+        "Vyakaran: Alankaar": [
+          "अलंकार: काव्य की शोभा बढ़ाने वाले उपकरण",
+          "शब्दालंकार: शब्दों की ध्वनि पर आधारित — अनुप्रास, यमक, श्लेष",
+          "अनुप्रास: एक ही वर्ण की आवृत्ति (चारु-चंद्र की चंचल किरणें)",
+          "यमक: एक ही शब्द अलग-अलग अर्थ में (काली घटा का घमंड घटा)",
+          "श्लेष: एक शब्द में एक साथ कई अर्थ",
+          "अर्थालंकार: अर्थ पर आधारित — उपमा, रूपक, उत्प्रेक्षा, अतिशयोक्ति",
+          "उपमा: दो वस्तुओं की समानता (नयन मृग-सा चंचल — सा, जैसा)",
+          "रूपक: उपमेय पर उपमान का आरोप (चरण-कमल) — वाचकांश नहीं",
+          "उत्प्रेक्षा: उपमेय में उपमान की संभावना (मनु ज्यों, मानो)",
         ],
       },
     },
@@ -3850,86 +4604,108 @@ function renderNotesTab() {
       Maths: {
         "Number Systems": [
           "Natural numbers ⊂ Whole numbers ⊂ Integers ⊂ Rational numbers ⊂ Real numbers",
-          "Irrational numbers cannot be expressed as p/q",
-          "Every real number has a unique point on number line",
-          "√2, √3, √5 are irrational",
+          "Irrational numbers cannot be expressed as p/q (e.g. √2, √3, π)",
+          "Every real number has a unique point on the number line",
+          "Decimal expansion: terminating or non-terminating repeating → rational",
+          "Non-terminating non-repeating → irrational",
+          "Laws of exponents: aᵐ × aⁿ = aᵐ⁺ⁿ · (aᵐ)ⁿ = aᵐⁿ · a⁰ = 1",
         ],
         Polynomials: [
           "Monomial: 1 term · Binomial: 2 terms · Trinomial: 3 terms",
           "Zero of polynomial p(x): value of x where p(x) = 0",
           "Remainder theorem: p(x) divided by (x−a), remainder = p(a)",
-          "Factor theorem: (x−a) is factor of p(x) if p(a) = 0",
+          "Factor theorem: (x−a) is a factor of p(x) if p(a) = 0",
+          "Algebraic identities: (a+b)² = a²+2ab+b² · (a−b)² = a²−2ab+b² · a²−b² = (a+b)(a−b)",
         ],
         Triangles: [
           "Congruence: SSS, SAS, ASA, AAS, RHS",
-          "In isoceles triangle, angles opposite equal sides are equal",
-          "Angle sum of triangle = 180°",
+          "In isosceles triangle, angles opposite equal sides are equal",
+          "Angle sum property: sum of angles of triangle = 180°",
           "Exterior angle = sum of two non-adjacent interior angles",
+          "Triangle inequality: sum of any two sides > third side",
         ],
         Statistics: [
-          "Mean = Σx/n",
-          "Median = middle value (arrange in order first)",
-          "Mode = most frequent value",
-          "Range = max − min",
+          "Mean = Σx/n (ungrouped data)",
+          "Median = middle value when data arranged in order",
+          "Mode = most frequently occurring value",
+          "Range = maximum − minimum",
+          "Frequency distribution: organising data in class intervals",
         ],
       },
       Physics: {
         Motion: [
-          "Distance = total path covered · Displacement = shortest path (vector)",
-          "Speed = distance/time · Velocity = displacement/time",
-          "Acceleration a = (v−u)/t",
-          "Equations of motion: v = u+at · s = ut + ½at² · v² = u² + 2as",
+          "Distance = total path covered (scalar) · Displacement = shortest path (vector)",
+          "Speed = distance/time · Velocity = displacement/time (vector)",
+          "Uniform motion: equal distances in equal time intervals",
+          "Acceleration a = (v−u)/t · unit: m/s²",
+          "Equations of motion: v = u+at · s = ut+½at² · v² = u²+2as",
+          "Graphical representation: distance-time and velocity-time graphs",
         ],
         "Force and Laws of Motion": [
-          "Newton's 1st Law: body stays at rest or uniform motion unless external force acts",
-          "Newton's 2nd Law: F = ma",
+          "Newton's 1st Law (Inertia): body stays at rest/uniform motion unless external force acts",
+          "Newton's 2nd Law: F = ma · force = rate of change of momentum",
           "Newton's 3rd Law: every action has equal and opposite reaction",
-          "Momentum p = mv · Impulse = F × t",
+          "Momentum p = mv · unit: kg·m/s",
+          "Conservation of momentum: total momentum remains constant when no external force",
         ],
         Gravitation: [
-          "F = Gm₁m₂/r² (Universal law of gravitation)",
-          "g = 9.8 m/s² on Earth's surface",
-          "Weight W = mg · Mass is constant, weight varies",
+          "Universal Law: F = Gm₁m₂/r² · G = 6.67 × 10⁻¹¹ N·m²/kg²",
+          "g = 9.8 m/s² on Earth's surface · g = GM/R²",
+          "Weight W = mg · Mass is constant everywhere; weight varies",
+          "Free fall: object falling only under gravity (no air resistance)",
           "Buoyancy: upward force on object submerged in fluid",
+          "Archimedes' Principle: buoyant force = weight of fluid displaced",
         ],
         "Work and Energy": [
-          "Work W = F × d × cos θ",
-          "Work done = 0 if force ⊥ displacement",
-          "KE = ½mv² · PE = mgh",
-          "Law of conservation of energy: energy can neither be created nor destroyed",
+          "Work W = F × d × cos θ · unit: joule (J)",
+          "Work = 0 if force ⊥ displacement or no displacement",
+          "Kinetic energy KE = ½mv²",
+          "Potential energy PE = mgh",
+          "Law of conservation of energy: energy is neither created nor destroyed",
+          "Power P = W/t = F × v · unit: watt (W) · 1 HP = 746 W",
         ],
       },
       Chemistry: {
         "Matter in Our Surroundings": [
-          "Matter: solid, liquid, gas",
-          "Solid: fixed shape & volume · Liquid: fixed volume, no shape · Gas: no fixed shape or volume",
+          "Matter: solid, liquid, gas — based on arrangement and movement of particles",
+          "Solid: fixed shape and volume · Liquid: fixed volume, no fixed shape · Gas: no fixed shape or volume",
+          "Melting point of ice = 0°C · Boiling point of water = 100°C",
+          "Sublimation: solid → gas directly (dry ice, iodine, camphor)",
           "Evaporation: surface phenomenon, causes cooling",
-          "Latent heat: heat absorbed/released during change of state without temperature change",
+          "Latent heat: heat absorbed/released during state change without temperature change",
         ],
         "Atoms and Molecules": [
           "Law of conservation of mass: mass of reactants = mass of products",
-          "Law of definite proportions: compound always has same elements in fixed ratio",
+          "Law of definite proportions: compound always has same elements in fixed mass ratio",
           "Atom = smallest particle of element · Molecule = group of atoms",
           "Atomic mass unit (amu): 1 amu = 1/12th mass of C-12",
+          "Mole concept: 1 mole = 6.022 × 10²³ particles (Avogadro's number)",
+          "Molar mass = atomic/molecular mass in grams",
         ],
       },
       Biology: {
         "The Fundamental Unit of Life": [
           "Cell = basic structural and functional unit of life",
-          "Plant cell has cell wall, chloroplasts, large vacuole · Animal cell lacks these",
-          "Nucleus = control centre · Mitochondria = powerhouse (ATP)",
-          "Osmosis: movement of water from high to low concentration through semi-permeable membrane",
+          "Plant cell: cell wall, large central vacuole, chloroplasts, plastids",
+          "Animal cell: centrioles, small vacuoles, no cell wall or plastids",
+          "Nucleus: control centre, contains DNA · nuclear membrane, nucleolus, chromosomes",
+          "Mitochondria: powerhouse, produce ATP (energy)",
+          "Osmosis: movement of water across semi-permeable membrane from high to low concentration",
+          "Plasmolysis: cell shrinks when placed in hypertonic solution",
         ],
         Tissues: [
-          "Plant tissues: meristematic (dividing) and permanent (non-dividing)",
+          "Plant tissues: meristematic (actively dividing) and permanent (differentiated)",
+          "Meristematic: apical (root/shoot tip), lateral (girth), intercalary (between nodes)",
+          "Simple permanent: parenchyma (basic function), collenchyma (flexibility), sclerenchyma (strength)",
+          "Complex permanent: xylem (water transport), phloem (food transport)",
           "Animal tissues: epithelial, connective, muscular, nervous",
-          "Meristematic tissue found at root/shoot tips",
-          "Neurons: basic unit of nervous tissue",
+          "Epithelial: covers surfaces · Connective: provides support (bone, blood, cartilage)",
+          "Muscular: striated (voluntary), smooth (involuntary), cardiac",
+          "Neurons: basic unit of nervous tissue · dendrites → cell body → axon",
         ],
       },
     },
   };
-
   const classNotes = NOTES[activeClass] || NOTES["10"];
   const subjectNotes = classNotes[activeSubject] || {};
   const chapters = Object.keys(subjectNotes);
@@ -4165,3 +4941,278 @@ function init() {
 }
 
 showNameSplash(init);
+// ============================================================
+// FLOATING CHATBOT WIDGET
+// ============================================================
+(function initChatbot() {
+  // Load markdown-it if not already present
+  if (!window.markdownit) {
+    const s = document.createElement("script");
+    s.src =
+      "https://cdn.jsdelivr.net/npm/markdown-it@14.1.0/dist/markdown-it.min.js";
+    document.head.appendChild(s);
+  }
+
+  // Inject styles
+  const style = document.createElement("style");
+  style.textContent = `
+    #cb-fab {
+      position: fixed;
+      bottom: 72px;
+      right: 16px;
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #4f8ef7, #9b6dff);
+      border: none;
+      cursor: pointer;
+      z-index: 8888;
+      box-shadow: 0 4px 20px rgba(79,142,247,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    #cb-fab:hover { transform: scale(1.1); box-shadow: 0 6px 28px rgba(79,142,247,0.7); }
+    #cb-fab .cb-pulse {
+      position: absolute;
+      inset: -4px;
+      border-radius: 50%;
+      border: 2px solid rgba(79,142,247,0.4);
+      animation: cbPulse 2s infinite;
+    }
+    @keyframes cbPulse { 0%,100%{transform:scale(1);opacity:.6} 50%{transform:scale(1.15);opacity:0} }
+    #cb-window {
+      position: fixed;
+      bottom: 134px;
+      right: 16px;
+      width: 320px;
+      height: 420px;
+      background: #0d0f1a;
+      border: 1px solid rgba(79,142,247,0.3);
+      border-radius: 20px;
+      z-index: 8889;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+      overflow: hidden;
+      transform: scale(0.85) translateY(20px);
+      opacity: 0;
+      pointer-events: none;
+      transition: transform 0.25s cubic-bezier(.34,1.56,.64,1), opacity 0.2s;
+    }
+    #cb-window.open {
+      transform: scale(1) translateY(0);
+      opacity: 1;
+      pointer-events: all;
+    }
+    #cb-header {
+      padding: 12px 16px;
+      background: rgba(79,142,247,0.1);
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    #cb-header .cb-title { font-weight: 800; font-size: 0.88rem; color: #eef2ff; }
+    #cb-header .cb-sub { font-size: 0.68rem; color: #4f8ef7; margin-top: 1px; }
+    #cb-close {
+      background: rgba(255,255,255,0.08);
+      border: none;
+      color: #7a8aaa;
+      border-radius: 8px;
+      width: 26px;
+      height: 26px;
+      cursor: pointer;
+      font-size: 0.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #cb-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(79,142,247,0.3) transparent;
+    }
+    .cb-msg {
+      max-width: 85%;
+      padding: 8px 12px;
+      border-radius: 14px;
+      font-size: 0.8rem;
+      line-height: 1.5;
+      font-family: Inter, system-ui, sans-serif;
+    }
+    .cb-msg.user {
+      align-self: flex-end;
+      background: linear-gradient(135deg, #4f8ef7, #9b6dff);
+      color: white;
+      border-bottom-right-radius: 4px;
+    }
+    .cb-msg.ai {
+      align-self: flex-start;
+      background: rgba(255,255,255,0.07);
+      color: #c8d0e0;
+      border-bottom-left-radius: 4px;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .cb-msg.ai p { margin: 0 0 4px; }
+    .cb-msg.ai p:last-child { margin: 0; }
+    .cb-msg.ai code { background: rgba(79,142,247,0.2); padding: 1px 4px; border-radius: 4px; font-size: 0.75rem; }
+    .cb-typing { display: flex; gap: 4px; align-items: center; padding: 10px 14px; }
+    .cb-dot { width: 6px; height: 6px; border-radius: 50%; background: #4f8ef7; animation: cbDot 1.2s infinite; }
+    .cb-dot:nth-child(2) { animation-delay: .2s; }
+    .cb-dot:nth-child(3) { animation-delay: .4s; }
+    @keyframes cbDot { 0%,80%,100%{transform:scale(.8);opacity:.5} 40%{transform:scale(1.2);opacity:1} }
+    #cb-input-row {
+      padding: 10px 12px;
+      border-top: 1px solid rgba(255,255,255,0.07);
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    #cb-input {
+      flex: 1;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 20px;
+      padding: 8px 14px;
+      color: #eef2ff;
+      font-size: 0.8rem;
+      font-family: Inter, system-ui, sans-serif;
+      outline: none;
+    }
+    #cb-input:focus { border-color: rgba(79,142,247,0.5); }
+    #cb-send {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #4f8ef7, #9b6dff);
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+      flex-shrink: 0;
+      transition: opacity 0.2s;
+    }
+    #cb-send:disabled { opacity: 0.5; cursor: not-allowed; }
+  `;
+  document.head.appendChild(style);
+
+  // Build HTML
+  const fab = document.createElement("button");
+  fab.id = "cb-fab";
+  fab.innerHTML = '<div class="cb-pulse"></div>🤖';
+  fab.title = "Chat with AI";
+
+  const win = document.createElement("div");
+  win.id = "cb-window";
+  win.innerHTML = `
+    <div id="cb-header">
+      <div>
+        <div class="cb-title">⚡ EduBot AI</div>
+        <div class="cb-sub">● Ask me anything CBSE</div>
+      </div>
+      <button id="cb-close">✕</button>
+    </div>
+    <div id="cb-messages">
+      <div class="cb-msg ai">Hey! I'm your CBSE AI tutor 🎓 Ask me any question from Class 6–10!</div>
+    </div>
+    <div id="cb-input-row">
+      <input id="cb-input" placeholder="Ask a question..." autocomplete="off">
+      <button id="cb-send">➤</button>
+    </div>
+  `;
+
+  document.body.appendChild(fab);
+  document.body.appendChild(win);
+
+  let open = false;
+  let loading = false;
+  let history = [];
+
+  fab.onclick = () => {
+    open = !open;
+    win.classList.toggle("open", open);
+    if (open) document.getElementById("cb-input").focus();
+  };
+  document.getElementById("cb-close").onclick = () => {
+    open = false;
+    win.classList.remove("open");
+  };
+
+  function appendMsg(role, html) {
+    const msgs = document.getElementById("cb-messages");
+    const div = document.createElement("div");
+    div.className = `cb-msg ${role}`;
+    div.innerHTML = html;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+    return div;
+  }
+
+  async function send() {
+    if (loading) return;
+    const inp = document.getElementById("cb-input");
+    const text = inp.value.trim();
+    if (!text) return;
+    inp.value = "";
+    loading = true;
+    document.getElementById("cb-send").disabled = true;
+
+    appendMsg("user", escapeHtml(text));
+
+    const typing = document.createElement("div");
+    typing.className = "cb-msg ai cb-typing";
+    typing.innerHTML =
+      '<div class="cb-dot"></div><div class="cb-dot"></div><div class="cb-dot"></div>';
+    document.getElementById("cb-messages").appendChild(typing);
+    document.getElementById("cb-messages").scrollTop = 999999;
+
+    try {
+      const res = await fetch("/api/solve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          question: text,
+          subject: (window.S && window.S.subjectPreference) || "Maths",
+          classNum: (window.S && window.S.classPreference) || "10",
+          chapter: (window.S && window.S.chapterPreference) || "",
+          level: "developing",
+          language: localStorage.getItem("stasis_lang") || "en",
+          chatMode: true,
+        }),
+      });
+      const data = await res.json();
+      typing.remove();
+      const md = window.markdownit
+        ? window.markdownit({ html: false, linkify: true })
+        : null;
+      const reply =
+        data.solution ||
+        (data.steps || []).map((s) => s).join("\n\n") ||
+        "Sorry, I could not get an answer.";
+      appendMsg("ai", md ? md.render(reply) : escapeHtml(reply));
+      history.push({ role: "user", text }, { role: "ai", text: reply });
+    } catch (e) {
+      typing.remove();
+      appendMsg("ai", "❌ Connection error. Please try again.");
+    }
+
+    loading = false;
+    document.getElementById("cb-send").disabled = false;
+    document.getElementById("cb-input").focus();
+  }
+
+  document.getElementById("cb-send").onclick = send;
+  document.getElementById("cb-input").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") send();
+  });
+})();
