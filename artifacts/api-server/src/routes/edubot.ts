@@ -594,9 +594,7 @@ Keep every string under 20 words. Do not invent subjects or numbers not present 
   }
 });
 
-// ============================================================
-// CHATBOT — General AI assistant (NOT Stasis/EduBot)
-// ============================================================
+// ── Nova Chatbot ─────────────────────────────────────────────────────────────
 router.post("/chatbot", async (req, res) => {
   const { message, history = [] } = req.body as {
     message: string;
@@ -607,53 +605,29 @@ router.post("/chatbot", async (req, res) => {
     return;
   }
 
-  const GRADE_REDIRECT_PROMPT = `You are Nova, a smart general-purpose AI assistant embedded in Stasis (a CBSE Class 10 learning platform). You help with general knowledge, coding, science, logic, current events, and everyday questions.
-
-IMPORTANT RULES:
-1. You are NOT Stasis (the edu-bot). You are Nova — a separate general assistant.
-2. If the user asks an academic/homework/exam question specifically about Class 6, 7, 8, 9, or 10 (or any school grade), respond EXACTLY with this JSON: {"redirect": true, "grade": "<grade>", "message": "Looks like a Class <grade> question! Head to the Home page to ask Stasis — it's built exactly for this. 🎯"}
-3. For everything else — general curiosity, casual chat, coding, current events, explanations, debate, opinion questions — answer helpfully and conversationally. Use markdown for formatting. Keep a casual, smart tone.
-4. Never reveal you are built on any specific AI model. You are Nova.`;
+  const system = `You are Nova, a smart casual AI assistant embedded in Stasis (a CBSE study app for Classes 6-10). You handle general knowledge, coding, science, current events, opinions, trivia, and everyday questions. You are NOT Stasis (the edu-bot) — that is a separate AI. Keep responses concise and conversational. Use markdown for code and lists. Never say which model powers you.`;
 
   try {
-    const messages = [
-      ...history.map((h) => ({
+    const msgs = (history as Array<{ role: string; content: string }>)
+      .slice(-20)
+      .map((h) => ({
         role: h.role as "user" | "assistant",
         content: h.content,
-      })),
-      { role: "user" as const, content: message },
-    ];
+      }));
+
+    msgs.push({ role: "user", content: message });
 
     const response = await client.chat.completions.create({
       model: MODEL,
-      messages: [
-        { role: "system", content: GRADE_REDIRECT_PROMPT },
-        ...messages,
-      ],
-      max_tokens: 800,
+      messages: [{ role: "system", content: system }, ...msgs],
+      max_tokens: 700,
     });
 
-    const raw = response.choices[0].message.content ?? "";
-
-    // Check if AI returned a redirect JSON
-    const redirectMatch = raw.match(/\{[\s\S]*"redirect"\s*:\s*true[\s\S]*\}/);
-    if (redirectMatch) {
-      try {
-        const parsed = JSON.parse(redirectMatch[0]);
-        res.json({
-          redirect: true,
-          grade: parsed.grade,
-          reply: parsed.message,
-        });
-        return;
-      } catch {
-        // fall through to normal reply
-      }
-    }
-
-    res.json({ reply: raw });
+    const reply =
+      response.choices[0].message.content ?? "Sorry, I couldn't process that.";
+    res.json({ reply });
   } catch (e) {
-    req.log.error({ err: e }, "chatbot error");
+    req.log.error({ err: e }, "nova-chatbot error");
     res.status(500).json({ error: "AI error" });
   }
 });

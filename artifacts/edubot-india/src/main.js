@@ -4943,8 +4943,7 @@ function init() {
 showNameSplash(init);
 
 // ============================================================
-// NOVA CHATBOT — Self-contained floating widget
-// Uses Anthropic API directly (no backend route needed)
+// NOVA CHATBOT — Floating widget, calls /api/chatbot (Groq)
 // ============================================================
 (function initNovaChatbot() {
   let chatHistory = [];
@@ -4952,39 +4951,34 @@ showNameSplash(init);
   let isMaximised = false;
   let isLoading = false;
 
-  // ── Styles ─────────────────────────────────────────────
   const style = document.createElement("style");
   style.textContent = `
     #nova-fab {
-      position: fixed; bottom: 24px; right: 24px; z-index: 9999;
-      width: 54px; height: 54px; border-radius: 50%;
-      background: linear-gradient(135deg, #4f8ef7 0%, #a855f7 100%);
-      box-shadow: 0 4px 20px rgba(79,142,247,0.55);
-      border: none; cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      transition: transform 0.2s, box-shadow 0.2s;
+      position:fixed;bottom:24px;right:24px;z-index:9999;
+      width:54px;height:54px;border-radius:50%;
+      background:linear-gradient(135deg,#4f8ef7 0%,#a855f7 100%);
+      box-shadow:0 4px 20px rgba(79,142,247,0.55);
+      border:none;cursor:pointer;
+      display:flex;align-items:center;justify-content:center;
+      transition:transform .2s,box-shadow .2s;
     }
-    #nova-fab:hover { transform: scale(1.1); box-shadow: 0 6px 32px rgba(79,142,247,0.75); }
-    #nova-fab::before {
-      content:''; position:absolute; inset:-5px; border-radius:50%;
+    #nova-fab:hover{transform:scale(1.1);box-shadow:0 6px 32px rgba(79,142,247,0.75)}
+    #nova-fab::before{
+      content:'';position:absolute;inset:-5px;border-radius:50%;
       border:2px solid rgba(79,142,247,0.35);
-      animation: nova-pulse 2.2s ease-in-out infinite;
+      animation:nova-pulse 2.2s ease-in-out infinite;
     }
-    @keyframes nova-pulse {
-      0%,100%{transform:scale(1);opacity:.6} 50%{transform:scale(1.2);opacity:0}
-    }
-    #nova-panel {
-      position:fixed; z-index:9998;
-      bottom:90px; right:24px;
-      width:360px; height:500px;
+    @keyframes nova-pulse{0%,100%{transform:scale(1);opacity:.6}50%{transform:scale(1.2);opacity:0}}
+    #nova-panel{
+      position:fixed;z-index:9998;bottom:90px;right:24px;
+      width:360px;height:500px;
       background:rgba(10,12,20,0.97);
       backdrop-filter:blur(20px);
-      border:1px solid rgba(79,142,247,0.2);
-      border-radius:20px;
+      border:1px solid rgba(79,142,247,0.2);border-radius:20px;
       box-shadow:0 8px 48px rgba(0,0,0,0.7),0 0 0 1px rgba(255,255,255,0.04);
-      display:flex; flex-direction:column; overflow:hidden;
-      transform:scale(0.88) translateY(14px); opacity:0; pointer-events:none;
-      transition:transform 0.28s cubic-bezier(0.34,1.56,0.64,1),opacity 0.2s;
+      display:flex;flex-direction:column;overflow:hidden;
+      transform:scale(0.88) translateY(14px);opacity:0;pointer-events:none;
+      transition:transform .28s cubic-bezier(0.34,1.56,0.64,1),opacity .2s;
       transform-origin:bottom right;
     }
     #nova-panel.open{transform:scale(1) translateY(0);opacity:1;pointer-events:all}
@@ -4992,12 +4986,9 @@ showNameSplash(init);
       width:min(720px,calc(100vw - 32px));
       height:min(580px,calc(100vh - 110px));
     }
-    /* Header */
     #nova-header{
-      display:flex;align-items:center;gap:10px;
-      padding:13px 14px;
-      background:rgba(255,255,255,0.03);
-      border-bottom:1px solid rgba(255,255,255,0.07);
+      display:flex;align-items:center;gap:10px;padding:13px 14px;
+      background:rgba(255,255,255,0.03);border-bottom:1px solid rgba(255,255,255,0.07);
       flex-shrink:0;
     }
     #nova-avatar{
@@ -5007,19 +4998,17 @@ showNameSplash(init);
       font-size:17px;flex-shrink:0;
     }
     #nova-title{flex:1}
-    #nova-title strong{display:block;font-size:0.88rem;color:#fff;font-weight:700}
-    #nova-title span{font-size:0.68rem;color:#4ade80;font-weight:600;letter-spacing:.05em}
+    #nova-title strong{display:block;font-size:.88rem;color:#fff;font-weight:700}
+    #nova-title span{font-size:.68rem;color:#4ade80;font-weight:600;letter-spacing:.05em}
     .nhbtn{
       background:rgba(255,255,255,0.07);border:none;border-radius:7px;
       color:rgba(255,255,255,0.45);cursor:pointer;padding:5px 8px;
-      font-size:0.78rem;line-height:1;transition:.15s;
+      font-size:.78rem;line-height:1;transition:.15s;
     }
     .nhbtn:hover{background:rgba(255,255,255,0.14);color:#fff}
-    /* Messages */
     #nova-msgs{
       flex:1;overflow-y:auto;padding:14px;
-      display:flex;flex-direction:column;gap:10px;
-      scroll-behavior:smooth;
+      display:flex;flex-direction:column;gap:10px;scroll-behavior:smooth;
     }
     #nova-msgs::-webkit-scrollbar{width:3px}
     #nova-msgs::-webkit-scrollbar-thumb{background:rgba(79,142,247,0.4);border-radius:10px}
@@ -5028,7 +5017,7 @@ showNameSplash(init);
     .nmsg.ai{align-self:flex-start}
     .nbub{
       padding:9px 13px;border-radius:16px;
-      font-size:0.81rem;line-height:1.6;word-break:break-word;
+      font-size:.81rem;line-height:1.6;word-break:break-word;
     }
     .nmsg.user .nbub{
       background:linear-gradient(135deg,#4f8ef7,#6366f1);
@@ -5046,17 +5035,16 @@ showNameSplash(init);
     .nbub pre code{background:none;padding:0}
     .nbub ul,.nbub ol{margin:3px 0;padding-left:16px}
     .nbub li{margin-bottom:2px}
-    /* Typing */
     .nova-typing{display:flex;gap:5px;align-items:center;padding:11px 14px}
     .nova-dot{width:6px;height:6px;border-radius:50%;background:#4f8ef7;animation:ndot 1.2s infinite}
     .nova-dot:nth-child(2){animation-delay:.2s}
     .nova-dot:nth-child(3){animation-delay:.4s}
     @keyframes ndot{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-7px)}}
-    /* Redirect */
     .nova-redir{
       background:rgba(79,142,247,0.1);border:1px solid rgba(79,142,247,0.28);
-      border-radius:12px;padding:11px 13px;font-size:0.79rem;
-      color:rgba(255,255,255,0.85);line-height:1.5;max-width:86%;align-self:flex-start;
+      border-radius:12px;padding:11px 13px;font-size:.79rem;
+      color:rgba(255,255,255,0.85);line-height:1.5;
+      max-width:86%;align-self:flex-start;
     }
     .nova-redir-btn{
       display:inline-block;margin-top:8px;
@@ -5064,7 +5052,6 @@ showNameSplash(init);
       color:#fff;border:none;border-radius:7px;
       padding:5px 13px;font-size:.74rem;font-weight:700;cursor:pointer;font-family:inherit;
     }
-    /* Input */
     #nova-input-row{
       padding:10px;border-top:1px solid rgba(255,255,255,0.07);
       display:flex;gap:8px;flex-shrink:0;background:rgba(255,255,255,0.02);
@@ -5072,7 +5059,7 @@ showNameSplash(init);
     #nova-input{
       flex:1;background:rgba(255,255,255,0.06);
       border:1px solid rgba(255,255,255,0.1);border-radius:11px;
-      padding:9px 13px;color:#fff;font-size:0.81rem;font-family:inherit;
+      padding:9px 13px;color:#fff;font-size:.81rem;font-family:inherit;
       outline:none;resize:none;max-height:76px;line-height:1.5;
       transition:border-color .2s;
     }
@@ -5088,7 +5075,6 @@ showNameSplash(init);
     #nova-send:hover{opacity:.85;transform:scale(1.06)}
     #nova-send:disabled{opacity:.35;cursor:not-allowed;transform:none}
     #nova-send svg{width:17px;height:17px;fill:white}
-    /* Welcome */
     #nova-welcome{
       display:flex;flex-direction:column;align-items:center;
       justify-content:center;flex:1;text-align:center;padding:18px;gap:8px;
@@ -5106,22 +5092,20 @@ showNameSplash(init);
   `;
   document.head.appendChild(style);
 
-  // ── Build DOM ──────────────────────────────────────────
+  // FAB
   const fab = document.createElement("button");
   fab.id = "nova-fab";
   fab.title = "Chat with Nova";
-  fab.innerHTML = `<svg width="26" height="26" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg>`;
+  fab.innerHTML = `<svg width="26" height="26" viewBox="0 0 24 24" fill="white"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg>`;
   document.body.appendChild(fab);
 
+  // Panel
   const panel = document.createElement("div");
   panel.id = "nova-panel";
   panel.innerHTML = `
     <div id="nova-header">
       <div id="nova-avatar">✦</div>
-      <div id="nova-title">
-        <strong>Nova</strong>
-        <span>● Online</span>
-      </div>
+      <div id="nova-title"><strong>Nova</strong><span>● Online</span></div>
       <button class="nhbtn" id="nova-max-btn" title="Maximise">⤢</button>
       <button class="nhbtn" id="nova-close-btn" title="Close">✕</button>
     </div>
@@ -5129,22 +5113,19 @@ showNameSplash(init);
       <div id="nova-welcome">
         <div class="nw-icon">✦</div>
         <h3>Hey, I'm Nova!</h3>
-        <p>Your general AI assistant — not Stasis. Ask me anything: science, code, trivia, opinions. For CBSE homework, use the Home tab!</p>
+        <p>Your general AI — not Stasis. Ask me anything: science, code, trivia, opinions. For CBSE homework, use the Home tab!</p>
         <div class="nw-chips">
           <button class="nw-chip" data-q="Explain quantum entanglement simply">⚛️ Quantum physics</button>
           <button class="nw-chip" data-q="Write a Python function to sort a list">🐍 Python help</button>
-          <button class="nw-chip" data-q="What's the latest in AI this year?">🤖 AI news</button>
-          <button class="nw-chip" data-q="Give me a fun logic puzzle to solve">🧩 Logic puzzle</button>
+          <button class="nw-chip" data-q="What's trending in AI right now?">🤖 AI news</button>
+          <button class="nw-chip" data-q="Give me a fun logic puzzle">🧩 Logic puzzle</button>
         </div>
       </div>
     </div>
     <div id="nova-input-row">
       <textarea id="nova-input" placeholder="Ask Nova anything…" rows="1"></textarea>
-      <button id="nova-send">
-        <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-      </button>
-    </div>
-  `;
+      <button id="nova-send"><svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
+    </div>`;
   document.body.appendChild(panel);
 
   const msgsEl = panel.querySelector("#nova-msgs");
@@ -5153,57 +5134,43 @@ showNameSplash(init);
   const maxBtn = panel.querySelector("#nova-max-btn");
   const closeBtn = panel.querySelector("#nova-close-btn");
 
-  // ── Markdown renderer ──────────────────────────────────
-  function md(text) {
-    return text
+  // Markdown
+  function md(t) {
+    return t
       .replace(
-        /```([\w]*)\n?([\s\S]*?)```/g,
-        (_, _l, c) =>
-          `<pre><code>${c.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</code></pre>`,
+        /```[\w]*\n?([\s\S]*?)```/g,
+        (_, c) => `<pre><code>${c.replace(/</g, "&lt;")}</code></pre>`,
       )
       .replace(/`([^`\n]+)`/g, "<code>$1</code>")
       .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
       .replace(/\*([^*\n]+)\*/g, "<em>$1</em>")
       .replace(/^#{1,3} (.+)$/gm, "<strong>$1</strong>")
       .replace(/^[-*] (.+)$/gm, "<li>$1</li>")
-      .replace(/(<li>.*<\/li>(\n|$))+/g, (m) => `<ul>${m}</ul>`)
+      .replace(/(<li>[\s\S]+?<\/li>)/g, "<ul>$1</ul>")
+      .replace(/<\/ul>\s*<ul>/g, "")
       .replace(/\n{2,}/g, "</p><p>")
-      .replace(/\n/g, "<br>")
-      .replace(/^([^<])/, "<p>$1")
-      .replace(/([^>])$/, "$1</p>");
+      .replace(/\n/g, "<br>");
   }
 
-  // ── Grade keyword detector ─────────────────────────────
+  // Grade redirect — instant, no API call
   const GRADE_RE =
-    /\b(class|grade|std|standard)\s*(6|7|8|9|10|six|seven|eight|nine|ten)\b|(cbse|ncert|board exam|syllabus|chapter|textbook)\b/i;
-  const GENERAL_RE =
-    /^(hi|hello|hey|what is|who is|how does|explain|tell me|what are|define|meaning of|difference between|compare|help me understand)/i;
-
-  function isSchoolQuestion(text) {
-    // If it explicitly mentions grade/class
-    if (GRADE_RE.test(text)) return true;
-    // Homework-flavored but no grade → still redirect (Stasis handles all CBSE)
-    if (
-      !GENERAL_RE.test(text) &&
-      /\b(solve|calculate|find|prove|derive|what is the formula|balance the equation|draw a diagram|write a note on)\b/i.test(
-        text,
-      )
-    )
-      return true;
-    return false;
+    /\b(class|grade|std)\s*(6|7|8|9|10|six|seven|eight|nine|ten)\b|(cbse|ncert|board.?exam|syllabus)/i;
+  const HOMEWORK_RE =
+    /\b(solve|calculate|find the|prove that|derive|balance the equation|write a note on|what is the formula for)\b/i;
+  function isSchoolQ(t) {
+    return GRADE_RE.test(t) || HOMEWORK_RE.test(t);
   }
 
-  // ── Append message ─────────────────────────────────────
-  function appendMsg(role, html, isRedir) {
-    const welcome = msgsEl.querySelector("#nova-welcome");
-    if (welcome) welcome.remove();
-    if (isRedir) {
-      const div = document.createElement("div");
-      div.className = "nova-redir";
-      div.innerHTML = html;
-      msgsEl.appendChild(div);
+  function appendMsg(role, html, redir) {
+    const w = msgsEl.querySelector("#nova-welcome");
+    if (w) w.remove();
+    if (redir) {
+      const d = document.createElement("div");
+      d.className = "nova-redir";
+      d.innerHTML = html;
+      msgsEl.appendChild(d);
       msgsEl.scrollTop = msgsEl.scrollHeight;
-      return div;
+      return d;
     }
     const wrap = document.createElement("div");
     wrap.className = `nmsg ${role}`;
@@ -5214,8 +5181,8 @@ showNameSplash(init);
   }
 
   function showTyping() {
-    const welcome = msgsEl.querySelector("#nova-welcome");
-    if (welcome) welcome.remove();
+    const w = msgsEl.querySelector("#nova-welcome");
+    if (w) w.remove();
     const wrap = document.createElement("div");
     wrap.className = "nmsg ai";
     wrap.id = "nova-typing";
@@ -5225,7 +5192,6 @@ showNameSplash(init);
     return wrap;
   }
 
-  // ── Send ───────────────────────────────────────────────
   async function sendMessage(prefill) {
     const text = (prefill || inputEl.value).trim();
     if (!text || isLoading) return;
@@ -5236,11 +5202,11 @@ showNameSplash(init);
 
     appendMsg("user", md(text));
 
-    // Client-side grade redirect check (instant, no API call wasted)
-    if (isSchoolQuestion(text)) {
+    // Instant redirect for school questions
+    if (isSchoolQ(text)) {
       appendMsg(
         "ai",
-        `Looks like a school question! 🎯 Head to the Home page — Stasis is built exactly for CBSE help.<br><button class="nova-redir-btn" onclick="navigate('home')">🏠 Go to Home</button>`,
+        `Looks like a school question! 🎯 Head to Home — Stasis is built exactly for CBSE.<br><button class="nova-redir-btn" onclick="navigate('home')">🏠 Go to Home</button>`,
         true,
       );
       isLoading = false;
@@ -5251,31 +5217,20 @@ showNameSplash(init);
     const typingEl = showTyping();
 
     try {
-      const SYSTEM = `You are Nova, a smart casual AI assistant embedded in Stasis (a CBSE study app). You handle general knowledge, coding, science, current events, opinions, and everyday questions. You are NOT the edu-bot — that's Stasis. Keep responses concise and conversational. Use markdown for code and lists. Never mention which model you are.`;
-
-      const messages = [...chatHistory, { role: "user", content: text }];
-
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
+      // Call backend /api/chatbot (same origin — no CORS issues)
+      const res = await fetch("/api/chatbot", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-6",
-          max_tokens: 800,
-          system: SYSTEM,
-          messages,
-        }),
+        body: JSON.stringify({ message: text, history: chatHistory }),
       });
 
       const data = await res.json();
       typingEl.remove();
 
-      if (!res.ok || !data.content) {
-        appendMsg(
-          "ai",
-          md("Hmm, couldn't reach Nova right now. Try again in a sec! 🔌"),
-        );
+      if (!res.ok || data.error) {
+        appendMsg("ai", "Hmm, Nova hit a snag. Try again! 🔌");
       } else {
-        const reply = data.content.map((b) => b.text || "").join("");
+        const reply = data.reply || "I didn't catch that, try again?";
         appendMsg("ai", md(reply));
         chatHistory.push({ role: "user", content: text });
         chatHistory.push({ role: "assistant", content: reply });
@@ -5283,7 +5238,7 @@ showNameSplash(init);
       }
     } catch {
       typingEl.remove();
-      appendMsg("ai", md("Connection dropped. Give it another shot? 🔌"));
+      appendMsg("ai", "Connection dropped. Give it another shot? 🔌");
     } finally {
       isLoading = false;
       sendBtn.disabled = false;
@@ -5291,7 +5246,6 @@ showNameSplash(init);
     }
   }
 
-  // ── Controls ───────────────────────────────────────────
   fab.addEventListener("click", () => {
     isOpen = !isOpen;
     panel.classList.toggle("open", isOpen);
