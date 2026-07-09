@@ -631,5 +631,38 @@ router.post("/chatbot", async (req, res) => {
     res.status(500).json({ error: "AI error" });
   }
 });
+router.post("/chatbot", async (req, res) => {
+  const { message, history = [] } = req.body as {
+    message: string;
+    history: Array<{ role: string; content: string }>;
+  };
+  if (!message) {
+    res.status(400).json({ error: "Missing message" });
+    return;
+  }
 
+  const system = `You are Nova, a smart casual AI assistant embedded in Stasis (a CBSE study app). You handle general knowledge, coding, science, current events, opinions and trivia. You are NOT Stasis — that is the edu-bot. Be concise and conversational. Use markdown for code/lists. Never say which model you are.`;
+
+  try {
+    const msgs = (history as Array<{ role: string; content: string }>)
+      .slice(-20)
+      .map((h) => ({
+        role: h.role as "user" | "assistant",
+        content: h.content,
+      }));
+    msgs.push({ role: "user" as const, content: message });
+
+    const response = await client.chat.completions.create({
+      model: MODEL,
+      messages: [{ role: "system", content: system }, ...msgs],
+      max_tokens: 700,
+    });
+
+    const reply = response.choices[0].message.content ?? "Sorry, try again.";
+    res.json({ reply });
+  } catch (e) {
+    req.log.error({ err: e }, "nova-chatbot error");
+    res.status(500).json({ error: "AI error" });
+  }
+});
 export default router;
