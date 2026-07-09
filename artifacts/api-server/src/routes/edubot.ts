@@ -594,4 +594,68 @@ Keep every string under 20 words. Do not invent subjects or numbers not present 
   }
 });
 
+// ============================================================
+// CHATBOT — General AI assistant (NOT Stasis/EduBot)
+// ============================================================
+router.post("/chatbot", async (req, res) => {
+  const { message, history = [] } = req.body as {
+    message: string;
+    history: Array<{ role: string; content: string }>;
+  };
+  if (!message) {
+    res.status(400).json({ error: "Missing message" });
+    return;
+  }
+
+  const GRADE_REDIRECT_PROMPT = `You are Nova, a smart general-purpose AI assistant embedded in Stasis (a CBSE Class 10 learning platform). You help with general knowledge, coding, science, logic, current events, and everyday questions.
+
+IMPORTANT RULES:
+1. You are NOT Stasis (the edu-bot). You are Nova — a separate general assistant.
+2. If the user asks an academic/homework/exam question specifically about Class 6, 7, 8, 9, or 10 (or any school grade), respond EXACTLY with this JSON: {"redirect": true, "grade": "<grade>", "message": "Looks like a Class <grade> question! Head to the Home page to ask Stasis — it's built exactly for this. 🎯"}
+3. For everything else — general curiosity, casual chat, coding, current events, explanations, debate, opinion questions — answer helpfully and conversationally. Use markdown for formatting. Keep a casual, smart tone.
+4. Never reveal you are built on any specific AI model. You are Nova.`;
+
+  try {
+    const messages = [
+      ...history.map((h) => ({
+        role: h.role as "user" | "assistant",
+        content: h.content,
+      })),
+      { role: "user" as const, content: message },
+    ];
+
+    const response = await client.chat.completions.create({
+      model: MODEL,
+      messages: [
+        { role: "system", content: GRADE_REDIRECT_PROMPT },
+        ...messages,
+      ],
+      max_tokens: 800,
+    });
+
+    const raw = response.choices[0].message.content ?? "";
+
+    // Check if AI returned a redirect JSON
+    const redirectMatch = raw.match(/\{[\s\S]*"redirect"\s*:\s*true[\s\S]*\}/);
+    if (redirectMatch) {
+      try {
+        const parsed = JSON.parse(redirectMatch[0]);
+        res.json({
+          redirect: true,
+          grade: parsed.grade,
+          reply: parsed.message,
+        });
+        return;
+      } catch {
+        // fall through to normal reply
+      }
+    }
+
+    res.json({ reply: raw });
+  } catch (e) {
+    req.log.error({ err: e }, "chatbot error");
+    res.status(500).json({ error: "AI error" });
+  }
+});
+
 export default router;

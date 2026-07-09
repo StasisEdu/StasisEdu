@@ -4941,278 +4941,385 @@ function init() {
 }
 
 showNameSplash(init);
-// ============================================================
-// FLOATING CHATBOT WIDGET
-// ============================================================
-(function initChatbot() {
-  // Load markdown-it if not already present
-  if (!window.markdownit) {
-    const s = document.createElement("script");
-    s.src =
-      "https://cdn.jsdelivr.net/npm/markdown-it@14.1.0/dist/markdown-it.min.js";
-    document.head.appendChild(s);
-  }
 
-  // Inject styles
+// ============================================================
+// NOVA CHATBOT — Self-contained floating widget
+// Uses Anthropic API directly (no backend route needed)
+// ============================================================
+(function initNovaChatbot() {
+  let chatHistory = [];
+  let isOpen = false;
+  let isMaximised = false;
+  let isLoading = false;
+
+  // ── Styles ─────────────────────────────────────────────
   const style = document.createElement("style");
   style.textContent = `
-    #cb-fab {
-      position: fixed;
-      bottom: 72px;
-      right: 16px;
-      width: 52px;
-      height: 52px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, #4f8ef7, #9b6dff);
-      border: none;
-      cursor: pointer;
-      z-index: 8888;
-      box-shadow: 0 4px 20px rgba(79,142,247,0.5);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.4rem;
+    #nova-fab {
+      position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+      width: 54px; height: 54px; border-radius: 50%;
+      background: linear-gradient(135deg, #4f8ef7 0%, #a855f7 100%);
+      box-shadow: 0 4px 20px rgba(79,142,247,0.55);
+      border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
       transition: transform 0.2s, box-shadow 0.2s;
     }
-    #cb-fab:hover { transform: scale(1.1); box-shadow: 0 6px 28px rgba(79,142,247,0.7); }
-    #cb-fab .cb-pulse {
-      position: absolute;
-      inset: -4px;
-      border-radius: 50%;
-      border: 2px solid rgba(79,142,247,0.4);
-      animation: cbPulse 2s infinite;
+    #nova-fab:hover { transform: scale(1.1); box-shadow: 0 6px 32px rgba(79,142,247,0.75); }
+    #nova-fab::before {
+      content:''; position:absolute; inset:-5px; border-radius:50%;
+      border:2px solid rgba(79,142,247,0.35);
+      animation: nova-pulse 2.2s ease-in-out infinite;
     }
-    @keyframes cbPulse { 0%,100%{transform:scale(1);opacity:.6} 50%{transform:scale(1.15);opacity:0} }
-    #cb-window {
-      position: fixed;
-      bottom: 134px;
-      right: 16px;
-      width: 320px;
-      height: 420px;
-      background: #0d0f1a;
-      border: 1px solid rgba(79,142,247,0.3);
-      border-radius: 20px;
-      z-index: 8889;
-      display: flex;
-      flex-direction: column;
-      box-shadow: 0 8px 40px rgba(0,0,0,0.6);
-      overflow: hidden;
-      transform: scale(0.85) translateY(20px);
-      opacity: 0;
-      pointer-events: none;
-      transition: transform 0.25s cubic-bezier(.34,1.56,.64,1), opacity 0.2s;
+    @keyframes nova-pulse {
+      0%,100%{transform:scale(1);opacity:.6} 50%{transform:scale(1.2);opacity:0}
     }
-    #cb-window.open {
-      transform: scale(1) translateY(0);
-      opacity: 1;
-      pointer-events: all;
+    #nova-panel {
+      position:fixed; z-index:9998;
+      bottom:90px; right:24px;
+      width:360px; height:500px;
+      background:rgba(10,12,20,0.97);
+      backdrop-filter:blur(20px);
+      border:1px solid rgba(79,142,247,0.2);
+      border-radius:20px;
+      box-shadow:0 8px 48px rgba(0,0,0,0.7),0 0 0 1px rgba(255,255,255,0.04);
+      display:flex; flex-direction:column; overflow:hidden;
+      transform:scale(0.88) translateY(14px); opacity:0; pointer-events:none;
+      transition:transform 0.28s cubic-bezier(0.34,1.56,0.64,1),opacity 0.2s;
+      transform-origin:bottom right;
     }
-    #cb-header {
-      padding: 12px 16px;
-      background: rgba(79,142,247,0.1);
-      border-bottom: 1px solid rgba(255,255,255,0.07);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+    #nova-panel.open{transform:scale(1) translateY(0);opacity:1;pointer-events:all}
+    #nova-panel.maximised{
+      width:min(720px,calc(100vw - 32px));
+      height:min(580px,calc(100vh - 110px));
     }
-    #cb-header .cb-title { font-weight: 800; font-size: 0.88rem; color: #eef2ff; }
-    #cb-header .cb-sub { font-size: 0.68rem; color: #4f8ef7; margin-top: 1px; }
-    #cb-close {
-      background: rgba(255,255,255,0.08);
-      border: none;
-      color: #7a8aaa;
-      border-radius: 8px;
-      width: 26px;
-      height: 26px;
-      cursor: pointer;
-      font-size: 0.75rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    /* Header */
+    #nova-header{
+      display:flex;align-items:center;gap:10px;
+      padding:13px 14px;
+      background:rgba(255,255,255,0.03);
+      border-bottom:1px solid rgba(255,255,255,0.07);
+      flex-shrink:0;
     }
-    #cb-messages {
-      flex: 1;
-      overflow-y: auto;
-      padding: 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      scrollbar-width: thin;
-      scrollbar-color: rgba(79,142,247,0.3) transparent;
+    #nova-avatar{
+      width:34px;height:34px;border-radius:50%;
+      background:linear-gradient(135deg,#4f8ef7,#a855f7);
+      display:flex;align-items:center;justify-content:center;
+      font-size:17px;flex-shrink:0;
     }
-    .cb-msg {
-      max-width: 85%;
-      padding: 8px 12px;
-      border-radius: 14px;
-      font-size: 0.8rem;
-      line-height: 1.5;
-      font-family: Inter, system-ui, sans-serif;
+    #nova-title{flex:1}
+    #nova-title strong{display:block;font-size:0.88rem;color:#fff;font-weight:700}
+    #nova-title span{font-size:0.68rem;color:#4ade80;font-weight:600;letter-spacing:.05em}
+    .nhbtn{
+      background:rgba(255,255,255,0.07);border:none;border-radius:7px;
+      color:rgba(255,255,255,0.45);cursor:pointer;padding:5px 8px;
+      font-size:0.78rem;line-height:1;transition:.15s;
     }
-    .cb-msg.user {
-      align-self: flex-end;
-      background: linear-gradient(135deg, #4f8ef7, #9b6dff);
-      color: white;
-      border-bottom-right-radius: 4px;
+    .nhbtn:hover{background:rgba(255,255,255,0.14);color:#fff}
+    /* Messages */
+    #nova-msgs{
+      flex:1;overflow-y:auto;padding:14px;
+      display:flex;flex-direction:column;gap:10px;
+      scroll-behavior:smooth;
     }
-    .cb-msg.ai {
-      align-self: flex-start;
-      background: rgba(255,255,255,0.07);
-      color: #c8d0e0;
-      border-bottom-left-radius: 4px;
-      border: 1px solid rgba(255,255,255,0.08);
+    #nova-msgs::-webkit-scrollbar{width:3px}
+    #nova-msgs::-webkit-scrollbar-thumb{background:rgba(79,142,247,0.4);border-radius:10px}
+    .nmsg{display:flex;max-width:86%}
+    .nmsg.user{align-self:flex-end;justify-content:flex-end}
+    .nmsg.ai{align-self:flex-start}
+    .nbub{
+      padding:9px 13px;border-radius:16px;
+      font-size:0.81rem;line-height:1.6;word-break:break-word;
     }
-    .cb-msg.ai p { margin: 0 0 4px; }
-    .cb-msg.ai p:last-child { margin: 0; }
-    .cb-msg.ai code { background: rgba(79,142,247,0.2); padding: 1px 4px; border-radius: 4px; font-size: 0.75rem; }
-    .cb-typing { display: flex; gap: 4px; align-items: center; padding: 10px 14px; }
-    .cb-dot { width: 6px; height: 6px; border-radius: 50%; background: #4f8ef7; animation: cbDot 1.2s infinite; }
-    .cb-dot:nth-child(2) { animation-delay: .2s; }
-    .cb-dot:nth-child(3) { animation-delay: .4s; }
-    @keyframes cbDot { 0%,80%,100%{transform:scale(.8);opacity:.5} 40%{transform:scale(1.2);opacity:1} }
-    #cb-input-row {
-      padding: 10px 12px;
-      border-top: 1px solid rgba(255,255,255,0.07);
-      display: flex;
-      gap: 8px;
-      align-items: center;
+    .nmsg.user .nbub{
+      background:linear-gradient(135deg,#4f8ef7,#6366f1);
+      color:#fff;border-bottom-right-radius:3px;
     }
-    #cb-input {
-      flex: 1;
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 20px;
-      padding: 8px 14px;
-      color: #eef2ff;
-      font-size: 0.8rem;
-      font-family: Inter, system-ui, sans-serif;
-      outline: none;
+    .nmsg.ai .nbub{
+      background:rgba(255,255,255,0.06);
+      border:1px solid rgba(255,255,255,0.08);
+      color:rgba(255,255,255,0.87);border-bottom-left-radius:3px;
     }
-    #cb-input:focus { border-color: rgba(79,142,247,0.5); }
-    #cb-send {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, #4f8ef7, #9b6dff);
-      border: none;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.9rem;
-      flex-shrink: 0;
-      transition: opacity 0.2s;
+    .nbub p{margin:0 0 5px}.nbub p:last-child{margin:0}
+    .nbub strong{color:#fff}
+    .nbub code{background:rgba(255,255,255,0.1);border-radius:4px;padding:1px 5px;font-size:.77rem}
+    .nbub pre{background:rgba(0,0,0,0.35);border-radius:8px;padding:9px;overflow-x:auto;margin:6px 0 0}
+    .nbub pre code{background:none;padding:0}
+    .nbub ul,.nbub ol{margin:3px 0;padding-left:16px}
+    .nbub li{margin-bottom:2px}
+    /* Typing */
+    .nova-typing{display:flex;gap:5px;align-items:center;padding:11px 14px}
+    .nova-dot{width:6px;height:6px;border-radius:50%;background:#4f8ef7;animation:ndot 1.2s infinite}
+    .nova-dot:nth-child(2){animation-delay:.2s}
+    .nova-dot:nth-child(3){animation-delay:.4s}
+    @keyframes ndot{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-7px)}}
+    /* Redirect */
+    .nova-redir{
+      background:rgba(79,142,247,0.1);border:1px solid rgba(79,142,247,0.28);
+      border-radius:12px;padding:11px 13px;font-size:0.79rem;
+      color:rgba(255,255,255,0.85);line-height:1.5;max-width:86%;align-self:flex-start;
     }
-    #cb-send:disabled { opacity: 0.5; cursor: not-allowed; }
+    .nova-redir-btn{
+      display:inline-block;margin-top:8px;
+      background:linear-gradient(135deg,#4f8ef7,#6366f1);
+      color:#fff;border:none;border-radius:7px;
+      padding:5px 13px;font-size:.74rem;font-weight:700;cursor:pointer;font-family:inherit;
+    }
+    /* Input */
+    #nova-input-row{
+      padding:10px;border-top:1px solid rgba(255,255,255,0.07);
+      display:flex;gap:8px;flex-shrink:0;background:rgba(255,255,255,0.02);
+    }
+    #nova-input{
+      flex:1;background:rgba(255,255,255,0.06);
+      border:1px solid rgba(255,255,255,0.1);border-radius:11px;
+      padding:9px 13px;color:#fff;font-size:0.81rem;font-family:inherit;
+      outline:none;resize:none;max-height:76px;line-height:1.5;
+      transition:border-color .2s;
+    }
+    #nova-input::placeholder{color:rgba(255,255,255,0.28)}
+    #nova-input:focus{border-color:rgba(79,142,247,0.5)}
+    #nova-send{
+      width:38px;height:38px;border-radius:11px;flex-shrink:0;
+      background:linear-gradient(135deg,#4f8ef7,#a855f7);
+      border:none;cursor:pointer;display:flex;align-items:center;
+      justify-content:center;align-self:flex-end;
+      transition:opacity .2s,transform .15s;
+    }
+    #nova-send:hover{opacity:.85;transform:scale(1.06)}
+    #nova-send:disabled{opacity:.35;cursor:not-allowed;transform:none}
+    #nova-send svg{width:17px;height:17px;fill:white}
+    /* Welcome */
+    #nova-welcome{
+      display:flex;flex-direction:column;align-items:center;
+      justify-content:center;flex:1;text-align:center;padding:18px;gap:8px;
+    }
+    #nova-welcome .nw-icon{font-size:2.4rem}
+    #nova-welcome h3{margin:0;font-size:.95rem;color:#fff}
+    #nova-welcome p{margin:0;font-size:.75rem;color:rgba(255,255,255,0.42);line-height:1.55}
+    .nw-chips{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:6px}
+    .nw-chip{
+      background:rgba(79,142,247,0.1);border:1px solid rgba(79,142,247,0.22);
+      border-radius:20px;padding:5px 11px;font-size:.71rem;
+      color:rgba(255,255,255,0.6);cursor:pointer;transition:.15s;font-family:inherit;
+    }
+    .nw-chip:hover{background:rgba(79,142,247,0.25);color:#fff}
   `;
   document.head.appendChild(style);
 
-  // Build HTML
+  // ── Build DOM ──────────────────────────────────────────
   const fab = document.createElement("button");
-  fab.id = "cb-fab";
-  fab.innerHTML = '<div class="cb-pulse"></div>🤖';
-  fab.title = "Chat with AI";
+  fab.id = "nova-fab";
+  fab.title = "Chat with Nova";
+  fab.innerHTML = `<svg width="26" height="26" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg>`;
+  document.body.appendChild(fab);
 
-  const win = document.createElement("div");
-  win.id = "cb-window";
-  win.innerHTML = `
-    <div id="cb-header">
-      <div>
-        <div class="cb-title">⚡ EduBot AI</div>
-        <div class="cb-sub">● Ask me anything CBSE</div>
+  const panel = document.createElement("div");
+  panel.id = "nova-panel";
+  panel.innerHTML = `
+    <div id="nova-header">
+      <div id="nova-avatar">✦</div>
+      <div id="nova-title">
+        <strong>Nova</strong>
+        <span>● Online</span>
       </div>
-      <button id="cb-close">✕</button>
+      <button class="nhbtn" id="nova-max-btn" title="Maximise">⤢</button>
+      <button class="nhbtn" id="nova-close-btn" title="Close">✕</button>
     </div>
-    <div id="cb-messages">
-      <div class="cb-msg ai">Hey! I'm your CBSE AI tutor 🎓 Ask me any question from Class 6–10!</div>
+    <div id="nova-msgs">
+      <div id="nova-welcome">
+        <div class="nw-icon">✦</div>
+        <h3>Hey, I'm Nova!</h3>
+        <p>Your general AI assistant — not Stasis. Ask me anything: science, code, trivia, opinions. For CBSE homework, use the Home tab!</p>
+        <div class="nw-chips">
+          <button class="nw-chip" data-q="Explain quantum entanglement simply">⚛️ Quantum physics</button>
+          <button class="nw-chip" data-q="Write a Python function to sort a list">🐍 Python help</button>
+          <button class="nw-chip" data-q="What's the latest in AI this year?">🤖 AI news</button>
+          <button class="nw-chip" data-q="Give me a fun logic puzzle to solve">🧩 Logic puzzle</button>
+        </div>
+      </div>
     </div>
-    <div id="cb-input-row">
-      <input id="cb-input" placeholder="Ask a question..." autocomplete="off">
-      <button id="cb-send">➤</button>
+    <div id="nova-input-row">
+      <textarea id="nova-input" placeholder="Ask Nova anything…" rows="1"></textarea>
+      <button id="nova-send">
+        <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+      </button>
     </div>
   `;
+  document.body.appendChild(panel);
 
-  document.body.appendChild(fab);
-  document.body.appendChild(win);
+  const msgsEl = panel.querySelector("#nova-msgs");
+  const inputEl = panel.querySelector("#nova-input");
+  const sendBtn = panel.querySelector("#nova-send");
+  const maxBtn = panel.querySelector("#nova-max-btn");
+  const closeBtn = panel.querySelector("#nova-close-btn");
 
-  let open = false;
-  let loading = false;
-  let history = [];
-
-  fab.onclick = () => {
-    open = !open;
-    win.classList.toggle("open", open);
-    if (open) document.getElementById("cb-input").focus();
-  };
-  document.getElementById("cb-close").onclick = () => {
-    open = false;
-    win.classList.remove("open");
-  };
-
-  function appendMsg(role, html) {
-    const msgs = document.getElementById("cb-messages");
-    const div = document.createElement("div");
-    div.className = `cb-msg ${role}`;
-    div.innerHTML = html;
-    msgs.appendChild(div);
-    msgs.scrollTop = msgs.scrollHeight;
-    return div;
+  // ── Markdown renderer ──────────────────────────────────
+  function md(text) {
+    return text
+      .replace(
+        /```([\w]*)\n?([\s\S]*?)```/g,
+        (_, _l, c) =>
+          `<pre><code>${c.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</code></pre>`,
+      )
+      .replace(/`([^`\n]+)`/g, "<code>$1</code>")
+      .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+      .replace(/\*([^*\n]+)\*/g, "<em>$1</em>")
+      .replace(/^#{1,3} (.+)$/gm, "<strong>$1</strong>")
+      .replace(/^[-*] (.+)$/gm, "<li>$1</li>")
+      .replace(/(<li>.*<\/li>(\n|$))+/g, (m) => `<ul>${m}</ul>`)
+      .replace(/\n{2,}/g, "</p><p>")
+      .replace(/\n/g, "<br>")
+      .replace(/^([^<])/, "<p>$1")
+      .replace(/([^>])$/, "$1</p>");
   }
 
-  async function send() {
-    if (loading) return;
-    const inp = document.getElementById("cb-input");
-    const text = inp.value.trim();
-    if (!text) return;
-    inp.value = "";
-    loading = true;
-    document.getElementById("cb-send").disabled = true;
+  // ── Grade keyword detector ─────────────────────────────
+  const GRADE_RE =
+    /\b(class|grade|std|standard)\s*(6|7|8|9|10|six|seven|eight|nine|ten)\b|(cbse|ncert|board exam|syllabus|chapter|textbook)\b/i;
+  const GENERAL_RE =
+    /^(hi|hello|hey|what is|who is|how does|explain|tell me|what are|define|meaning of|difference between|compare|help me understand)/i;
 
-    appendMsg("user", escapeHtml(text));
+  function isSchoolQuestion(text) {
+    // If it explicitly mentions grade/class
+    if (GRADE_RE.test(text)) return true;
+    // Homework-flavored but no grade → still redirect (Stasis handles all CBSE)
+    if (
+      !GENERAL_RE.test(text) &&
+      /\b(solve|calculate|find|prove|derive|what is the formula|balance the equation|draw a diagram|write a note on)\b/i.test(
+        text,
+      )
+    )
+      return true;
+    return false;
+  }
 
-    const typing = document.createElement("div");
-    typing.className = "cb-msg ai cb-typing";
-    typing.innerHTML =
-      '<div class="cb-dot"></div><div class="cb-dot"></div><div class="cb-dot"></div>';
-    document.getElementById("cb-messages").appendChild(typing);
-    document.getElementById("cb-messages").scrollTop = 999999;
+  // ── Append message ─────────────────────────────────────
+  function appendMsg(role, html, isRedir) {
+    const welcome = msgsEl.querySelector("#nova-welcome");
+    if (welcome) welcome.remove();
+    if (isRedir) {
+      const div = document.createElement("div");
+      div.className = "nova-redir";
+      div.innerHTML = html;
+      msgsEl.appendChild(div);
+      msgsEl.scrollTop = msgsEl.scrollHeight;
+      return div;
+    }
+    const wrap = document.createElement("div");
+    wrap.className = `nmsg ${role}`;
+    wrap.innerHTML = `<div class="nbub">${html}</div>`;
+    msgsEl.appendChild(wrap);
+    msgsEl.scrollTop = msgsEl.scrollHeight;
+    return wrap;
+  }
+
+  function showTyping() {
+    const welcome = msgsEl.querySelector("#nova-welcome");
+    if (welcome) welcome.remove();
+    const wrap = document.createElement("div");
+    wrap.className = "nmsg ai";
+    wrap.id = "nova-typing";
+    wrap.innerHTML = `<div class="nbub"><div class="nova-typing"><div class="nova-dot"></div><div class="nova-dot"></div><div class="nova-dot"></div></div></div>`;
+    msgsEl.appendChild(wrap);
+    msgsEl.scrollTop = msgsEl.scrollHeight;
+    return wrap;
+  }
+
+  // ── Send ───────────────────────────────────────────────
+  async function sendMessage(prefill) {
+    const text = (prefill || inputEl.value).trim();
+    if (!text || isLoading) return;
+    inputEl.value = "";
+    inputEl.style.height = "auto";
+    isLoading = true;
+    sendBtn.disabled = true;
+
+    appendMsg("user", md(text));
+
+    // Client-side grade redirect check (instant, no API call wasted)
+    if (isSchoolQuestion(text)) {
+      appendMsg(
+        "ai",
+        `Looks like a school question! 🎯 Head to the Home page — Stasis is built exactly for CBSE help.<br><button class="nova-redir-btn" onclick="navigate('home')">🏠 Go to Home</button>`,
+        true,
+      );
+      isLoading = false;
+      sendBtn.disabled = false;
+      return;
+    }
+
+    const typingEl = showTyping();
 
     try {
-      const res = await fetch("/api/solve", {
+      const SYSTEM = `You are Nova, a smart casual AI assistant embedded in Stasis (a CBSE study app). You handle general knowledge, coding, science, current events, opinions, and everyday questions. You are NOT the edu-bot — that's Stasis. Keep responses concise and conversational. Use markdown for code and lists. Never mention which model you are.`;
+
+      const messages = [...chatHistory, { role: "user", content: text }];
+
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          question: text,
-          subject: (window.S && window.S.subjectPreference) || "Maths",
-          classNum: (window.S && window.S.classPreference) || "10",
-          chapter: (window.S && window.S.chapterPreference) || "",
-          level: "developing",
-          language: localStorage.getItem("stasis_lang") || "en",
-          chatMode: true,
+          model: "claude-sonnet-4-6",
+          max_tokens: 800,
+          system: SYSTEM,
+          messages,
         }),
       });
-      const data = await res.json();
-      typing.remove();
-      const md = window.markdownit
-        ? window.markdownit({ html: false, linkify: true })
-        : null;
-      const reply =
-        data.solution ||
-        (data.steps || []).map((s) => s).join("\n\n") ||
-        "Sorry, I could not get an answer.";
-      appendMsg("ai", md ? md.render(reply) : escapeHtml(reply));
-      history.push({ role: "user", text }, { role: "ai", text: reply });
-    } catch (e) {
-      typing.remove();
-      appendMsg("ai", "❌ Connection error. Please try again.");
-    }
 
-    loading = false;
-    document.getElementById("cb-send").disabled = false;
-    document.getElementById("cb-input").focus();
+      const data = await res.json();
+      typingEl.remove();
+
+      if (!res.ok || !data.content) {
+        appendMsg(
+          "ai",
+          md("Hmm, couldn't reach Nova right now. Try again in a sec! 🔌"),
+        );
+      } else {
+        const reply = data.content.map((b) => b.text || "").join("");
+        appendMsg("ai", md(reply));
+        chatHistory.push({ role: "user", content: text });
+        chatHistory.push({ role: "assistant", content: reply });
+        if (chatHistory.length > 40) chatHistory = chatHistory.slice(-40);
+      }
+    } catch {
+      typingEl.remove();
+      appendMsg("ai", md("Connection dropped. Give it another shot? 🔌"));
+    } finally {
+      isLoading = false;
+      sendBtn.disabled = false;
+      inputEl.focus();
+    }
   }
 
-  document.getElementById("cb-send").onclick = send;
-  document.getElementById("cb-input").addEventListener("keydown", (e) => {
-    if (e.key === "Enter") send();
+  // ── Controls ───────────────────────────────────────────
+  fab.addEventListener("click", () => {
+    isOpen = !isOpen;
+    panel.classList.toggle("open", isOpen);
+    if (isOpen) setTimeout(() => inputEl.focus(), 260);
+  });
+  closeBtn.addEventListener("click", () => {
+    isOpen = false;
+    panel.classList.remove("open");
+  });
+  maxBtn.addEventListener("click", () => {
+    isMaximised = !isMaximised;
+    panel.classList.toggle("maximised", isMaximised);
+    maxBtn.textContent = isMaximised ? "⤡" : "⤢";
+    maxBtn.title = isMaximised ? "Restore" : "Maximise";
+  });
+  sendBtn.addEventListener("click", () => sendMessage());
+  inputEl.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+  inputEl.addEventListener("input", () => {
+    inputEl.style.height = "auto";
+    inputEl.style.height = Math.min(inputEl.scrollHeight, 76) + "px";
+  });
+  panel.addEventListener("click", (e) => {
+    const c = e.target.closest(".nw-chip");
+    if (c) sendMessage(c.dataset.q);
   });
 })();
