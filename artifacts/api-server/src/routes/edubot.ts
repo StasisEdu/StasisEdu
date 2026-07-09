@@ -62,7 +62,6 @@ router.post("/solve", async (req, res) => {
     ? ` Focus specifically on CBSE Chapter: ${chapter}.`
     : "";
   const isHindi = language === "hi" || subject === "Hindi";
-  console.log("SUBJECT:", subject, "LANGUAGE:", language, "ISHINDI:", isHindi);
   const langClause = isHindi
     ? " IMPORTANT: Respond ENTIRELY in Hindi using Devanagari script — this includes the solution, every step, and the memory trick. Do not use any English words except for proper nouns or technical terms with no Hindi equivalent."
     : "";
@@ -605,7 +604,7 @@ router.post("/chatbot", async (req, res) => {
     return;
   }
 
-  const system = `You are Nova, a smart casual AI assistant embedded in Stasis (a CBSE study app for Classes 6-10). You handle general knowledge, coding, science, current events, opinions, trivia, and everyday questions. You are NOT Stasis (the edu-bot) — that is a separate AI. Keep responses concise and conversational. Use markdown for code and lists. Never say which model powers you.`;
+  const system = `You are Nova, a smart casual AI assistant embedded in Stasis (a CBSE study app for Classes 6-10). You handle general knowledge, coding, science, current events, opinions, trivia, and everyday questions. You are NOT Stasis (the edu-bot) — that is a separate AI. Give complete, detailed answers — never cut short. Use markdown: headers, bold, bullet points, code blocks where relevant. Never say which model powers you.`;
 
   try {
     const msgs = (history as Array<{ role: string; content: string }>)
@@ -620,7 +619,7 @@ router.post("/chatbot", async (req, res) => {
     const response = await client.chat.completions.create({
       model: MODEL,
       messages: [{ role: "system", content: system }, ...msgs],
-      max_tokens: 700,
+      max_tokens: 2000,
     });
 
     const reply =
@@ -631,38 +630,5 @@ router.post("/chatbot", async (req, res) => {
     res.status(500).json({ error: "AI error" });
   }
 });
-router.post("/chatbot", async (req, res) => {
-  const { message, history = [] } = req.body as {
-    message: string;
-    history: Array<{ role: string; content: string }>;
-  };
-  if (!message) {
-    res.status(400).json({ error: "Missing message" });
-    return;
-  }
 
-  const system = `You are Nova, a smart casual AI assistant embedded in Stasis (a CBSE study app). You handle general knowledge, coding, science, current events, opinions and trivia. You are NOT Stasis — that is the edu-bot. Be concise and conversational. Use markdown for code/lists. Never say which model you are.`;
-
-  try {
-    const msgs = (history as Array<{ role: string; content: string }>)
-      .slice(-20)
-      .map((h) => ({
-        role: h.role as "user" | "assistant",
-        content: h.content,
-      }));
-    msgs.push({ role: "user" as const, content: message });
-
-    const response = await client.chat.completions.create({
-      model: MODEL,
-      messages: [{ role: "system", content: system }, ...msgs],
-      max_tokens: 700,
-    });
-
-    const reply = response.choices[0].message.content ?? "Sorry, try again.";
-    res.json({ reply });
-  } catch (e) {
-    req.log.error({ err: e }, "nova-chatbot error");
-    res.status(500).json({ error: "AI error" });
-  }
-});
 export default router;
