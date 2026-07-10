@@ -1091,6 +1091,7 @@ const LANG = {
     resources_title: "📚 Resources",
     papers_tab: "📄 Papers",
     notes_tab: "📒 Notes",
+    formulas_tab: "🔢 Formulas",
     onboard_title: "Let's Personalize Your Learning",
     onboard_sub:
       "Tell us your last exam score so we can adapt your questions and explanations",
@@ -1162,6 +1163,7 @@ const LANG = {
     resources_title: "📚 संसाधन",
     papers_tab: "📄 प्रश्नपत्र",
     notes_tab: "📒 नोट्स",
+    formulas_tab: "🔢 सूत्र",
     onboard_title: "अपनी पढ़ाई को व्यक्तिगत बनाएं",
     onboard_sub:
       "हमें अपना पिछला परीक्षा स्कोर बताएं ताकि हम प्रश्न आपके अनुसार ढाल सकें",
@@ -3477,11 +3479,12 @@ function renderResources() {
       <button id="tab-papers" onclick="switchResourceTab('papers')" style="flex:1;padding:10px;background:none;border:none;color:#4f8ef7;font-weight:700;font-size:0.9rem;font-family:inherit;border-bottom:2px solid #4f8ef7;cursor:pointer;margin-bottom:-2px">${t("papers_tab")}</button>
       <button id="tab-pdfs" onclick="switchResourceTab('pdfs')" style="flex:1;padding:10px;background:none;border:none;color:var(--text-muted);font-weight:700;font-size:0.9rem;font-family:inherit;border-bottom:2px solid transparent;cursor:pointer;margin-bottom:-2px">📥 Board PDFs</button>
       <button id="tab-notes" onclick="switchResourceTab('notes')" style="flex:1;padding:10px;background:none;border:none;color:var(--text-muted);font-weight:700;font-size:0.9rem;font-family:inherit;border-bottom:2px solid transparent;cursor:pointer;margin-bottom:-2px">${t("notes_tab")}</button>
+      <button id="tab-formulas" onclick="switchResourceTab('formulas')" style="flex:1;padding:10px;background:none;border:none;color:var(--text-muted);font-weight:700;font-size:0.9rem;font-family:inherit;border-bottom:2px solid transparent;cursor:pointer;margin-bottom:-2px">${t("formulas_tab")}</button>
     </div>
     <div id="resource-tab-content"></div>
   `;
   window.switchResourceTab = (tab) => {
-    ["papers", "pdfs", "notes"].forEach((id) => {
+    ["papers", "pdfs", "notes", "formulas"].forEach((id) => {
       const el = document.getElementById("tab-" + id);
       if (!el) return;
       const active = tab === id;
@@ -3490,6 +3493,7 @@ function renderResources() {
     });
     if (tab === "papers") renderPapersTab();
     else if (tab === "pdfs") renderPdfPapersTab();
+    else if (tab === "formulas") renderFormulasTab();
     else renderNotesTab();
   };
   switchResourceTab("papers");
@@ -4868,6 +4872,322 @@ window.closePaper = () => {
   document.getElementById("paperModal")?.remove();
   document.body.style.overflow = "";
 };
+
+// ============================================================
+// FORMULAS TAB – Math & Science quick reference
+// ============================================================
+function renderFormulasTab() {
+  const SUBJECTS = ["Math", "Science"];
+  const MATH_CHAPTERS = [
+    {
+      name: "Real Numbers",
+      color: "#4f8ef7",
+      formulas: [
+        {
+          name: "Euclid's Division Lemma",
+          expr: "a = bq + r, where 0 ≤ r < b",
+        },
+        { name: "HCF × LCM", expr: "HCF(a,b) × LCM(a,b) = a × b" },
+      ],
+    },
+    {
+      name: "Polynomials",
+      color: "#a78bfa",
+      formulas: [
+        { name: "Sum of Zeroes (quadratic)", expr: "α + β = −b/a" },
+        { name: "Product of Zeroes (quadratic)", expr: "α × β = c/a" },
+        { name: "Sum of Zeroes (cubic)", expr: "α + β + γ = −b/a" },
+        { name: "Product of Zeroes (cubic)", expr: "αβγ = −d/a" },
+      ],
+    },
+    {
+      name: "Quadratic Equations",
+      color: "#f472b6",
+      formulas: [
+        { name: "Quadratic Formula", expr: "x = (−b ± √(b²−4ac)) / 2a" },
+        { name: "Discriminant", expr: "D = b² − 4ac" },
+        {
+          name: "Nature of Roots",
+          expr: "D>0: 2 real; D=0: equal; D<0: no real roots",
+        },
+      ],
+    },
+    {
+      name: "Arithmetic Progressions",
+      color: "#34d399",
+      formulas: [
+        { name: "nth Term", expr: "aₙ = a + (n−1)d" },
+        { name: "Sum of n Terms", expr: "Sₙ = n/2 × [2a + (n−1)d]" },
+        { name: "Sum (first & last)", expr: "Sₙ = n/2 × (a + l)" },
+      ],
+    },
+    {
+      name: "Triangles",
+      color: "#fbbf24",
+      formulas: [
+        {
+          name: "Basic Proportionality Theorem",
+          expr: "DE ∥ BC ⟹ AD/DB = AE/EC",
+        },
+        {
+          name: "Area of Similar Triangles",
+          expr: "ar(△ABC)/ar(△PQR) = (AB/PQ)²",
+        },
+        { name: "Pythagoras Theorem", expr: "AC² = AB² + BC²" },
+      ],
+    },
+    {
+      name: "Coordinate Geometry",
+      color: "#f87171",
+      formulas: [
+        { name: "Distance Formula", expr: "d = √[(x₂−x₁)² + (y₂−y₁)²]" },
+        {
+          name: "Section Formula",
+          expr: "P = ((mx₂+nx₁)/(m+n), (my₂+ny₁)/(m+n))",
+        },
+        { name: "Midpoint", expr: "M = ((x₁+x₂)/2, (y₁+y₂)/2)" },
+        {
+          name: "Area of Triangle",
+          expr: "A = ½|x₁(y₂−y₃)+x₂(y₃−y₁)+x₃(y₁−y₂)|",
+        },
+      ],
+    },
+    {
+      name: "Trigonometry",
+      color: "#38bdf8",
+      formulas: [
+        { name: "sin θ", expr: "Opposite / Hypotenuse" },
+        { name: "cos θ", expr: "Adjacent / Hypotenuse" },
+        { name: "tan θ", expr: "Opposite / Adjacent = sin θ / cos θ" },
+        { name: "Pythagorean Identity", expr: "sin²θ + cos²θ = 1" },
+        { name: "Identity 2", expr: "1 + tan²θ = sec²θ" },
+        { name: "Identity 3", expr: "1 + cot²θ = cosec²θ" },
+      ],
+    },
+    {
+      name: "Areas Related to Circles",
+      color: "#fb923c",
+      formulas: [
+        { name: "Area of Circle", expr: "A = πr²" },
+        { name: "Circumference", expr: "C = 2πr" },
+        { name: "Area of Sector", expr: "A = (θ/360) × πr²" },
+        { name: "Length of Arc", expr: "l = (θ/360) × 2πr" },
+        { name: "Area of Segment", expr: "A_segment = A_sector − A_triangle" },
+      ],
+    },
+    {
+      name: "Surface Areas & Volumes",
+      color: "#c084fc",
+      formulas: [
+        { name: "Cube SA", expr: "6a²" },
+        { name: "Cuboid SA", expr: "2(lb + bh + hl)" },
+        { name: "Cylinder CSA", expr: "2πrh" },
+        { name: "Cylinder TSA", expr: "2πr(r+h)" },
+        { name: "Cone CSA", expr: "πrl, l = √(r²+h²)" },
+        { name: "Cone TSA", expr: "πr(r+l)" },
+        { name: "Sphere SA", expr: "4πr²" },
+        { name: "Hemisphere TSA", expr: "3πr²" },
+        { name: "Cylinder Vol", expr: "πr²h" },
+        { name: "Cone Vol", expr: "⅓πr²h" },
+        { name: "Sphere Vol", expr: "⁴⁄₃πr³" },
+      ],
+    },
+    {
+      name: "Statistics",
+      color: "#2dd4bf",
+      formulas: [
+        { name: "Mean (Direct)", expr: "x̄ = Σfᵢxᵢ / Σfᵢ" },
+        { name: "Mean (Assumed)", expr: "x̄ = a + (Σfᵢdᵢ / Σfᵢ)" },
+        { name: "Median", expr: "M = l + [(n/2 − cf)/f] × h" },
+        { name: "Mode", expr: "Mo = l + [(f₁−f₀)/(2f₁−f₀−f₂)] × h" },
+      ],
+    },
+    {
+      name: "Probability",
+      color: "#facc15",
+      formulas: [
+        {
+          name: "Probability",
+          expr: "P(E) = Favourable outcomes / Total outcomes",
+        },
+        { name: "Complement", expr: "P(Ē) = 1 − P(E)" },
+        { name: "Range", expr: "0 ≤ P(E) ≤ 1" },
+      ],
+    },
+  ];
+
+  const SCIENCE_CHAPTERS = [
+    {
+      name: "Light – Reflection",
+      color: "#fbbf24",
+      formulas: [
+        { name: "Mirror Formula", expr: "1/f = 1/v + 1/u" },
+        { name: "Magnification (mirror)", expr: "m = −v/u = h'/h" },
+        { name: "Focal Length", expr: "f = R/2" },
+      ],
+    },
+    {
+      name: "Light – Refraction",
+      color: "#38bdf8",
+      formulas: [
+        { name: "Snell's Law", expr: "n₁ sin i = n₂ sin r" },
+        { name: "Refractive Index", expr: "n = c/v = sin i / sin r" },
+        { name: "Lens Formula", expr: "1/f = 1/v − 1/u" },
+        { name: "Magnification (lens)", expr: "m = v/u = h'/h" },
+        { name: "Lens Power", expr: "P = 1/f (metres), unit: Dioptre (D)" },
+        { name: "Combined Power", expr: "P = P₁ + P₂" },
+      ],
+    },
+    {
+      name: "Electricity",
+      color: "#a78bfa",
+      formulas: [
+        { name: "Ohm's Law", expr: "V = IR" },
+        { name: "Resistance", expr: "R = ρl/A" },
+        { name: "Resistors in Series", expr: "R_s = R₁ + R₂ + R₃" },
+        { name: "Resistors in Parallel", expr: "1/R_p = 1/R₁ + 1/R₂ + 1/R₃" },
+        { name: "Electric Power", expr: "P = VI = I²R = V²/R" },
+        { name: "Electric Energy", expr: "W = VIt = Pt" },
+      ],
+    },
+    {
+      name: "Magnetic Effects of Current",
+      color: "#34d399",
+      formulas: [
+        { name: "Force on current-carrying wire", expr: "F = BIl sinθ" },
+        {
+          name: "Fleming's Left Hand Rule",
+          expr: "Thumb: Force; Index: Field; Middle: Current",
+        },
+        {
+          name: "Fleming's Right Hand Rule",
+          expr: "For generators: induced current direction",
+        },
+      ],
+    },
+    {
+      name: "Chemical Reactions",
+      color: "#f472b6",
+      formulas: [
+        { name: "Combination", expr: "A + B → AB" },
+        { name: "Decomposition", expr: "AB → A + B" },
+        { name: "Displacement", expr: "A + BC → AC + B" },
+        { name: "Double Displacement", expr: "AB + CD → AD + CB" },
+        { name: "Oxidation", expr: "Loss of electrons / gain of oxygen" },
+        { name: "Reduction", expr: "Gain of electrons / loss of oxygen" },
+      ],
+    },
+    {
+      name: "Acids, Bases & Salts",
+      color: "#fb923c",
+      formulas: [
+        { name: "Neutralisation", expr: "Acid + Base → Salt + Water" },
+        {
+          name: "pH scale",
+          expr: "pH < 7: acid; pH = 7: neutral; pH > 7: base",
+        },
+        {
+          name: "Water of crystallisation",
+          expr: "e.g. CuSO₄·5H₂O (Blue vitriol)",
+        },
+      ],
+    },
+    {
+      name: "Metals & Non-Metals",
+      color: "#f87171",
+      formulas: [
+        { name: "Reaction with O₂", expr: "4Na + O₂ → 2Na₂O" },
+        { name: "Reaction with Water", expr: "2Na + 2H₂O → 2NaOH + H₂" },
+        { name: "Thermite Reaction", expr: "Fe₂O₃ + 2Al → Al₂O₃ + 2Fe + heat" },
+      ],
+    },
+    {
+      name: "Carbon Compounds",
+      color: "#c084fc",
+      formulas: [
+        {
+          name: "Homologous Series diff",
+          expr: "Each member differs by −CH₂− (14 mass units)",
+        },
+        { name: "Alkane general formula", expr: "CₙH₂ₙ₊₂" },
+        { name: "Alkene general formula", expr: "CₙH₂ₙ" },
+        { name: "Alkyne general formula", expr: "CₙH₂ₙ₋₂" },
+        { name: "Saponification", expr: "Ester + NaOH → Soap + Glycerol" },
+      ],
+    },
+  ];
+
+  let activeSubject = "Math";
+
+  function buildHTML(subject) {
+    const chapters = subject === "Math" ? MATH_CHAPTERS : SCIENCE_CHAPTERS;
+    return chapters
+      .map(
+        (ch) => `
+      <div style="margin-bottom:18px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;cursor:pointer" onclick="toggleFormulaChapter('${ch.name.replace(/'/g, "\\'")}')">
+          <div style="width:3px;height:18px;background:${ch.color};border-radius:2px;flex-shrink:0"></div>
+          <div style="font-weight:800;font-size:0.88rem;color:${ch.color};flex:1">${ch.name}</div>
+          <div id="chevron-${ch.name.replace(/\s/g, "-")}" style="color:var(--text-muted);font-size:0.8rem">▾</div>
+        </div>
+        <div id="fch-${ch.name.replace(/\s/g, "-")}" style="display:block">
+          ${ch.formulas
+            .map(
+              (f) => `
+            <div class="glass" style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:10px 14px;margin-bottom:8px;border:1px solid ${ch.color}22;border-radius:10px">
+              <div style="font-size:0.78rem;color:var(--text-muted);flex-shrink:0;min-width:100px;padding-top:1px">${f.name}</div>
+              <div style="font-size:0.85rem;font-weight:700;color:var(--text);text-align:right;font-family:monospace">${f.expr}</div>
+            </div>
+          `,
+            )
+            .join("")}
+        </div>
+      </div>
+    `,
+      )
+      .join("");
+  }
+
+  document.getElementById("resource-tab-content").innerHTML = `
+    <div style="display:flex;gap:8px;margin-bottom:18px">
+      ${SUBJECTS.map(
+        (s) => `
+        <button id="fsub-${s}" onclick="switchFormulasSubject('${s}')"
+          style="padding:6px 18px;border-radius:20px;border:1px solid ${s === activeSubject ? "#4f8ef7" : "rgba(255,255,255,0.12)"};background:${s === activeSubject ? "rgba(79,142,247,0.15)" : "rgba(255,255,255,0.05)"};color:${s === activeSubject ? "#4f8ef7" : "var(--text-muted)"};font-size:0.82rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s">
+          ${s === "Math" ? "📐 Math" : "🔬 Science"}
+        </button>
+      `,
+      ).join("")}
+    </div>
+    <div id="formulas-content">${buildHTML("Math")}</div>
+  `;
+
+  window.switchFormulasSubject = (subject) => {
+    activeSubject = subject;
+    SUBJECTS.forEach((s) => {
+      const btn = document.getElementById("fsub-" + s);
+      if (!btn) return;
+      const active = s === subject;
+      btn.style.borderColor = active ? "#4f8ef7" : "rgba(255,255,255,0.12)";
+      btn.style.background = active
+        ? "rgba(79,142,247,0.15)"
+        : "rgba(255,255,255,0.05)";
+      btn.style.color = active ? "#4f8ef7" : "var(--text-muted)";
+    });
+    document.getElementById("formulas-content").innerHTML = buildHTML(subject);
+  };
+
+  window.toggleFormulaChapter = (name) => {
+    const id = "fch-" + name.replace(/\s/g, "-");
+    const chevId = "chevron-" + name.replace(/\s/g, "-");
+    const el = document.getElementById(id);
+    const chev = document.getElementById(chevId);
+    if (!el) return;
+    const hidden = el.style.display === "none";
+    el.style.display = hidden ? "block" : "none";
+    if (chev) chev.textContent = hidden ? "▾" : "▸";
+  };
+}
 
 // ============================================================
 // WEB SEARCH PAGE – Creative problem-solving ideas
