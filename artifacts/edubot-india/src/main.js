@@ -1429,7 +1429,7 @@ window.submitOnboarding = () => {
   });
   const overlay = document.getElementById("onboardingOverlay");
   if (overlay) overlay.remove();
-  renderHome();
+  navigate("landing");
 };
 
 window.updateMyLevel = () => showOnboardingModal();
@@ -1903,168 +1903,276 @@ function renderLanding() {
     PERF_DEFS[perf ? perf.level : "developing"] || PERF_DEFS.developing;
   const name = localStorage.getItem("stasis_name") || "";
   const cls = (S && S.classPreference) || "10";
-  const greeting = name
-    ? `Hey, ${escapeHtml(name)} 👋`
-    : "Welcome to Stasis ⚡";
+  const xp = S.xp || 0;
+  const streak = S.streak || 0;
+  const solved = S.totalSolved || 0;
 
-  const features = [
+  // Time-based greeting
+  const hour = new Date().getHours();
+  const timeGreet =
+    hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const firstName = name.split(" ")[0];
+  const greetLine = firstName
+    ? `${timeGreet}, ${escapeHtml(firstName)} 👋`
+    : "Welcome back 👋";
+
+  // XP to next level
+  const LEVELS_XP = [0, 150, 400, 900, 1800, 3500];
+  const LEVEL_NAMES = [
+    "🌱 Rookie",
+    "📖 Scholar",
+    "💡 Thinker",
+    "🧠 Genius",
+    "⚔️ Champion",
+    "🏆 Legend",
+  ];
+  function getLvlIdx(x) {
+    let i = 0;
+    while (i < LEVELS_XP.length - 1 && x >= LEVELS_XP[i + 1]) i++;
+    return i;
+  }
+  const lvlIdx = getLvlIdx(xp);
+  const lvlName = LEVEL_NAMES[lvlIdx];
+  const nextXP = LEVELS_XP[lvlIdx + 1] || LEVELS_XP[LEVELS_XP.length - 1];
+  const prevXP = LEVELS_XP[lvlIdx];
+  const xpPct =
+    lvlIdx >= LEVEL_NAMES.length - 1
+      ? 100
+      : Math.min(100, Math.round(((xp - prevXP) / (nextXP - prevXP)) * 100));
+
+  // Motivational micro-copy based on streak
+  const motivations =
+    streak >= 7
+      ? [
+          "You're on 🔥 fire! Keep the streak alive!",
+          "Legend behaviour right here 🏆",
+        ]
+      : streak >= 3
+        ? [
+            "3+ day streak — you're building momentum!",
+            "Consistency is your superpower ⚡",
+          ]
+        : [
+            "Every champion started at day 1 🌱",
+            "Today's a great day to level up 📈",
+          ];
+  const motiveTip = motivations[Math.floor(Math.random() * motivations.length)];
+
+  // Quick action shortcuts
+  const quickActions = [
     {
       emoji: "🤖",
-      title: "AI Doubt Solver",
-      desc: "Ask any CBSE question — get instant step-by-step solutions powered by AI.",
+      label: "Ask a Doubt",
+      sub: "AI explains it",
       page: "home",
-    },
-    {
-      emoji: "📸",
-      title: "Solve from Photo",
-      desc: "Snap a photo of your textbook problem and let AI solve it in seconds.",
-      page: "home",
+      grad: "linear-gradient(135deg,#4f8ef7,#6366f1)",
+      glow: "rgba(79,142,247,0.45)",
     },
     {
       emoji: "📝",
-      title: "Practice Mode",
-      desc: "Adaptive MCQs that get harder as you improve — curated per chapter.",
+      label: "Practice",
+      sub: "Adaptive MCQs",
       page: "practice",
+      grad: "linear-gradient(135deg,#9b6dff,#c026d3)",
+      glow: "rgba(155,109,255,0.4)",
     },
     {
       emoji: "🎮",
-      title: "Learning Games",
-      desc: "Quiz battles, word scrambles, and math sprints to make studying fun.",
+      label: "Games",
+      sub: "Learn by playing",
       page: "games",
+      grad: "linear-gradient(135deg,#0fca8c,#06b6d4)",
+      glow: "rgba(15,202,140,0.4)",
     },
     {
       emoji: "📄",
-      title: "Past Papers",
-      desc: "CBSE PYQs and sample papers for all subjects, instantly accessible.",
+      label: "Papers",
+      sub: "PYQs & samples",
       page: "resources",
+      grad: "linear-gradient(135deg,#f0b429,#f97316)",
+      glow: "rgba(240,180,41,0.4)",
+    },
+  ];
+
+  // Feature showcase cards
+  const features = [
+    {
+      emoji: "📸",
+      title: "Snap & Solve",
+      desc: "Photo → instant AI solution",
+      page: "home",
+      accent: "#4f8ef7",
     },
     {
       emoji: "📊",
-      title: "Progress Stats",
-      desc: "Track your XP, streaks, accuracy, and weekly performance trends.",
+      title: "Your Stats",
+      desc: "Track accuracy & XP trends",
       page: "stats",
+      accent: "#9b6dff",
     },
     {
       emoji: "🏆",
       title: "Leaderboard",
-      desc: "Compete with other students and climb the global XP rankings.",
+      desc: "Compete globally for rank #1",
       page: "leaderboard",
+      accent: "#f0b429",
     },
     {
       emoji: "💾",
-      title: "Saved Questions",
-      desc: "Bookmark tough questions and revisit them anytime for revision.",
+      title: "Saved",
+      desc: "Revisit bookmarked questions",
       page: "saved",
-    },
-  ];
-
-  const statCards = [
-    { val: `${S.xp || 0} XP`, label: "Total XP Earned", color: "#4f8ef7" },
-    { val: `${S.streak || 0}🔥`, label: "Day Streak", color: "#f0b429" },
-    {
-      val: `${S.totalSolved || 0}`,
-      label: "Questions Solved",
-      color: "#0fca8c",
+      accent: "#0fca8c",
     },
   ];
 
   app.innerHTML = `
-    <div style="padding-bottom:12px;">
+    <style>
+      @keyframes lp-float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+      @keyframes lp-pop { 0%{transform:scale(0.92);opacity:0} 100%{transform:scale(1);opacity:1} }
+      @keyframes lp-shimmer { 0%{left:-60%} 100%{left:160%} }
+      @keyframes lp-pulse-ring { 0%{transform:scale(1);opacity:0.6} 100%{transform:scale(1.5);opacity:0} }
+      @keyframes lp-xp-fill { from{width:0%} to{width:${xpPct}%} }
+      .lp-pop { animation: lp-pop 0.38s cubic-bezier(.34,1.56,.64,1) both; }
+      .lp-pop-d1 { animation-delay:0.04s; }
+      .lp-pop-d2 { animation-delay:0.08s; }
+      .lp-pop-d3 { animation-delay:0.12s; }
+      .lp-pop-d4 { animation-delay:0.16s; }
+      .lp-qa-btn {
+        display:flex;flex-direction:column;align-items:center;gap:7px;
+        border:none;border-radius:20px;padding:16px 10px;cursor:pointer;
+        font-family:inherit;position:relative;overflow:hidden;
+        transition:transform 0.18s cubic-bezier(.34,1.56,.64,1), box-shadow 0.18s;
+      }
+      .lp-qa-btn:active{transform:scale(0.94)!important;}
+      .lp-qa-btn::before{
+        content:'';position:absolute;top:-50%;left:-60%;
+        width:28%;height:200%;background:rgba(255,255,255,0.22);
+        transform:skewX(-20deg);animation:lp-shimmer 3.2s infinite;
+      }
+      .lp-feat-btn {
+        text-align:left;border:none;border-radius:18px;padding:16px 14px;
+        cursor:pointer;font-family:inherit;width:100%;
+        transition:transform 0.18s cubic-bezier(.34,1.56,.64,1),box-shadow 0.18s;
+      }
+      .lp-feat-btn:active{transform:scale(0.96)!important;}
+      .lp-feat-btn:hover{transform:translateY(-3px);}
+      .lp-xp-bar-fill {
+        height:100%;border-radius:99px;
+        background:linear-gradient(90deg,#4f8ef7,#9b6dff,#f0b429);
+        width:0%;animation:lp-xp-fill 1s 0.5s cubic-bezier(.22,1,.36,1) forwards;
+        box-shadow:0 0 8px rgba(79,142,247,0.6);
+        position:relative;
+      }
+      .lp-xp-bar-fill::after{
+        content:'';position:absolute;right:0;top:50%;transform:translateY(-50%);
+        width:8px;height:8px;border-radius:50%;background:white;
+        box-shadow:0 0 6px rgba(255,255,255,0.8);
+      }
+      .lp-streak-ring {
+        position:relative;display:inline-flex;align-items:center;justify-content:center;
+      }
+      .lp-streak-ring::before {
+        content:'';position:absolute;inset:-4px;border-radius:50%;
+        border:2px solid #f0b429;
+        animation:lp-pulse-ring 2s ease-out infinite;
+      }
+    </style>
 
-      <!-- Hero -->
-      <div style="text-align:center;padding:28px 0 20px;position:relative;">
-        <div style="font-size:2.8rem;margin-bottom:8px;filter:drop-shadow(0 0 24px rgba(79,142,247,0.5))">⚡</div>
-        <h1 style="font-size:1.6rem;font-weight:900;background:linear-gradient(135deg,#4f8ef7,#9b6dff 60%,#f0b429);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-0.02em;margin-bottom:6px;">${greeting}</h1>
-        <p style="color:var(--text-muted);font-size:0.88rem;max-width:300px;margin:0 auto 18px;">Your AI-powered CBSE tutor for Class ${cls}. Master every chapter, one question at a time.</p>
-
-        <!-- Quick Stats Row -->
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px;">
-          ${statCards
-            .map(
-              (s) => `
-            <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:12px 8px;">
-              <div style="font-size:1.2rem;font-weight:900;color:${s.color};">${s.val}</div>
-              <div style="font-size:0.65rem;color:var(--text-muted);font-weight:600;margin-top:2px;">${s.label}</div>
-            </div>`,
-            )
-            .join("")}
+    <!-- ① Hero greeting -->
+    <div style="padding-top:18px;padding-bottom:4px;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;">
+        <div>
+          <div style="font-size:0.75rem;font-weight:700;color:var(--text-muted);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">StasisEducation ⚡ · Class ${cls}</div>
+          <h1 class="section-heading gradient-heading" style="margin-bottom:2px;font-size:1.55rem;">${greetLine}</h1>
+          <p style="font-size:0.8rem;color:var(--text-muted);margin:0;">${motiveTip}</p>
         </div>
-
-        <!-- Primary CTA -->
-        <button onclick="navigate('home')" style="display:inline-flex;align-items:center;gap:10px;padding:15px 32px;border-radius:50px;border:none;background:linear-gradient(135deg,#4f8ef7,#9b6dff);color:white;font-size:1rem;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 4px 24px rgba(79,142,247,0.4);transition:transform 0.15s,box-shadow 0.15s;width:100%;justify-content:center;"
-          onmouseover="this.style.transform='scale(1.02)';this.style.boxShadow='0 6px 32px rgba(79,142,247,0.55)'"
-          onmouseout="this.style.transform='';this.style.boxShadow='0 4px 24px rgba(79,142,247,0.4)'">
-          🤖 Ask a Doubt
-        </button>
-        <button onclick="navigate('practice')" style="display:inline-flex;align-items:center;gap:10px;padding:13px 32px;border-radius:50px;border:1px solid rgba(155,109,255,0.4);background:rgba(155,109,255,0.08);color:#9b6dff;font-size:0.95rem;font-weight:700;cursor:pointer;font-family:inherit;margin-top:10px;width:100%;justify-content:center;"
-          onmouseover="this.style.background='rgba(155,109,255,0.15)'"
-          onmouseout="this.style.background='rgba(155,109,255,0.08)'">
-          📝 Start Practising
-        </button>
+        <div class="lp-streak-ring" onclick="navigate('stats')" style="cursor:pointer;flex-shrink:0;margin-left:12px;margin-top:4px;">
+          <div style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,rgba(240,180,41,0.18),rgba(240,86,74,0.18));border:1px solid rgba(240,180,41,0.35);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;">
+            <div style="font-size:1.3rem;line-height:1;">🔥</div>
+            <div style="font-size:0.72rem;font-weight:900;color:#f0b429;line-height:1.2;">${streak}</div>
+          </div>
+        </div>
       </div>
 
-      <!-- Features Heading -->
-      <div style="margin-bottom:12px;">
-        <h2 style="font-size:1rem;font-weight:800;color:var(--text);letter-spacing:-0.01em;">Everything you need to ace Class ${cls}</h2>
-        <p style="font-size:0.78rem;color:var(--text-muted);margin-top:3px;">Tap any card to jump straight in</p>
+      <!-- ② XP Progress bar -->
+      <div class="glass lp-pop" style="padding:14px 16px;margin-bottom:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:1rem;">${lvlName.split(" ")[0]}</span>
+            <span style="font-size:0.82rem;font-weight:800;color:var(--text);">${lvlName.substring(lvlName.indexOf(" ") + 1)}</span>
+          </div>
+          <div style="font-size:0.75rem;font-weight:700;color:var(--text-muted);">${xp} <span style="color:var(--text-muted);font-weight:500;">/ ${nextXP} XP</span></div>
+        </div>
+        <div style="height:7px;border-radius:99px;background:rgba(255,255,255,0.07);overflow:hidden;position:relative;">
+          <div class="lp-xp-bar-fill"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:8px;">
+          <div style="font-size:0.7rem;color:var(--text-muted);">${xpPct}% to next level</div>
+          <div style="font-size:0.7rem;color:var(--text-muted);">🎯 ${solved} solved</div>
+        </div>
       </div>
 
-      <!-- Feature Cards Grid -->
-      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:20px;">
-        ${features
-          .map((f, i) => {
-            const gradients = [
-              "rgba(79,142,247,0.12)",
-              "rgba(155,109,255,0.12)",
-              "rgba(15,202,140,0.1)",
-              "rgba(240,180,41,0.1)",
-              "rgba(240,86,74,0.1)",
-              "rgba(79,142,247,0.1)",
-              "rgba(240,180,41,0.12)",
-              "rgba(155,109,255,0.1)",
-            ];
-            const borders = [
-              "rgba(79,142,247,0.25)",
-              "rgba(155,109,255,0.25)",
-              "rgba(15,202,140,0.2)",
-              "rgba(240,180,41,0.2)",
-              "rgba(240,86,74,0.2)",
-              "rgba(79,142,247,0.2)",
-              "rgba(240,180,41,0.25)",
-              "rgba(155,109,255,0.2)",
-            ];
-            return `
-          <button onclick="navigate('${f.page}')"
-            style="text-align:left;padding:16px 14px;border-radius:16px;border:1px solid ${borders[i]};background:${gradients[i]};cursor:pointer;font-family:inherit;transition:transform 0.15s,box-shadow 0.15s;"
-            onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,0.25)'"
-            onmouseout="this.style.transform='';this.style.boxShadow=''">
-            <div style="font-size:1.5rem;margin-bottom:8px;">${f.emoji}</div>
-            <div style="font-size:0.85rem;font-weight:800;color:var(--text);margin-bottom:5px;">${f.title}</div>
-            <div style="font-size:0.72rem;color:var(--text-muted);line-height:1.45;">${f.desc}</div>
-          </button>`;
-          })
+      <!-- ③ Quick Action Buttons (2×2 grid) -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:16px;">
+        ${quickActions
+          .map(
+            (q, i) => `
+          <button class="lp-qa-btn lp-pop lp-pop-d${i + 1}" onclick="navigate('${q.page}')"
+            style="background:${q.grad};box-shadow:0 4px 18px ${q.glow};">
+            <div style="font-size:1.7rem;filter:drop-shadow(0 2px 6px rgba(0,0,0,0.3));animation:lp-float ${2.2 + i * 0.3}s ease-in-out infinite;">${q.emoji}</div>
+            <div style="font-size:0.75rem;font-weight:800;color:#fff;text-align:center;line-height:1.2;">${q.label}</div>
+            <div style="font-size:0.63rem;color:rgba(255,255,255,0.7);text-align:center;line-height:1.2;">${q.sub}</div>
+          </button>`,
+          )
           .join("")}
       </div>
 
-      <!-- Performance Insight -->
-      <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:16px 18px;margin-bottom:16px;display:flex;align-items:center;gap:14px;">
-        <div style="font-size:2.2rem;">${perfDef ? perfDef.emoji : "📚"}</div>
-        <div>
-          <div style="font-size:0.78rem;color:var(--text-muted);font-weight:600;margin-bottom:2px;">YOUR LEARNING LEVEL</div>
-          <div style="font-size:1rem;font-weight:800;color:var(--text);">${perfDef ? perfDef.name : "Getting started"}</div>
-          <div style="font-size:0.75rem;color:var(--text-muted);margin-top:2px;">${perfDef ? perfDef.message : "Complete onboarding to personalise your experience"}</div>
+      <!-- ④ Level badge + perf card -->
+      <div class="glass lp-pop lp-pop-d2" onclick="window.updateMyLevel && window.updateMyLevel()" style="cursor:pointer;padding:16px 18px;margin-bottom:14px;display:flex;align-items:center;gap:14px;background:linear-gradient(135deg,rgba(155,109,255,0.08),rgba(79,142,247,0.06));border-color:rgba(155,109,255,0.2);">
+        <div style="font-size:2.4rem;animation:lp-float 3s ease-in-out infinite;filter:drop-shadow(0 0 12px rgba(155,109,255,0.5));">${perfDef ? perfDef.emoji : "📚"}</div>
+        <div style="flex:1;">
+          <div style="font-size:0.68rem;font-weight:700;color:#9b6dff;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:3px;">Your Level</div>
+          <div style="font-size:1rem;font-weight:900;color:var(--text);margin-bottom:3px;">${perfDef ? perfDef.name : "Getting started"}</div>
+          <div style="font-size:0.73rem;color:var(--text-muted);line-height:1.4;">${perfDef ? perfDef.message : "Complete onboarding to personalise"}</div>
+        </div>
+        <div style="font-size:0.75rem;color:var(--text-muted);flex-shrink:0;">✏️</div>
+      </div>
+
+      <!-- ⑤ Secondary feature tiles (2-col) -->
+      <div style="margin-bottom:10px;">
+        <div style="font-size:0.78rem;font-weight:700;color:var(--text-muted);letter-spacing:0.05em;text-transform:uppercase;margin-bottom:10px;">More tools</div>
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;">
+          ${features
+            .map(
+              (f, i) => `
+            <button class="lp-feat-btn lp-pop lp-pop-d${(i % 4) + 1}" onclick="navigate('${f.page}')"
+              style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);box-shadow:0 2px 12px rgba(0,0,0,0.2);">
+              <div style="font-size:1.6rem;margin-bottom:8px;filter:drop-shadow(0 0 8px ${f.accent}66);">${f.emoji}</div>
+              <div style="font-size:0.83rem;font-weight:800;color:var(--text);margin-bottom:4px;">${f.title}</div>
+              <div style="font-size:0.7rem;color:var(--text-muted);line-height:1.4;">${f.desc}</div>
+              <div style="margin-top:10px;height:2px;border-radius:99px;background:linear-gradient(90deg,${f.accent},transparent);opacity:0.6;"></div>
+            </button>`,
+            )
+            .join("")}
         </div>
       </div>
 
-      <!-- Nova tip -->
-      <div style="background:linear-gradient(135deg,rgba(79,142,247,0.08),rgba(155,109,255,0.08));border:1px solid rgba(79,142,247,0.2);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:12px;margin-bottom:4px;">
-        <div style="font-size:1.5rem;flex-shrink:0;">✨</div>
-        <div>
-          <div style="font-size:0.82rem;font-weight:700;color:#4f8ef7;margin-bottom:2px;">Nova AI is here to help</div>
-          <div style="font-size:0.73rem;color:var(--text-muted);line-height:1.4;">Tap the <strong style="color:var(--text)">⚡ button</strong> (bottom-right) to ask Nova anything — homework help, general knowledge, study tips.</div>
+      <!-- ⑥ Nova AI banner -->
+      <div class="glass lp-pop" onclick="document.getElementById('nova-fab') && document.getElementById('nova-fab').click()"
+        style="cursor:pointer;padding:14px 16px;margin-top:14px;margin-bottom:4px;
+               background:linear-gradient(135deg,rgba(79,142,247,0.07),rgba(155,109,255,0.09));
+               border-color:rgba(79,142,247,0.22);display:flex;align-items:center;gap:12px;">
+        <div style="width:40px;height:40px;flex-shrink:0;border-radius:50%;
+                    background:linear-gradient(135deg,#4f8ef7,#9b6dff);
+                    display:flex;align-items:center;justify-content:center;font-size:1.15rem;
+                    box-shadow:0 0 16px rgba(79,142,247,0.5);animation:lp-float 2.8s ease-in-out infinite;">✨</div>
+        <div style="flex:1;">
+          <div style="font-size:0.82rem;font-weight:800;color:#4f8ef7;margin-bottom:2px;">Nova AI — your study buddy</div>
+          <div style="font-size:0.72rem;color:var(--text-muted);line-height:1.4;">Tap me for homework help, concept explanations, and more.</div>
         </div>
+        <div style="font-size:1rem;color:var(--text-muted);flex-shrink:0;">→</div>
       </div>
-
     </div>
   `;
 }
@@ -4772,7 +4880,7 @@ function renderNotesTab() {
           "अव्यय: प्रकार (संबंधबोधक, समुच्चयबोधक, विस्मयादिबोधक)",
         ],
         "Vyakaran: Alankaar": [
-          "अलंकार: काव्य की शोभा बढ़ाने वाले उपकरण",
+          "अलंकार: काव्य की शोभा बढ़ाने वाले b��पकरण",
           "शब्दालंकार: शब्दों की ध्वनि पर आधारित — अनुप्रास, यमक, श्लेष",
           "अनुप्रास: एक ही वर्ण की आवृत्ति (चारु-चंद्र की चंचल किरणें)",
           "यमक: एक ही शब्द अलग-अलग अर्थ में (काली घटा का घमंड घटा)",
