@@ -1784,15 +1784,19 @@ let currentPage = "home";
 
 function navigate(page, extra) {
   currentPage = page;
+  const navPage = page === "landing" ? "landing" : page;
   document
     .querySelectorAll(".nav-btn")
-    .forEach((b) => b.classList.toggle("active", b.dataset.page === page));
+    .forEach((b) => b.classList.toggle("active", b.dataset.page === navPage));
   const app = document.getElementById("app");
   app.innerHTML = "";
   app.classList.remove("fade-in");
   requestAnimationFrame(() => {
     app.classList.add("fade-in");
     switch (page) {
+      case "landing":
+        renderLanding();
+        break;
       case "home":
         renderHome();
         break;
@@ -1887,6 +1891,182 @@ function skeletonCard() {
     <div class="skeleton" style="height:12px;width:90%;margin-bottom:6px"></div>
     <div class="skeleton" style="height:12px;width:75%"></div>
   </div>`;
+}
+
+// ============================================================
+// LANDING PAGE
+// ============================================================
+function renderLanding() {
+  const app = document.getElementById("app");
+  const perf = getPerf();
+  const perfDef =
+    PERF_DEFS[perf ? perf.level : "developing"] || PERF_DEFS.developing;
+  const name = localStorage.getItem("stasis_name") || "";
+  const cls = (S && S.classPreference) || "10";
+  const greeting = name
+    ? `Hey, ${escapeHtml(name)} 👋`
+    : "Welcome to Stasis ⚡";
+
+  const features = [
+    {
+      emoji: "🤖",
+      title: "AI Doubt Solver",
+      desc: "Ask any CBSE question — get instant step-by-step solutions powered by AI.",
+      page: "home",
+    },
+    {
+      emoji: "📸",
+      title: "Solve from Photo",
+      desc: "Snap a photo of your textbook problem and let AI solve it in seconds.",
+      page: "home",
+    },
+    {
+      emoji: "📝",
+      title: "Practice Mode",
+      desc: "Adaptive MCQs that get harder as you improve — curated per chapter.",
+      page: "practice",
+    },
+    {
+      emoji: "🎮",
+      title: "Learning Games",
+      desc: "Quiz battles, word scrambles, and math sprints to make studying fun.",
+      page: "games",
+    },
+    {
+      emoji: "📄",
+      title: "Past Papers",
+      desc: "CBSE PYQs and sample papers for all subjects, instantly accessible.",
+      page: "resources",
+    },
+    {
+      emoji: "📊",
+      title: "Progress Stats",
+      desc: "Track your XP, streaks, accuracy, and weekly performance trends.",
+      page: "stats",
+    },
+    {
+      emoji: "🏆",
+      title: "Leaderboard",
+      desc: "Compete with other students and climb the global XP rankings.",
+      page: "leaderboard",
+    },
+    {
+      emoji: "💾",
+      title: "Saved Questions",
+      desc: "Bookmark tough questions and revisit them anytime for revision.",
+      page: "saved",
+    },
+  ];
+
+  const statCards = [
+    { val: `${S.xp || 0} XP`, label: "Total XP Earned", color: "#4f8ef7" },
+    { val: `${S.streak || 0}🔥`, label: "Day Streak", color: "#f0b429" },
+    {
+      val: `${S.totalSolved || 0}`,
+      label: "Questions Solved",
+      color: "#0fca8c",
+    },
+  ];
+
+  app.innerHTML = `
+    <div style="padding-bottom:12px;">
+
+      <!-- Hero -->
+      <div style="text-align:center;padding:28px 0 20px;position:relative;">
+        <div style="font-size:2.8rem;margin-bottom:8px;filter:drop-shadow(0 0 24px rgba(79,142,247,0.5))">⚡</div>
+        <h1 style="font-size:1.6rem;font-weight:900;background:linear-gradient(135deg,#4f8ef7,#9b6dff 60%,#f0b429);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-0.02em;margin-bottom:6px;">${greeting}</h1>
+        <p style="color:var(--text-muted);font-size:0.88rem;max-width:300px;margin:0 auto 18px;">Your AI-powered CBSE tutor for Class ${cls}. Master every chapter, one question at a time.</p>
+
+        <!-- Quick Stats Row -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px;">
+          ${statCards
+            .map(
+              (s) => `
+            <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:12px 8px;">
+              <div style="font-size:1.2rem;font-weight:900;color:${s.color};">${s.val}</div>
+              <div style="font-size:0.65rem;color:var(--text-muted);font-weight:600;margin-top:2px;">${s.label}</div>
+            </div>`,
+            )
+            .join("")}
+        </div>
+
+        <!-- Primary CTA -->
+        <button onclick="navigate('home')" style="display:inline-flex;align-items:center;gap:10px;padding:15px 32px;border-radius:50px;border:none;background:linear-gradient(135deg,#4f8ef7,#9b6dff);color:white;font-size:1rem;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 4px 24px rgba(79,142,247,0.4);transition:transform 0.15s,box-shadow 0.15s;width:100%;justify-content:center;"
+          onmouseover="this.style.transform='scale(1.02)';this.style.boxShadow='0 6px 32px rgba(79,142,247,0.55)'"
+          onmouseout="this.style.transform='';this.style.boxShadow='0 4px 24px rgba(79,142,247,0.4)'">
+          🤖 Ask a Doubt
+        </button>
+        <button onclick="navigate('practice')" style="display:inline-flex;align-items:center;gap:10px;padding:13px 32px;border-radius:50px;border:1px solid rgba(155,109,255,0.4);background:rgba(155,109,255,0.08);color:#9b6dff;font-size:0.95rem;font-weight:700;cursor:pointer;font-family:inherit;margin-top:10px;width:100%;justify-content:center;"
+          onmouseover="this.style.background='rgba(155,109,255,0.15)'"
+          onmouseout="this.style.background='rgba(155,109,255,0.08)'">
+          📝 Start Practising
+        </button>
+      </div>
+
+      <!-- Features Heading -->
+      <div style="margin-bottom:12px;">
+        <h2 style="font-size:1rem;font-weight:800;color:var(--text);letter-spacing:-0.01em;">Everything you need to ace Class ${cls}</h2>
+        <p style="font-size:0.78rem;color:var(--text-muted);margin-top:3px;">Tap any card to jump straight in</p>
+      </div>
+
+      <!-- Feature Cards Grid -->
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:20px;">
+        ${features
+          .map((f, i) => {
+            const gradients = [
+              "rgba(79,142,247,0.12)",
+              "rgba(155,109,255,0.12)",
+              "rgba(15,202,140,0.1)",
+              "rgba(240,180,41,0.1)",
+              "rgba(240,86,74,0.1)",
+              "rgba(79,142,247,0.1)",
+              "rgba(240,180,41,0.12)",
+              "rgba(155,109,255,0.1)",
+            ];
+            const borders = [
+              "rgba(79,142,247,0.25)",
+              "rgba(155,109,255,0.25)",
+              "rgba(15,202,140,0.2)",
+              "rgba(240,180,41,0.2)",
+              "rgba(240,86,74,0.2)",
+              "rgba(79,142,247,0.2)",
+              "rgba(240,180,41,0.25)",
+              "rgba(155,109,255,0.2)",
+            ];
+            return `
+          <button onclick="navigate('${f.page}')"
+            style="text-align:left;padding:16px 14px;border-radius:16px;border:1px solid ${borders[i]};background:${gradients[i]};cursor:pointer;font-family:inherit;transition:transform 0.15s,box-shadow 0.15s;"
+            onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,0.25)'"
+            onmouseout="this.style.transform='';this.style.boxShadow=''">
+            <div style="font-size:1.5rem;margin-bottom:8px;">${f.emoji}</div>
+            <div style="font-size:0.85rem;font-weight:800;color:var(--text);margin-bottom:5px;">${f.title}</div>
+            <div style="font-size:0.72rem;color:var(--text-muted);line-height:1.45;">${f.desc}</div>
+          </button>`;
+          })
+          .join("")}
+      </div>
+
+      <!-- Performance Insight -->
+      <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:16px 18px;margin-bottom:16px;display:flex;align-items:center;gap:14px;">
+        <div style="font-size:2.2rem;">${perfDef ? perfDef.emoji : "📚"}</div>
+        <div>
+          <div style="font-size:0.78rem;color:var(--text-muted);font-weight:600;margin-bottom:2px;">YOUR LEARNING LEVEL</div>
+          <div style="font-size:1rem;font-weight:800;color:var(--text);">${perfDef ? perfDef.name : "Getting started"}</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);margin-top:2px;">${perfDef ? perfDef.message : "Complete onboarding to personalise your experience"}</div>
+        </div>
+      </div>
+
+      <!-- Nova tip -->
+      <div style="background:linear-gradient(135deg,rgba(79,142,247,0.08),rgba(155,109,255,0.08));border:1px solid rgba(79,142,247,0.2);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:12px;margin-bottom:4px;">
+        <div style="font-size:1.5rem;flex-shrink:0;">✨</div>
+        <div>
+          <div style="font-size:0.82rem;font-weight:700;color:#4f8ef7;margin-bottom:2px;">Nova AI is here to help</div>
+          <div style="font-size:0.73rem;color:var(--text-muted);line-height:1.4;">Tap the <strong style="color:var(--text)">⚡ button</strong> (bottom-right) to ask Nova anything — homework help, general knowledge, study tips.</div>
+        </div>
+      </div>
+
+    </div>
+  `;
 }
 
 // ============================================================
@@ -5255,7 +5435,7 @@ function init() {
   updateHeader();
   initBackground();
   applyNavLang();
-  navigate("home");
+  navigate("landing");
   window.S = S;
   if (!loadPerformance()) showOnboardingModal();
 }
