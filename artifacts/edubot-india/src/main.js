@@ -2550,25 +2550,37 @@ function renderPractice() {
     return;
   }
 
+  const pct = Math.round((done / 3) * 100);
+  const ringColor = done === 3 ? "var(--green)" : "#4f8ef7";
   app.innerHTML = `
-    <div class="flex items-center justify-between mb-2">
-      <div>
-        <div class="section-heading">${t("daily_practice")}</div>
-        <div class="section-sub">${new Date().toLocaleDateString("en-IN", { weekday: "long", month: "short", day: "numeric" })}</div>
+    <div style="background:linear-gradient(135deg,rgba(79,142,247,0.12) 0%,rgba(167,139,250,0.08) 100%);border:1px solid rgba(79,142,247,0.2);border-radius:18px;padding:18px 18px 14px;margin-bottom:14px;position:relative;overflow:hidden">
+      <div style="position:absolute;top:-30px;right:-30px;width:120px;height:120px;border-radius:50%;background:radial-gradient(circle,rgba(79,142,247,0.15),transparent);pointer-events:none"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-size:0.68rem;font-weight:800;letter-spacing:0.12em;color:#4f8ef7;text-transform:uppercase;margin-bottom:4px">⚡ Daily Practice</div>
+          <div style="font-size:1.15rem;font-weight:800;color:var(--text)">${new Date().toLocaleDateString("en-IN", { weekday: "long", month: "short", day: "numeric" })}</div>
+          <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+            ${subjectTag(S.subjectPreference)}
+            ${chapterTag(S.practiceChapter)}
+          </div>
+        </div>
+        <div style="position:relative;width:68px;height:68px;flex-shrink:0">
+          <svg width="68" height="68" style="transform:rotate(-90deg)">
+            <circle cx="34" cy="34" r="28" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="6"/>
+            <circle cx="34" cy="34" r="28" fill="none" stroke="${ringColor}" stroke-width="6" stroke-linecap="round"
+              stroke-dasharray="${2 * Math.PI * 28}" stroke-dashoffset="${2 * Math.PI * 28 * (1 - pct / 100)}"
+              style="transition:stroke-dashoffset 0.6s ease"/>
+          </svg>
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">
+            <div style="font-size:1.2rem;font-weight:900;color:${ringColor}">${done}</div>
+            <div style="font-size:0.58rem;color:var(--text-muted);margin-top:-1px">of 3</div>
+          </div>
+        </div>
       </div>
-      <div style="text-align:center">
-        <div style="font-size:1.4rem;font-weight:800">${done}/3</div>
-        <div style="font-size:0.7rem;color:var(--text-muted)">${t("completed")}</div>
+      <div style="margin-top:12px;display:flex;align-items:center;justify-content:space-between">
+        <div style="font-size:0.78rem;color:var(--text-muted)">${t("questions_for_level")} <strong style="color:var(--text)">${perfDef.emoji} ${perfDef.name}</strong></div>
+        <button class="btn btn-secondary btn-sm" onclick="changePracticeChapter()" style="font-size:0.72rem;padding:4px 10px">${t("change_chapter")}</button>
       </div>
-    </div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;align-items:center">
-      ${subjectTag(S.subjectPreference)}
-      ${chapterTag(S.practiceChapter)}
-      <button class="btn btn-secondary btn-sm" style="margin-left:auto" onclick="changePracticeChapter()">${t("change_chapter")}</button>
-    </div>
-    <div style="margin-bottom:10px;font-size:0.8rem;color:var(--text-muted)">${t("questions_for_level")} <strong style="color:var(--text)">${perfDef.emoji} ${perfDef.name}</strong></div>
-    <div class="progress-bar-top mb-4">
-      <div class="progress-bar-top-inner" style="width:${Math.round((done / 3) * 100)}%"></div>
     </div>
     <div id="practiceCards"></div>
     <div id="countdownArea" style="margin-top:16px"></div>
@@ -2697,32 +2709,45 @@ function renderPracticeCards(questions) {
   const cardsEl = document.getElementById("practiceCards");
   if (!cardsEl) return;
   cardsEl.innerHTML = questions
-    .map(
-      (q, i) => `
-    <div class="glass practice-card" id="pcard-${i}">
-      <div class="flex items-center justify-between mb-2" style="flex-wrap:wrap;gap:4px">
-        <span style="font-size:0.75rem;font-weight:700;color:var(--text-muted)">Q${i + 1} · ${q.difficulty || "Medium"}</span>
-        ${chapterTag(S.practiceChapter)}
-        ${q.done ? '<span style="color:var(--green);font-weight:700">✅ Done</span>' : ""}
+    .map((q, i) => {
+      const accentColors = ["#4f8ef7", "#a78bfa", "#34d399"];
+      const accent = accentColors[i % accentColors.length];
+      const statusBg = q.done
+        ? q.correct
+          ? "rgba(52,211,153,0.08)"
+          : "rgba(239,68,68,0.08)"
+        : "rgba(255,255,255,0.03)";
+      const statusBorder = q.done
+        ? q.correct
+          ? "rgba(52,211,153,0.25)"
+          : "rgba(239,68,68,0.25)"
+        : `${accent}22`;
+      return `
+    <div style="background:${statusBg};border:1.5px solid ${statusBorder};border-radius:16px;padding:16px;margin-bottom:12px;position:relative;overflow:hidden;transition:all .3s" id="pcard-${i}">
+      <div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:${q.done ? (q.correct ? "var(--green)" : "#ef4444") : accent};border-radius:3px 0 0 3px"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding-left:8px;flex-wrap:wrap;gap:4px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="background:${accent}22;border:1px solid ${accent}44;color:${accent};font-size:0.7rem;font-weight:800;padding:2px 8px;border-radius:20px">Q${i + 1}</span>
+          <span style="font-size:0.72rem;color:var(--text-muted);font-weight:600">${q.difficulty || "Medium"}</span>
+          ${chapterTag(S.practiceChapter)}
+        </div>
+        ${q.done ? `<span style="font-size:0.78rem;font-weight:700;color:${q.correct ? "var(--green)" : "#ef4444"}">${q.correct ? "✅ Correct" : "❌ Wrong"}</span>` : ""}
       </div>
-      <div class="practice-q">${escapeHtml(q.question)}</div>
+      <div style="font-size:0.92rem;line-height:1.55;color:var(--text);padding-left:8px;margin-bottom:12px;font-weight:500">${escapeHtml(q.question)}</div>
       ${
         !q.done
           ? `
-        <textarea class="form-textarea" id="pans-${i}" placeholder="${t("type_answer")}" style="min-height:80px"></textarea>
-        <button class="btn btn-primary btn-sm mt-2" onclick="submitPractice(${i})">${t("submit_answer")}</button>
+        <textarea class="form-textarea" id="pans-${i}" placeholder="${t("type_answer")}" style="min-height:80px;border-color:${accent}33"></textarea>
+        <button class="btn btn-primary btn-sm mt-2" onclick="submitPractice(${i})" style="background:${accent};border-color:${accent}">${t("submit_answer")}</button>
       `
           : `
-        <div class="practice-result ${q.correct ? "correct" : "wrong"}">
-          <div class="answer-result-icon">${q.correct ? "✅" : "❌"}</div>
-          ${escapeHtml(q.feedback || "")}
-        </div>
+        <div style="background:${q.correct ? "rgba(52,211,153,0.08)" : "rgba(239,68,68,0.08)"};border:1px solid ${q.correct ? "rgba(52,211,153,0.2)" : "rgba(239,68,68,0.2)"};border-radius:10px;padding:12px;font-size:0.84rem;color:var(--text-secondary);line-height:1.55;padding-left:8px">${escapeHtml(q.feedback || "")}</div>
       `
       }
       <div id="pres-${i}"></div>
     </div>
-  `,
-    )
+  `;
+    })
     .join("");
 }
 
@@ -2935,67 +2960,130 @@ function renderStats() {
       : null;
 
   app.innerHTML = `
-    <div class="glass profile-card mb-4">
-      <div class="avatar-emoji">${avatarEmojis[lvlIdx]}</div>
-      <div class="profile-name">${getName() || "Student"}</div>
-      <div style="font-size:0.8rem;color:var(--text-muted);margin-top:2px">${LEVELS[lvlIdx].name}</div>
-      <div style="width:100%;max-width:200px">
-        <div class="flex justify-between text-sm text-muted mb-1">
+    <div style="background:linear-gradient(135deg,rgba(79,142,247,0.15) 0%,rgba(167,139,250,0.1) 100%);border:1px solid rgba(79,142,247,0.25);border-radius:20px;padding:20px;margin-bottom:14px;text-align:center;position:relative;overflow:hidden">
+      <div style="position:absolute;top:-40px;left:50%;transform:translateX(-50%);width:180px;height:180px;border-radius:50%;background:radial-gradient(circle,rgba(79,142,247,0.12),transparent);pointer-events:none"></div>
+      <div style="font-size:3.2rem;margin-bottom:6px">${avatarEmojis[lvlIdx]}</div>
+      <div style="font-size:1.25rem;font-weight:900;color:var(--text);margin-bottom:2px">${getName() || "Student"}</div>
+      <div style="font-size:0.75rem;font-weight:700;letter-spacing:0.08em;color:#4f8ef7;text-transform:uppercase;margin-bottom:14px">${LEVELS[lvlIdx].name}</div>
+      <div style="max-width:220px;margin:0 auto">
+        <div style="display:flex;justify-content:space-between;font-size:0.72rem;color:var(--text-muted);margin-bottom:5px">
           <span>${S.xp} XP</span>
           <span>${info.next ? LEVELS[lvlIdx + 1].name : "MAX"}</span>
         </div>
-        <div class="xp-bar-wrap" style="width:100%;height:8px"><div class="xp-bar" style="width:${info.pct}%"></div></div>
-        <div class="text-muted mt-1" style="font-size:0.75rem;text-align:center">${info.next ? `${LEVELS[lvlIdx + 1].min - S.xp} XP to next level` : "Maximum level!"}</div>
+        <div style="height:8px;background:rgba(255,255,255,0.08);border-radius:8px;overflow:hidden">
+          <div style="height:100%;width:${info.pct}%;background:linear-gradient(90deg,#4f8ef7,#a78bfa);border-radius:8px;transition:width 0.8s ease"></div>
+        </div>
+        <div style="font-size:0.72rem;color:var(--text-muted);margin-top:5px">${info.next ? `${LEVELS[lvlIdx + 1].min - S.xp} XP to next level` : "Maximum level!"}</div>
       </div>
     </div>
-    <div class="glass" style="padding:16px 18px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+    <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:14px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
       <div>
-        <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.04em">${t("your_level")}</div>
-        <div style="font-size:1.05rem;font-weight:700">${perfDef.emoji} ${perfDef.name} <span style="font-size:0.8rem;color:var(--text-muted);font-weight:400">(${perf.percentage}%)</span></div>
-        <div style="font-size:0.78rem;color:var(--text-muted);font-style:italic;margin-top:2px">${perfDef.message}</div>
+        <div style="font-size:0.68rem;font-weight:800;letter-spacing:0.1em;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px">${t("your_level")}</div>
+        <div style="font-size:1rem;font-weight:700">${perfDef.emoji} ${perfDef.name} <span style="font-size:0.78rem;color:var(--text-muted);font-weight:400">(${perf.percentage}%)</span></div>
+        <div style="font-size:0.77rem;color:var(--text-muted);font-style:italic;margin-top:2px">${perfDef.message}</div>
       </div>
-      <button class="btn btn-secondary btn-sm" onclick="updateMyLevel()">${t("update_score")}</button>
+      <button class="btn btn-secondary btn-sm" onclick="updateMyLevel()" style="font-size:0.72rem">${t("update_score")}</button>
     </div>
-    <div class="stats-grid mb-4">
-      <div class="glass stat-card"><div class="stat-val">${S.totalSolved}</div><div class="stat-label">${t("questions_solved")}</div></div>
-      <div class="glass stat-card"><div class="stat-val">${S.streak}🔥</div><div class="stat-label">${t("current_streak")}</div></div>
-      <div class="glass stat-card"><div class="stat-val">${S.bestStreak}</div><div class="stat-label">${t("best_streak")}</div></div>
-      <div class="glass stat-card"><div class="stat-val">${S.xp}</div><div class="stat-label">${t("total_xp")}</div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      ${[
+        {
+          val: S.totalSolved,
+          label: t("questions_solved"),
+          color: "#4f8ef7",
+          icon: "📝",
+        },
+        {
+          val: `${S.streak}🔥`,
+          label: t("current_streak"),
+          color: "#f97316",
+          icon: "",
+        },
+        {
+          val: S.bestStreak,
+          label: t("best_streak"),
+          color: "#a78bfa",
+          icon: "⭐",
+        },
+        { val: S.xp, label: t("total_xp"), color: "#34d399", icon: "✨" },
+      ]
+        .map(
+          (
+            c,
+          ) => `<div style="background:linear-gradient(135deg,${c.color}12,${c.color}06);border:1px solid ${c.color}30;border-radius:14px;padding:16px 14px;text-align:center">
+        <div style="font-size:1.6rem;font-weight:900;color:${c.color}">${c.val}</div>
+        <div style="font-size:0.72rem;color:var(--text-muted);margin-top:4px;font-weight:600">${c.label}</div>
+      </div>`,
+        )
+        .join("")}
     </div>
-    <div class="glass" style="padding:18px;margin-bottom:16px">
-      <div class="section-sub">${t("subject_breakdown")}</div>
+    <div class="glass" style="padding:18px;margin-bottom:14px">
+      <div style="font-size:0.72rem;font-weight:800;letter-spacing:0.08em;color:var(--text-muted);text-transform:uppercase;margin-bottom:14px">${t("subject_breakdown")}</div>
       <div class="bar-chart">
-        ${subjects.map((s) => `<div class="bar-row"><div class="bar-subject">${s}</div><div class="bar-outer"><div class="bar-inner" style="width:${Math.round(((S.subjectCounts[s] || 0) / maxCount) * 100)}%"></div></div><div class="bar-count">${S.subjectCounts[s] || 0}</div></div>`).join("")}
+        ${subjects
+          .map((s) => {
+            const count = S.subjectCounts[s] || 0;
+            const pct2 = Math.round((count / maxCount) * 100);
+            const subjectColors = {
+              Maths: "#4f8ef7",
+              Physics: "#a78bfa",
+              Biology: "#34d399",
+              Chemistry: "#f97316",
+              History: "#f59e0b",
+              Geography: "#06b6d4",
+              Civics: "#ec4899",
+              Economics: "#8b5cf6",
+              English: "#10b981",
+              Hindi: "#ef4444",
+            };
+            const col = subjectColors[s] || "#4f8ef7";
+            return `<div class="bar-row"><div class="bar-subject">${s}</div><div class="bar-outer"><div class="bar-inner" style="width:${pct2}%;background:linear-gradient(90deg,${col},${col}88)"></div></div><div class="bar-count">${count}</div></div>`;
+          })
+          .join("")}
       </div>
     </div>
-    <div class="glass" style="padding:18px;margin-bottom:16px">
-      <div class="section-sub">${t("activity_30")}</div>
+    <div class="glass" style="padding:18px;margin-bottom:14px">
+      <div style="font-size:0.72rem;font-weight:800;letter-spacing:0.08em;color:var(--text-muted);text-transform:uppercase;margin-bottom:12px">${t("activity_30")}</div>
       <div class="heatmap">${days30.map((d) => `<div class="heatmap-day heat-${d.heat}" title="${d.d}"></div>`).join("")}</div>
     </div>
-    <div class="glass" style="padding:18px;margin-bottom:16px">
-      <div class="section-sub">${t("weekly_xp")}</div>
+    <div class="glass" style="padding:18px;margin-bottom:14px">
+      <div style="font-size:0.72rem;font-weight:800;letter-spacing:0.08em;color:var(--text-muted);text-transform:uppercase;margin-bottom:12px">${t("weekly_xp")}</div>
       <div class="weekly-chart">
-        ${S.weeklyXP.map((xp, i) => `<div class="weekly-bar-wrap"><div class="weekly-bar-outer"><div class="weekly-bar" style="height:${Math.round((xp / maxW) * 100)}%"></div></div><div class="weekly-day">${days[i]}</div></div>`).join("")}
+        ${S.weeklyXP.map((xp, i) => `<div class="weekly-bar-wrap"><div class="weekly-bar-outer"><div class="weekly-bar" style="height:${Math.round((xp / maxW) * 100)}%;background:linear-gradient(180deg,#4f8ef7,#a78bfa)"></div></div><div class="weekly-day">${days[i]}</div></div>`).join("")}
       </div>
     </div>
-    <div class="glass" style="padding:18px;margin-bottom:16px">
-      <div class="flex items-center justify-between mb-2">
-        <div class="section-sub" style="margin-bottom:0">📊 This Week's Analysis</div>
+    <div class="glass" style="padding:18px;margin-bottom:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div style="font-size:0.72rem;font-weight:800;letter-spacing:0.08em;color:var(--text-muted);text-transform:uppercase">📊 This Week's Analysis</div>
         <span style="font-size:0.7rem;color:var(--text-muted)">${new Date(weekKey).toLocaleDateString("en-IN", { month: "short", day: "numeric" })} – Today</span>
       </div>
-      <div class="stats-grid mb-3" style="margin-bottom:14px">
-        <div class="glass stat-card"><div class="stat-val">${wk.totalQuestions}</div><div class="stat-label">Questions</div></div>
-        <div class="glass stat-card"><div class="stat-val">${wk.activeDays}/${wk.daysSoFar}</div><div class="stat-label">Active Days</div></div>
-        <div class="glass stat-card"><div class="stat-val" style="font-size:0.95rem">${wk.topSubject || "—"}</div><div class="stat-label">Top Subject</div></div>
-        <div class="glass stat-card"><div class="stat-val">${wk.totalXP}</div><div class="stat-label">XP This Week</div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        ${[
+          { val: wk.totalQuestions, label: "Questions", color: "#4f8ef7" },
+          {
+            val: `${wk.activeDays}/${wk.daysSoFar}`,
+            label: "Active Days",
+            color: "#34d399",
+          },
+          { val: wk.topSubject || "—", label: "Top Subject", color: "#a78bfa" },
+          { val: wk.totalXP, label: "XP This Week", color: "#f97316" },
+        ]
+          .map(
+            (
+              c,
+            ) => `<div style="background:${c.color}10;border:1px solid ${c.color}25;border-radius:12px;padding:12px;text-align:center">
+          <div style="font-size:1.2rem;font-weight:900;color:${c.color}">${c.val}</div>
+          <div style="font-size:0.7rem;color:var(--text-muted);margin-top:3px">${c.label}</div>
+        </div>`,
+          )
+          .join("")}
       </div>
       <div class="weekly-chart mb-3">
-        ${wk.dailyXP.map((d) => `<div class="weekly-bar-wrap"><div class="weekly-bar-outer"><div class="weekly-bar" style="height:${Math.round((d.xp / wkMaxXP) * 100)}%"></div></div><div class="weekly-day">${d.label}</div></div>`).join("")}
+        ${wk.dailyXP.map((d) => `<div class="weekly-bar-wrap"><div class="weekly-bar-outer"><div class="weekly-bar" style="height:${Math.round((d.xp / wkMaxXP) * 100)}%;background:linear-gradient(180deg,#a78bfa,#4f8ef7)"></div></div><div class="weekly-day">${d.label}</div></div>`).join("")}
       </div>
       ${
         wkSubjects.length > 0
           ? `<div class="bar-chart mb-3">
-              ${wkSubjects.map((s) => `<div class="bar-row"><div class="bar-subject">${s}</div><div class="bar-outer"><div class="bar-inner" style="width:${Math.round((wk.subjectTotals[s] / wkMaxCount) * 100)}%"></div></div><div class="bar-count">${wk.subjectTotals[s]}</div></div>`).join("")}
+              ${wkSubjects.map((s) => `<div class="bar-row"><div class="bar-subject">${s}</div><div class="bar-outer"><div class="bar-inner" style="width:${Math.round((wk.subjectTotals[s] / wkMaxCount) * 100)}%;background:linear-gradient(90deg,#a78bfa,#4f8ef7)"></div></div><div class="bar-count">${wk.subjectTotals[s]}</div></div>`).join("")}
             </div>`
           : `<div style="font-size:0.8rem;color:var(--text-muted);text-align:center;padding:8px 0;margin-bottom:10px">No questions logged yet this week — go solve or practice something!</div>`
       }
@@ -3003,8 +3091,8 @@ function renderStats() {
         ${cachedAnalysis ? renderAIInsightsHTML(cachedAnalysis) : renderAIInsightsPrompt()}
       </div>
     </div>
-    <div class="glass" style="padding:18px;margin-bottom:16px">
-      <div class="section-sub">Badges</div>
+    <div class="glass" style="padding:18px;margin-bottom:14px">
+      <div style="font-size:0.72rem;font-weight:800;letter-spacing:0.08em;color:var(--text-muted);text-transform:uppercase;margin-bottom:14px">🏅 Badges</div>
       <div class="badges-grid">
         ${BADGE_DEFS.map((b) => `<div class="badge-item ${S.badges[b.id] ? "earned" : "locked"}" title="${b.desc}"><div class="badge-emoji">${b.emoji}</div><div class="badge-name">${b.name}</div></div>`).join("")}
       </div>
@@ -3165,9 +3253,11 @@ function renderGames() {
   const initChapters = getChapters(initClass, initSubject);
 
   app.innerHTML = `
-    <div class="section-heading mb-1">${t("games_title")}</div>
-    <div class="section-sub mb-3">${t("games_sub")}</div>
-    <div class="glass" style="padding:16px;margin-bottom:16px">
+    <div style="margin-bottom:16px">
+      <div style="font-size:0.68rem;font-weight:800;letter-spacing:0.12em;color:#a78bfa;text-transform:uppercase;margin-bottom:4px">🎮 ${t("games_title")}</div>
+      <div style="font-size:0.85rem;color:var(--text-muted)">${t("games_sub")}</div>
+    </div>
+    <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:16px;margin-bottom:18px">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
         <div>
           <label class="form-label" style="margin-bottom:4px">${t("class_label")}</label>
@@ -3189,10 +3279,56 @@ function renderGames() {
         ${initChapters.map((ch) => `<option value="${ch}" ${S.chapterPreference === ch ? "selected" : ""}>${ch}</option>`).join("")}
       </select>
     </div>
-    <div class="game-cards">
-      <div class="glass game-card" onclick="startGame('quiz')"><div class="game-icon">🧠</div><div class="game-info"><div class="game-title">${t("quiz_title")}</div><div class="game-desc">${t("quiz_desc")}</div><div class="game-xp">${t("quiz_xp")}</div></div><div style="color:var(--text-muted)">›</div></div>
-      <div class="glass game-card" onclick="startGame('scramble')"><div class="game-icon">🔤</div><div class="game-info"><div class="game-title">${t("scramble_title")}</div><div class="game-desc">${t("scramble_desc")}</div><div class="game-xp">${t("scramble_xp")}</div></div><div style="color:var(--text-muted)">›</div></div>
-      <div class="glass game-card" onclick="startGame('math')"><div class="game-icon">🧮</div><div class="game-info"><div class="game-title">${t("math_title")}</div><div class="game-desc">${t("math_desc")}</div><div class="game-xp">${t("math_xp")}</div></div><div style="color:var(--text-muted)">›</div></div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      ${[
+        {
+          type: "quiz",
+          icon: "🧠",
+          color: "#4f8ef7",
+          glow: "rgba(79,142,247,0.3)",
+          title: t("quiz_title"),
+          desc: t("quiz_desc"),
+          xp: t("quiz_xp"),
+          badge: "MCQ Battle",
+        },
+        {
+          type: "scramble",
+          icon: "🔤",
+          color: "#a78bfa",
+          glow: "rgba(167,139,250,0.3)",
+          title: t("scramble_title"),
+          desc: t("scramble_desc"),
+          xp: t("scramble_xp"),
+          badge: "Word Hunt",
+        },
+        {
+          type: "math",
+          icon: "🧮",
+          color: "#34d399",
+          glow: "rgba(52,211,153,0.3)",
+          title: t("math_title"),
+          desc: t("math_desc"),
+          xp: t("math_xp"),
+          badge: "Speed Math",
+        },
+      ]
+        .map(
+          (g) => `
+        <div onclick="startGame('${g.type}')" style="background:linear-gradient(135deg,${g.color}10,${g.color}05);border:1.5px solid ${g.color}30;border-radius:16px;padding:16px 18px;cursor:pointer;display:flex;align-items:center;gap:14px;position:relative;overflow:hidden;transition:all .25s" onmouseover="this.style.borderColor='${g.color}70';this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px ${g.glow}'" onmouseout="this.style.borderColor='${g.color}30';this.style.transform='';this.style.boxShadow=''">
+          <div style="width:52px;height:52px;background:${g.color}18;border:1.5px solid ${g.color}40;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;flex-shrink:0">${g.icon}</div>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
+              <div style="font-size:0.95rem;font-weight:800;color:var(--text)">${g.title}</div>
+              <span style="background:${g.color}18;border:1px solid ${g.color}33;color:${g.color};font-size:0.62rem;font-weight:800;padding:1px 7px;border-radius:20px;letter-spacing:0.05em;white-space:nowrap">${g.badge}</span>
+            </div>
+            <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:4px">${g.desc}</div>
+            <div style="font-size:0.72rem;font-weight:700;color:${g.color}">${g.xp}</div>
+          </div>
+          <div style="color:${g.color};font-size:1.3rem;font-weight:300;flex-shrink:0">›</div>
+        </div>
+      `,
+        )
+        .join("")}
     </div>
   `;
 
@@ -3803,8 +3939,11 @@ function renderPapersTab() {
     "Hindi",
   ];
 
-  const filterPills = `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px">
-    ${SUBJECTS.map((s, i) => `<button class="subject-filter-pill${i === 0 ? " active" : ""}" data-subject="${s}" onclick="filterPapers('${s}')" style="padding:6px 14px;border-radius:20px;border:1px solid ${i === 0 ? "#4f8ef7" : "rgba(255,255,255,0.12)"};background:${i === 0 ? "rgba(79,142,247,0.15)" : "rgba(255,255,255,0.05)"};color:${i === 0 ? "#4f8ef7" : "var(--text-muted)"};font-size:0.78rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s">${s}</button>`).join("")}
+  const filterPills = `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid rgba(255,255,255,0.07)">
+    ${SUBJECTS.map((s, i) => {
+      const active = i === 0;
+      return `<button class="subject-filter-pill${active ? " active" : ""}" data-subject="${s}" onclick="filterPapers('${s}')" style="padding:6px 14px;border-radius:20px;border:1.5px solid ${active ? "#4f8ef7" : "rgba(255,255,255,0.1)"};background:${active ? "rgba(79,142,247,0.15)" : "rgba(255,255,255,0.04)"};color:${active ? "#4f8ef7" : "var(--text-muted)"};font-size:0.76rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s;letter-spacing:0.02em">${s}</button>`;
+    }).join("")}
   </div>`;
 
   const grouped = {};
@@ -3816,19 +3955,28 @@ function renderPapersTab() {
   let cardsHtml = filterPills;
   Object.entries(grouped).forEach(([tag, items]) => {
     const color = TAG_COLOR[tag] || "#4f8ef7";
-    cardsHtml += `<div class="papers-group" style="margin-bottom:20px">
-      <div style="font-size:0.72rem;font-weight:800;letter-spacing:0.08em;color:${color};text-transform:uppercase;margin-bottom:10px">${tag}s</div>
+    cardsHtml += `<div class="papers-group" style="margin-bottom:24px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <div style="width:3px;height:16px;background:${color};border-radius:3px"></div>
+        <div style="font-size:0.7rem;font-weight:900;letter-spacing:0.1em;color:${color};text-transform:uppercase">${tag}s</div>
+        <div style="flex:1;height:1px;background:${color}18"></div>
+        <span style="font-size:0.68rem;color:var(--text-muted)">${items.length}</span>
+      </div>
       ${items
         .map(
           (p) => `
         <div data-subject="${p.subject}" class="paper-card" onclick="showPaper('${p.id}')" style="margin-bottom:10px;cursor:pointer">
-          <div class="glass" style="padding:14px 16px;border:1px solid ${color}28;transition:all .2s" onmouseover="this.style.borderColor='${color}88';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='${color}28';this.style.transform=''">
-            <div style="display:flex;align-items:center;gap:10px;justify-content:space-between">
-              <div>
-                <div style="font-weight:700;color:var(--text);font-size:0.9rem;margin-bottom:3px">${p.label}</div>
-                <div style="font-size:0.75rem;color:var(--text-muted)">${p.year} · ${p.subject} · ${p.maxMarks} marks · ${p.time}</div>
+          <div style="background:linear-gradient(135deg,${color}08,${color}04);border:1.5px solid ${color}20;border-radius:14px;padding:14px 16px;transition:all .25s" onmouseover="this.style.borderColor='${color}55';this.style.transform='translateY(-2px)';this.style.background='linear-gradient(135deg,${color}12,${color}06)'" onmouseout="this.style.borderColor='${color}20';this.style.transform='';this.style.background='linear-gradient(135deg,${color}08,${color}04)'">
+            <div style="display:flex;align-items:center;gap:12px;justify-content:space-between">
+              <div style="flex:1;min-width:0">
+                <div style="font-weight:800;color:var(--text);font-size:0.9rem;margin-bottom:5px;line-height:1.3">${p.label}</div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+                  <span style="font-size:0.7rem;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);padding:2px 8px;border-radius:20px;color:var(--text-muted)">${p.year}</span>
+                  <span style="font-size:0.7rem;background:${color}12;border:1px solid ${color}25;padding:2px 8px;border-radius:20px;color:${color}">${p.subject}</span>
+                  <span style="font-size:0.7rem;color:var(--text-muted)">${p.maxMarks} marks · ${p.time}</span>
+                </div>
               </div>
-              <div style="flex-shrink:0;background:${color}18;border:1px solid ${color}44;border-radius:8px;padding:6px 14px;font-size:0.78rem;font-weight:700;color:${color}">View Paper →</div>
+              <div style="flex-shrink:0;background:${color}15;border:1.5px solid ${color}40;border-radius:10px;padding:7px 14px;font-size:0.76rem;font-weight:800;color:${color};white-space:nowrap">View →</div>
             </div>
           </div>
         </div>`,
@@ -3842,10 +3990,10 @@ function renderPapersTab() {
   window.filterPapers = (subject) => {
     document.querySelectorAll(".subject-filter-pill").forEach((btn) => {
       const active = btn.dataset.subject === subject;
-      btn.style.borderColor = active ? "#4f8ef7" : "rgba(255,255,255,0.12)";
+      btn.style.borderColor = active ? "#4f8ef7" : "rgba(255,255,255,0.1)";
       btn.style.background = active
         ? "rgba(79,142,247,0.15)"
-        : "rgba(255,255,255,0.05)";
+        : "rgba(255,255,255,0.04)";
       btn.style.color = active ? "#4f8ef7" : "var(--text-muted)";
     });
     document.querySelectorAll(".paper-card").forEach((card) => {
@@ -4806,7 +4954,7 @@ function renderNotesTab() {
         ],
         "Sarveshwar Dayal Saxena": [
           "पाठ 'मानवीय करुणा की दिव्य चमक' — फादर बुल्के पर संस्मरण",
-          "फादर बुल्के: बेल्जियम के ईसाई पादरी जो हिंदी से प्रेम करते थे",
+          "फादर बुल्के: बेल्जियम के ईसाई पादरी जो हिंदी से प्रेम करते थ:��",
           "रामकथा पर शोध किया · अंग्रेज़ी-हिंदी शब्दकोश बनाया",
           "थीम: मानवीयता, करुणा, सांस्कृतिक एकता",
         ],
