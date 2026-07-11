@@ -3495,7 +3495,15 @@ function renderQuiz(state) {
         })
         .join("")}
     </div>
-    ${answered === total ? `<div style="text-align:center;padding:16px;background:rgba(15,202,140,0.1);border:1px solid rgba(15,202,140,0.3);border-radius:14px;margin-top:4px"><div style="font-size:1.2rem;font-weight:900;color:#0fca8c">All done! ✓</div><div style="font-size:0.82rem;color:var(--text-muted);margin-top:4px">Waiting for others to finish...</div></div>` : ""}
+    ${
+      answered === total
+        ? `<div style="text-align:center;padding:18px;background:rgba(15,202,140,0.1);border:1.5px solid rgba(15,202,140,0.35);border-radius:14px;margin-top:4px">
+      <div style="font-size:1.2rem;font-weight:900;color:#0fca8c;margin-bottom:4px">All done! ✓</div>
+      <div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:14px">Waiting for others... or finish now</div>
+      <button onclick="forceFinishRoom()" class="btn btn-primary" style="background:linear-gradient(135deg,#f0b429,#f97316);border:none;padding:10px 28px;font-weight:800">See Results →</button>
+    </div>`
+        : ""
+    }
   `;
   // poll for finish
   stopClassroomPoll();
@@ -3509,9 +3517,31 @@ function renderQuiz(state) {
         stopClassroomPoll();
         renderClassroomResult(data);
       }
+      // also re-render if all done button should appear
+      const ans = Object.keys(_crAnswered).length;
+      const doneDiv = document.querySelector("[style*='See Results']");
+      if (ans === _crState?.questions?.length && !doneDiv) {
+        renderQuiz(data);
+      }
     } catch (e) {}
   }, 2500);
 }
+
+window.forceFinishRoom = async () => {
+  stopClassroomPoll();
+  try {
+    // force mark player as done then poll final state
+    const data = await apiPost("/classroom/poll", {
+      code: _crRoom.code,
+      playerId: _crRoom.playerId,
+    });
+    // manually flip status for display since server needs all players
+    data.status = "finished";
+    renderClassroomResult(data);
+  } catch (e) {
+    alert("Error: " + e.message);
+  }
+};
 
 window.submitCrAnswer = async (qIndex, chosen, btn) => {
   if (_crAnswered[qIndex] !== undefined) return;
@@ -3519,8 +3549,42 @@ window.submitCrAnswer = async (qIndex, chosen, btn) => {
   // disable all options for this question
   const card = document.getElementById(`crq-${qIndex}`);
   if (card)
-    card.querySelectorAll("._croption").forEach((b) => (b.disabled = true));
+    card.querySelectorAll("._croption").forEach((b) => {
+      b.disabled = true;
+    });
   btn.classList.add("chosen");
+  // update progress bar + counter
+  const answered = Object.keys(_crAnswered).length;
+  const total = _crState?.questions?.length || 10;
+  const counter = document.querySelector("[style*='answered']");
+  if (counter) counter.textContent = `${answered}/${total} answered`;
+  const prog = document.querySelector("[style*='transition:width .4s']");
+  if (prog) prog.style.width = (answered / total) * 100 + "%";
+  // mark question as answered in header
+  const qhead =
+    card?.querySelector("[id^='crq-'] [style*='margin-bottom:12px']") ||
+    card?.querySelector("div:first-child");
+  if (card && !card.querySelector(".cr-done-tag")) {
+    const tag = document.createElement("span");
+    tag.className = "cr-done-tag";
+    tag.style.cssText = "font-size:0.72rem;color:#0fca8c;font-weight:700";
+    tag.textContent = "✓ Answered";
+    card.querySelector("div")?.appendChild(tag);
+  }
+  // update card border
+  if (card) card.style.borderColor = "rgba(79,142,247,0.4)";
+  // if all done, show finish button
+  if (answered === total) {
+    const existingDone = document.getElementById("cr-alldone");
+    if (!existingDone) {
+      const doneDiv = document.createElement("div");
+      doneDiv.id = "cr-alldone";
+      doneDiv.style.cssText =
+        "text-align:center;padding:18px;background:rgba(15,202,140,0.1);border:1.5px solid rgba(15,202,140,0.35);border-radius:14px;margin-top:4px";
+      doneDiv.innerHTML = `<div style="font-size:1.2rem;font-weight:900;color:#0fca8c;margin-bottom:4px">All done! ✓</div><div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:14px">Waiting for others... or finish now</div><button onclick="forceFinishRoom()" class="btn btn-primary" style="background:linear-gradient(135deg,#f0b429,#f97316);border:none;padding:10px 28px;font-weight:800">See Results →</button>`;
+      document.getElementById("cr-questions")?.after(doneDiv);
+    }
+  }
   try {
     await apiPost("/classroom/answer", {
       code: _crRoom.code,
@@ -3529,22 +3593,6 @@ window.submitCrAnswer = async (qIndex, chosen, btn) => {
       chosen,
     });
   } catch (e) {}
-  // re-render quiz with updated answered count
-  const answered = Object.keys(_crAnswered).length;
-  const prog = document.querySelector("[style*='transition:width']");
-  if (prog)
-    prog.style.width = (answered / _crState.questions.length) * 100 + "%";
-  // mark answered
-  const qhead = card?.querySelector("[style*='margin-bottom:12px']");
-  if (qhead && answered) {
-    const tag = card?.querySelector(".chosen");
-    if (!card?.querySelector("[style*='0fca8c']")) {
-      qhead.insertAdjacentHTML(
-        "beforeend",
-        `<span style="font-size:0.72rem;color:#0fca8c;font-weight:700">✓ Answered</span>`,
-      );
-    }
-  }
 };
 
 function renderClassroomResult(state) {
@@ -5416,7 +5464,7 @@ function renderNotesTab() {
         "Mata ka Anchal": [
           "लेखक: शिवपूजन सहाय · संस्मरण",
           "बच्चे का पिता के साथ खेलना, राम-भजन सुनना, पिता का भक्त बनाने का प्रयास",
-          "साँप का डर लगने पर बच्चा माँ की गोद में जा छुपता है — माँ का आँचल सबसे सुरक्षित",
+          "साँप का डर लगने पर बच्चा माँ की गोद में जा छुपता है — मEB�ँ का आँचल सबसे सुरक्षित",
           "थीम: माँ का ममत्व, बचपन की निश्चिंतता, माँ-बच्चे का अटूट रिश्ता",
         ],
         "George Pancham ki Naak": [
@@ -5436,7 +5484,7 @@ function renderNotesTab() {
         "Ehi Thaiya Jhulani Herani Ho Rama": [
           "लेखक: शिवप्रसाद मिश्र 'रुद्र' · काशी की संस्कृति पर",
           "दुलारी और टुन्नू की कहानी — काशी के लोकगीत, विदेशी कपड़ों का बहिष्कार",
-          "टुनeb�नू की देशभक्ति — विदेशी कपड़े छोड़ता है, ब्रिटिश अधिकारी द्वारा मारा जाता है",
+          "टुन्नू की देशभक्ति — विदेशी कपड़े छोड़ता है, ब्रिटिश अधिकारी द्वारा मारा जाता है",
           "दुलारी टुन्नू के मरने के बाद उसका खद्दर का कपड़ा ओढ़कर जुलूस में शामिल होती है",
           "थीम: देशभक्ति, स्वदेशी आंदोलन, त्याग",
         ],
