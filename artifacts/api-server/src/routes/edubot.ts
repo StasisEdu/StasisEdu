@@ -269,17 +269,24 @@ router.post("/check", async (req, res) => {
     return;
   }
   const ctx = [classNum, subject, chapter].filter(Boolean).join(" ");
+  const isMaths = subject === "Maths" || subject === "Mathematics";
+
+  const evalRules = isMaths
+    ? `Evaluate mathematically:
+1. Accept "1 by 3", "2 by 5" as correct fraction notation.
+2. Partially simplified fractions: mark correct:true, note in feedback.
+3. Correct answer wrong format: mark correct:true.
+4. Judge correctness only, not exact wording.`
+    : `Evaluate based on CBSE ${subject} understanding:
+1. Full credit if student captures the key idea, even in simple words.
+2. Partial/incomplete: mark correct:false, acknowledge what they got right.
+3. Completely wrong, irrelevant, or random characters: mark correct:false.`;
+
+  const wrongInstruction = `CRITICAL: If correct is false, feedback MUST start with the correct answer: "The correct answer is: [answer]. [brief explanation]". Be educational and encouraging.`;
+
   try {
     const text = await ask(
-      `A ${ctx} student was asked: "${question}". They answered: "${userAnswer}".
-
-Evaluate their answer using these rules:
-1. Accept "1 by 3", "2 by 5", "X by Y" as correct fraction notation equivalent to 1/3, 2/5, X/Y.
-2. If the answer is mathematically correct but not in simplified form (e.g. 2/4 instead of 1/2), mark correct:true but say in feedback: "Correct! Next time, remember to simplify your fraction. [unsimplified] = [simplified]."
-3. If the answer is mathematically correct and fully simplified, mark correct:true and praise them briefly.
-4. Judge mathematical correctness only — not exact wording or format.
-
-Return ONLY valid JSON: {"correct":true,"feedback":"clear and friendly explanation"}`,
+      `A ${ctx} student was asked: "${question}"\nTheir answer: "${userAnswer}"\n\n${evalRules}\n\n${wrongInstruction}\n\nReturn ONLY valid JSON: {"correct":true/false,"feedback":"explanation"}`,
     );
     const parsed = safeJson(text) as {
       correct?: boolean;

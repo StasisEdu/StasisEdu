@@ -3036,6 +3036,22 @@ window.changePracticeChapter = () => {
   saveState();
   renderPracticeSetup();
 };
+window.renderPracticeSetup = renderPracticeSetup;
+window.renderPractice = renderPractice;
+window.goBackFromPractice = () => {
+  _practicePicked = false;
+  if (S.practiceChapter) {
+    // Already have chapter — go back to practice page (will show picker again next time)
+    // But we want to skip the picker this time, so directly show the practice screen
+    // with existing questions if any, else setup
+    S.todayPractice = [];
+    S.practiceDate = null;
+    saveState();
+    renderPracticeSetup();
+  } else {
+    renderPracticeSetup();
+  }
+};
 
 let _practicePicked = false;
 
@@ -3044,7 +3060,7 @@ async function loadPracticeQuestions() {
     renderDifficultyPicker({
       title: "⚡ Daily Practice",
       color: "#9b6dff",
-      backFn: "renderPracticeSetup",
+      backFn: "goBackFromPractice",
       onConfirm: () => {
         _practicePicked = true;
         S._practiceDifficulty = _gameConfig.difficulty;
@@ -6212,7 +6228,7 @@ function renderNotesTab() {
           "पाठ 'स्त्री शिक्षा के विरोधी कुतर्कों का खंडन' — तर्कपूर्ण निबंध",
           "स्त्री शिक्षा के विरोधियों के तर्कों को एक-एक कर खंडित करते हैं",
           "प्रमाण देते हैं कि प्राचीन भारत में स्त्रियाँ शिक्षित थीं (गार्गी, मैत्रेयी)",
-          "थीम: स्त्री शिक्षा का समर्थन, सामाजिक कुरीतियों का विरोध",
+          "थीम: स्त्री शिक्षen� का समर्थन, सामाजिक कुरीतियों का विरोध",
         ],
         "Mata ka Anchal": [
           "लेखक: शिवपूजन सहाय · संस्मरण",
