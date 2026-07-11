@@ -722,7 +722,102 @@ function getChapters(classNum, subject) {
   return (CHAPTERS[classNum] || {})[subject] || [];
 }
 
-let _gameConfig = { classNum: "10", subject: "Maths", chapter: "" };
+let _gameConfig = {
+  classNum: "10",
+  subject: "Maths",
+  chapter: "",
+  difficulty: "easy",
+  count: 3,
+};
+
+const COUNT_CONFIG = {
+  3: {
+    xp: 10,
+    difficulty: "easy",
+    label: "Easy",
+    emoji: "🟢",
+    desc: "10 XP · 30s each",
+  },
+  5: {
+    xp: 20,
+    difficulty: "hard",
+    label: "Hard",
+    emoji: "🔴",
+    desc: "20 XP · 30s each",
+  },
+  7: {
+    xp: 30,
+    difficulty: "very hard",
+    label: "Very Hard",
+    emoji: "💀",
+    desc: "30 XP · 30s each",
+  },
+};
+
+function renderDifficultyPicker({ title, color, backFn, onConfirm }) {
+  const app = document.getElementById("app");
+  app.innerHTML = `
+    <style>
+      @keyframes _dpIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+      ._dpo{border-radius:16px;padding:18px 12px;cursor:pointer;border:2px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);transition:all .2s;text-align:center;font-family:inherit;width:100%}
+      ._dpo._sel{border-color:${color};background:rgba(0,0,0,0.0);box-shadow:0 0 20px ${color}44}
+      ._dpo:hover:not(._sel){border-color:${color}66;background:${color}08}
+    </style>
+    <div style="animation:_dpIn .3s ease">
+      <button onclick="${backFn}()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.85rem;padding:0;font-family:inherit;margin-bottom:20px;display:block">‹ Back</button>
+      <div style="font-size:1.3rem;font-weight:900;color:#fff;margin-bottom:4px">${title}</div>
+      <div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:28px">Pick your challenge level</div>
+      <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:28px">
+        ${[3, 5, 7]
+          .map((n) => {
+            const cfg = COUNT_CONFIG[n];
+            const sel = _gameConfig.count === n;
+            return `<button class="_dpo${sel ? " _sel" : ""}" onclick="dpPickCount(${n},this)" style="${sel ? `border-color:${color};box-shadow:0 0 20px ${color}44` : ""}">
+            <div style="display:flex;align-items:center;gap:14px">
+              <div style="font-size:2rem;flex-shrink:0">${cfg.emoji}</div>
+              <div style="flex:1;text-align:left">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
+                  <span style="font-size:1rem;font-weight:900;color:${sel ? color : "var(--text)"};">${n} Questions</span>
+                  <span style="background:${color}18;border:1px solid ${color}33;color:${color};font-size:0.65rem;font-weight:900;padding:2px 8px;border-radius:20px">${cfg.label}</span>
+                </div>
+                <div style="font-size:0.78rem;color:var(--text-muted)">⏱ 30s per question · +${cfg.xp} XP total</div>
+              </div>
+              <div style="font-size:1.5rem;font-weight:900;color:${sel ? color : "var(--text-muted)"}">+${cfg.xp}</div>
+            </div>
+          </button>`;
+          })
+          .join("")}
+      </div>
+      <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:12px 16px;margin-bottom:20px;font-size:0.82rem;color:var(--text-muted);display:flex;align-items:center;gap:8px">
+        <span>⏱</span> Each question has a <strong style="color:var(--text)">30 second</strong> timer. Unanswered questions count as timed out.
+      </div>
+      <button onclick="dpConfirm()" class="btn btn-primary" style="width:100%;padding:14px;font-size:1rem;font-weight:900;background:linear-gradient(135deg,${color},${color}bb);border:none;box-shadow:0 4px 20px ${color}44">
+        Start — ${COUNT_CONFIG[_gameConfig.count].label} Mode →
+      </button>
+    </div>
+  `;
+  window._dpConfirmFn = onConfirm;
+  window.dpConfirm = () => window._dpConfirmFn();
+  window.dpPickCount = (n, btn) => {
+    _gameConfig.count = n;
+    _gameConfig.difficulty = COUNT_CONFIG[n].difficulty;
+    document.querySelectorAll("._dpo").forEach((b) => {
+      b.classList.remove("_sel");
+      b.style.borderColor = "rgba(255,255,255,0.1)";
+      b.style.boxShadow = "";
+    });
+    btn.classList.add("_sel");
+    btn.style.borderColor = color;
+    btn.style.boxShadow = `0 0 20px ${color}44`;
+    // update title name and XP in btn
+    btn.querySelector("span:first-of-type").style.color = color;
+    btn.querySelector("div:last-child").style.color = color;
+    // update start button text
+    const startBtn = document.querySelector("[onclick='dpConfirm()']");
+    if (startBtn)
+      startBtn.textContent = `Start — ${COUNT_CONFIG[n].label} Mode →`;
+  };
+}
 
 // ============================================================
 // LANGUAGE SELECTION
@@ -1300,45 +1395,145 @@ let S = loadState();
 // ADAPTIVE PERFORMANCE LEVELS
 // ============================================================
 const DAILY_TIPS = [
-  { emoji: "⚡", subject: "Maths", tip: "In a right triangle, (Hypotenuse)² = (Base)² + (Height)². Remember: Always square all three sides!" },
-  { emoji: "🧪", subject: "Chemistry", tip: "Acids turn blue litmus red. Bases turn red litmus blue. Neutral solutions don't change litmus colour." },
-  { emoji: "🌿", subject: "Biology", tip: "Photosynthesis: 6CO₂ + 6H₂O + light → C₆H₁₂O₆ + 6O₂. Chlorophyll absorbs sunlight in the chloroplast." },
-  { emoji: "⚛️", subject: "Physics", tip: "Newton's 2nd Law: F = ma. Force equals mass times acceleration. Units: Newton (N) = kg·m/s²." },
-  { emoji: "🗺️", subject: "Geography", tip: "The Tropic of Cancer passes through 8 Indian states. It runs at 23.5°N latitude." },
-  { emoji: "📜", subject: "History", tip: "The Indian National Congress was founded in 1885 by A.O. Hume. The first session was in Bombay." },
-  { emoji: "⚖️", subject: "Civics", tip: "India has 3 tiers of government: Union, State, and Local (Panchayati Raj). Each has its own powers." },
-  { emoji: "💰", subject: "Economics", tip: "GDP = Consumption + Investment + Government Spending + Net Exports. This is the expenditure approach." },
-  { emoji: "📝", subject: "English", tip: "Active voice: Subject does the action. Passive voice: Subject receives the action. Prefer active in writing." },
-  { emoji: "🔢", subject: "Maths", tip: "HCF × LCM = Product of two numbers. This shortcut works for any two positive integers." },
-  { emoji: "🌊", subject: "Physics", tip: "Speed of light in vacuum = 3×10⁸ m/s. In a medium, speed = c/n where n is the refractive index." },
-  { emoji: "🧬", subject: "Biology", tip: "Mitosis produces 2 identical diploid cells. Meiosis produces 4 genetically unique haploid cells." },
-  { emoji: "🏛️", subject: "History", tip: "The Non-Cooperation Movement (1920-22) was Gandhi's first mass movement. It was withdrawn after Chauri Chaura." },
-  { emoji: "📐", subject: "Maths", tip: "Area of circle = πr². Circumference = 2πr. For CBSE, use π = 22/7 unless told otherwise." },
-  { emoji: "⚗️", subject: "Chemistry", tip: "Valency of Carbon = 4. This allows it to form long chains and millions of organic compounds." },
-  { emoji: "🌍", subject: "Geography", tip: "India's total area is 3.28 million km². It is the 7th largest country in the world by area." },
-  { emoji: "💡", subject: "Physics", tip: "Ohm's Law: V = IR. Resistance in series adds up. In parallel: 1/R = 1/R1 + 1/R2 + ..." },
-  { emoji: "🌱", subject: "Biology", tip: "The functional unit of kidney is Nephron. Each kidney has about 1 million nephrons." },
-  { emoji: "📊", subject: "Economics", tip: "Primary sector = agriculture/mining. Secondary = manufacturing. Tertiary = services (largest in India now)." },
-  { emoji: "🔬", subject: "Chemistry", tip: "Metals lose electrons → oxidised. Non-metals gain electrons → reduced. OIL RIG: Oxidation Is Loss, Reduction Is Gain." },
+  {
+    emoji: "⚡",
+    subject: "Maths",
+    tip: "In a right triangle, (Hypotenuse)² = (Base)² + (Height)². Remember: Always square all three sides!",
+  },
+  {
+    emoji: "🧪",
+    subject: "Chemistry",
+    tip: "Acids turn blue litmus red. Bases turn red litmus blue. Neutral solutions don't change litmus colour.",
+  },
+  {
+    emoji: "🌿",
+    subject: "Biology",
+    tip: "Photosynthesis: 6CO₂ + 6H₂O + light → C₆H₁₂O₆ + 6O₂. Chlorophyll absorbs sunlight in the chloroplast.",
+  },
+  {
+    emoji: "⚛️",
+    subject: "Physics",
+    tip: "Newton's 2nd Law: F = ma. Force equals mass times acceleration. Units: Newton (N) = kg·m/s².",
+  },
+  {
+    emoji: "🗺️",
+    subject: "Geography",
+    tip: "The Tropic of Cancer passes through 8 Indian states. It runs at 23.5°N latitude.",
+  },
+  {
+    emoji: "📜",
+    subject: "History",
+    tip: "The Indian National Congress was founded in 1885 by A.O. Hume. The first session was in Bombay.",
+  },
+  {
+    emoji: "⚖️",
+    subject: "Civics",
+    tip: "India has 3 tiers of government: Union, State, and Local (Panchayati Raj). Each has its own powers.",
+  },
+  {
+    emoji: "💰",
+    subject: "Economics",
+    tip: "GDP = Consumption + Investment + Government Spending + Net Exports. This is the expenditure approach.",
+  },
+  {
+    emoji: "📝",
+    subject: "English",
+    tip: "Active voice: Subject does the action. Passive voice: Subject receives the action. Prefer active in writing.",
+  },
+  {
+    emoji: "🔢",
+    subject: "Maths",
+    tip: "HCF × LCM = Product of two numbers. This shortcut works for any two positive integers.",
+  },
+  {
+    emoji: "🌊",
+    subject: "Physics",
+    tip: "Speed of light in vacuum = 3×10⁸ m/s. In a medium, speed = c/n where n is the refractive index.",
+  },
+  {
+    emoji: "🧬",
+    subject: "Biology",
+    tip: "Mitosis produces 2 identical diploid cells. Meiosis produces 4 genetically unique haploid cells.",
+  },
+  {
+    emoji: "🏛️",
+    subject: "History",
+    tip: "The Non-Cooperation Movement (1920-22) was Gandhi's first mass movement. It was withdrawn after Chauri Chaura.",
+  },
+  {
+    emoji: "📐",
+    subject: "Maths",
+    tip: "Area of circle = πr². Circumference = 2πr. For CBSE, use π = 22/7 unless told otherwise.",
+  },
+  {
+    emoji: "⚗️",
+    subject: "Chemistry",
+    tip: "Valency of Carbon = 4. This allows it to form long chains and millions of organic compounds.",
+  },
+  {
+    emoji: "🌍",
+    subject: "Geography",
+    tip: "India's total area is 3.28 million km². It is the 7th largest country in the world by area.",
+  },
+  {
+    emoji: "💡",
+    subject: "Physics",
+    tip: "Ohm's Law: V = IR. Resistance in series adds up. In parallel: 1/R = 1/R1 + 1/R2 + ...",
+  },
+  {
+    emoji: "🌱",
+    subject: "Biology",
+    tip: "The functional unit of kidney is Nephron. Each kidney has about 1 million nephrons.",
+  },
+  {
+    emoji: "📊",
+    subject: "Economics",
+    tip: "Primary sector = agriculture/mining. Secondary = manufacturing. Tertiary = services (largest in India now).",
+  },
+  {
+    emoji: "🔬",
+    subject: "Chemistry",
+    tip: "Metals lose electrons → oxidised. Non-metals gain electrons → reduced. OIL RIG: Oxidation Is Loss, Reduction Is Gain.",
+  },
 ];
 
 function getDailyTip() {
-  const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
+  const dayOfYear = Math.floor(
+    (Date.now() - new Date(new Date().getFullYear(), 0, 0)) / 86400000,
+  );
   return DAILY_TIPS[dayOfYear % DAILY_TIPS.length];
 }
 
 function getWeakSubject() {
-  const allSubjects = ["Maths","Physics","Biology","Chemistry","History","Geography","Civics","Economics","English","Hindi"];
-  const threeDaysAgo = new Date(Date.now() - 3 * 86400000).toISOString().split("T")[0];
+  const allSubjects = [
+    "Maths",
+    "Physics",
+    "Biology",
+    "Chemistry",
+    "History",
+    "Geography",
+    "Civics",
+    "Economics",
+    "English",
+    "Hindi",
+  ];
+  const threeDaysAgo = new Date(Date.now() - 3 * 86400000)
+    .toISOString()
+    .split("T")[0];
   const recentSubjects = new Set(
-    (S.questionHistory || []).filter(h => h.date >= threeDaysAgo).map(h => h.subject)
+    (S.questionHistory || [])
+      .filter((h) => h.date >= threeDaysAgo)
+      .map((h) => h.subject),
   );
-  const neglected = allSubjects.filter(s => !recentSubjects.has(s) && (S.subjectCounts[s] || 0) > 0);
+  const neglected = allSubjects.filter(
+    (s) => !recentSubjects.has(s) && (S.subjectCounts[s] || 0) > 0,
+  );
   if (neglected.length === 0) return null;
   // pick the one with most all-time questions (most practiced historically but recently neglected)
-  return neglected.sort((a,b) => (S.subjectCounts[b]||0) - (S.subjectCounts[a]||0))[0];
+  return neglected.sort(
+    (a, b) => (S.subjectCounts[b] || 0) - (S.subjectCounts[a] || 0),
+  )[0];
 }
-
 
 const PERF_DEFS = {
   beginner: {
@@ -1534,7 +1729,8 @@ function logQuestion({ subject, chapter, correct, source }) {
     correct: !!correct,
     source: source || "practice",
   });
-  if (S.questionHistory.length > 500) S.questionHistory = S.questionHistory.slice(0, 500);
+  if (S.questionHistory.length > 500)
+    S.questionHistory = S.questionHistory.slice(0, 500);
   saveState();
 }
 
@@ -2273,18 +2469,21 @@ function renderHome() {
       const todayXP = S.activityLog[todayKey()] || 0;
       const tip = getDailyTip();
       const weakSubject = getWeakSubject();
-      const fireAnim = streak > 3 ? `@keyframes _firePulse{0%,100%{transform:scale(1) rotate(-3deg);filter:drop-shadow(0 0 8px #f97316)}50%{transform:scale(1.15) rotate(3deg);filter:drop-shadow(0 0 18px #f97316)}}` : "";
+      const fireAnim =
+        streak > 3
+          ? `@keyframes _firePulse{0%,100%{transform:scale(1) rotate(-3deg);filter:drop-shadow(0 0 8px #f97316)}50%{transform:scale(1.15) rotate(3deg);filter:drop-shadow(0 0 18px #f97316)}}`
+          : "";
       return `
       <style>${fireAnim}
         @keyframes _slideIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
         ._hcard{border-radius:16px;padding:14px 16px;margin-bottom:12px;animation:_slideIn .35s ease both}
       </style>
       <!-- STREAK CARD -->
-      <div class="_hcard" style="background:linear-gradient(135deg,rgba(249,115,22,0.18),rgba(240,180,41,0.1));border:1.5px solid rgba(249,115,22,${streak>3?'0.5':'0.25'});animation-delay:.05s;display:flex;align-items:center;gap:14px">
-        <div style="font-size:${streak>3?'2.8':'2rem'};line-height:1;${streak>3?'animation:_firePulse 1.5s ease-in-out infinite':''}">${streak>0?'🔥':'💤'}</div>
+      <div class="_hcard" style="background:linear-gradient(135deg,rgba(249,115,22,0.18),rgba(240,180,41,0.1));border:1.5px solid rgba(249,115,22,${streak > 3 ? "0.5" : "0.25"});animation-delay:.05s;display:flex;align-items:center;gap:14px">
+        <div style="font-size:${streak > 3 ? "2.8" : "2rem"};line-height:1;${streak > 3 ? "animation:_firePulse 1.5s ease-in-out infinite" : ""}">${streak > 0 ? "🔥" : "💤"}</div>
         <div style="flex:1">
-          <div style="font-size:1.5rem;font-weight:900;color:${streak>3?'#f97316':'var(--text)'};line-height:1">${streak} <span style="font-size:0.9rem;font-weight:700;color:var(--text-muted)">day streak</span></div>
-          <div style="font-size:0.75rem;color:var(--text-muted);margin-top:2px">${streak===0?'Start today to build your streak!':streak>3?`🏆 Best: ${S.bestStreak} days — keep it up!`:`Best: ${S.bestStreak} days`}</div>
+          <div style="font-size:1.5rem;font-weight:900;color:${streak > 3 ? "#f97316" : "var(--text)"};line-height:1">${streak} <span style="font-size:0.9rem;font-weight:700;color:var(--text-muted)">day streak</span></div>
+          <div style="font-size:0.75rem;color:var(--text-muted);margin-top:2px">${streak === 0 ? "Start today to build your streak!" : streak > 3 ? `🏆 Best: ${S.bestStreak} days — keep it up!` : `Best: ${S.bestStreak} days`}</div>
         </div>
         <div style="text-align:right">
           <div style="font-size:1.1rem;font-weight:900;color:#f0b429">${todayXP}</div>
@@ -2292,7 +2491,9 @@ function renderHome() {
         </div>
       </div>
       <!-- WEAK AREA ALERT -->
-      ${weakSubject ? `<div class="_hcard" onclick="(()=>{S.subjectPreference='${weakSubject}';saveState();document.getElementById('subjectSel').value='${weakSubject}';window.onHomeSubjectChange&&onHomeSubjectChange();})()" style="background:rgba(240,180,41,0.08);border:1.5px solid rgba(240,180,41,0.3);cursor:pointer;display:flex;align-items:center;gap:12px;animation-delay:.1s" onmouseover="this.style.borderColor='rgba(240,180,41,0.6)'" onmouseout="this.style.borderColor='rgba(240,180,41,0.3)'">
+      ${
+        weakSubject
+          ? `<div class="_hcard" onclick="(()=>{S.subjectPreference='${weakSubject}';saveState();document.getElementById('subjectSel').value='${weakSubject}';window.onHomeSubjectChange&&onHomeSubjectChange();})()" style="background:rgba(240,180,41,0.08);border:1.5px solid rgba(240,180,41,0.3);cursor:pointer;display:flex;align-items:center;gap:12px;animation-delay:.1s" onmouseover="this.style.borderColor='rgba(240,180,41,0.6)'" onmouseout="this.style.borderColor='rgba(240,180,41,0.3)'">
         <div style="font-size:1.6rem">⚠️</div>
         <div style="flex:1">
           <div style="font-size:0.7rem;font-weight:900;letter-spacing:0.08em;color:#f0b429;text-transform:uppercase;margin-bottom:2px">Weak Area Detected</div>
@@ -2300,7 +2501,9 @@ function renderHome() {
           <div style="font-size:0.75rem;color:var(--text-muted);margin-top:2px">Tap to switch → practice it now</div>
         </div>
         <div style="color:#f0b429;font-size:1.2rem">›</div>
-      </div>` : ""}
+      </div>`
+          : ""
+      }
       <!-- DAILY TIP -->
       <div class="_hcard" style="background:linear-gradient(135deg,rgba(79,142,247,0.1),rgba(155,109,255,0.07));border:1.5px solid rgba(79,142,247,0.2);animation-delay:.15s">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
@@ -2314,7 +2517,8 @@ function renderHome() {
         <div style="font-size:0.65rem;font-weight:900;letter-spacing:0.1em;color:#0fca8c;text-transform:uppercase;margin-bottom:8px">🏫 Open Classrooms</div>
         <div id="home-rooms-list" style="font-size:0.82rem;color:var(--text-muted)">Loading...</div>
       </div>
-    `})()}
+    `;
+    })()}
 
     <div class="stats-row glass mb-4">
       <div class="stat-mini">
@@ -2377,24 +2581,39 @@ function renderHome() {
   // Poll for open classroom rooms (friend activity)
   (async () => {
     try {
-      const recentCodes = (S.classroomHistory||[]).slice(0,5).map(h=>h.code).filter(Boolean);
+      const recentCodes = (S.classroomHistory || [])
+        .slice(0, 5)
+        .map((h) => h.code)
+        .filter(Boolean);
       if (recentCodes.length === 0) return;
       const results = await Promise.allSettled(
-        recentCodes.map(code => apiPost("/classroom/poll", { code, playerId: "guest_check" }))
+        recentCodes.map((code) =>
+          apiPost("/classroom/poll", { code, playerId: "guest_check" }),
+        ),
       );
       const openRooms = results
-        .map((r,i) => r.status==="fulfilled" && r.value && r.value.status==="waiting" ? { code: recentCodes[i], players: r.value.players||[] } : null)
+        .map((r, i) =>
+          r.status === "fulfilled" && r.value && r.value.status === "waiting"
+            ? { code: recentCodes[i], players: r.value.players || [] }
+            : null,
+        )
         .filter(Boolean);
       const card = document.getElementById("home-friend-activity");
       const list = document.getElementById("home-rooms-list");
       if (card && list && openRooms.length > 0) {
         card.style.display = "block";
-        list.innerHTML = openRooms.map(r=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05)">
-          <div><span style="font-weight:800;color:#0fca8c;letter-spacing:0.1em">${r.code}</span> <span style="color:var(--text-muted);font-size:0.78rem">${r.players.length} player${r.players.length!==1?'s':''} waiting</span></div>
+        list.innerHTML = openRooms
+          .map(
+            (
+              r,
+            ) => `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05)">
+          <div><span style="font-weight:800;color:#0fca8c;letter-spacing:0.1em">${r.code}</span> <span style="color:var(--text-muted);font-size:0.78rem">${r.players.length} player${r.players.length !== 1 ? "s" : ""} waiting</span></div>
           <button onclick="showJoinRoom()" style="background:rgba(15,202,140,0.2);border:1px solid rgba(15,202,140,0.4);color:#0fca8c;border-radius:8px;padding:4px 12px;font-size:0.75rem;font-weight:800;cursor:pointer;font-family:inherit">Join \u2192</button>
-        </div>`).join("");
+        </div>`,
+          )
+          .join("");
       }
-    } catch(e) {}
+    } catch (e) {}
   })();
 
   window._imgData = null;
@@ -2678,8 +2897,14 @@ function renderPractice() {
     return;
   }
 
-  const _pct = Math.round((done / 3) * 100);
-  const _doneColor = done === 3 ? "#0fca8c" : done === 2 ? "#f0b429" : "#4f8ef7";
+  const practiceCount = S._practiceCount || 3;
+  const _pct = Math.round((done / practiceCount) * 100);
+  const _doneColor =
+    done === practiceCount
+      ? "#0fca8c"
+      : done >= practiceCount / 2
+        ? "#f0b429"
+        : "#4f8ef7";
   app.innerHTML = `
     <style>
       @keyframes _pulse{0%,100%{opacity:.7}50%{opacity:1}}
@@ -2703,7 +2928,7 @@ function renderPractice() {
           </div>
           <div style="text-align:center;background:rgba(255,255,255,0.08);border:1.5px solid rgba(255,255,255,0.15);border-radius:16px;padding:12px 16px;min-width:68px;backdrop-filter:blur(10px)">
             <div style="font-size:2rem;font-weight:900;color:${_doneColor};line-height:1;text-shadow:0 0 20px ${_doneColor}">${done}</div>
-            <div style="font-size:0.6rem;color:rgba(255,255,255,0.5);margin-top:2px">of 3 done</div>
+            <div style="font-size:0.6rem;color:rgba(255,255,255,0.5);margin-top:2px">of ${practiceCount} done</div>
           </div>
         </div>
         <div style="margin-top:14px;background:rgba(255,255,255,0.08);border-radius:100px;height:6px;overflow:hidden">
@@ -2813,15 +3038,38 @@ window.changePracticeChapter = () => {
 };
 
 async function loadPracticeQuestions() {
+  // Show difficulty/count picker if not already set for this session
+  if (!S._practicePicked) {
+    renderDifficultyPicker({
+      title: "⚡ Daily Practice",
+      color: "#9b6dff",
+      backFn: "renderPracticeSetup",
+      onConfirm: () => {
+        S._practicePicked = true;
+        S._practiceDifficulty = _gameConfig.difficulty;
+        S._practiceCount = _gameConfig.count;
+        doLoadPracticeQuestions();
+      },
+    });
+    return;
+  }
+  doLoadPracticeQuestions();
+}
+
+async function doLoadPracticeQuestions() {
+  S._practicePicked = false; // reset for next time
   const cardsEl = document.getElementById("practiceCards");
   if (!cardsEl) return;
-  cardsEl.innerHTML = `${skeletonCard()}${skeletonCard()}${skeletonCard()}`;
+  const count = S._practiceCount || 3;
+  cardsEl.innerHTML = Array(Math.min(count, 3)).fill(skeletonCard()).join("");
   try {
     const data = await apiPost("/practice", {
       classNum: S.classPreference,
       subject: S.subjectPreference,
       chapter: S.practiceChapter,
       level: getPerf().level,
+      difficulty: S._practiceDifficulty || "medium",
+      count: count,
     });
     const questions = (data.questions || []).map((q) => ({
       ...q,
@@ -2841,35 +3089,41 @@ async function loadPracticeQuestions() {
 function renderPracticeCards(questions) {
   const cardsEl = document.getElementById("practiceCards");
   if (!cardsEl) return;
-  const _cardAccents = ["#4f8ef7","#9b6dff","#0fca8c"];
+  const _cardAccents = ["#4f8ef7", "#9b6dff", "#0fca8c"];
   cardsEl.innerHTML = questions
-    .map(
-      (q, i) => {
-        const ac = _cardAccents[i % _cardAccents.length];
-        const cls = q.done ? (q.correct ? "_done_ok" : "_done_fail") : "_pending";
-        const icon = q.done ? (q.correct ? "✅" : "❌") : `<span style="background:${ac};color:#fff;border-radius:50%;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:900">${i+1}</span>`;
-        return `
+    .map((q, i) => {
+      const ac = _cardAccents[i % _cardAccents.length];
+      const cls = q.done ? (q.correct ? "_done_ok" : "_done_fail") : "_pending";
+      const icon = q.done
+        ? q.correct
+          ? "✅"
+          : "❌"
+        : `<span style="background:${ac};color:#fff;border-radius:50%;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:900">${i + 1}</span>`;
+      return `
     <div class="_pcard ${cls}" id="pcard-${i}">
-      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:${q.done?(q.correct?"#0fca8c":"#f0564a"):ac};border-radius:16px 0 0 16px"></div>
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:${q.done ? (q.correct ? "#0fca8c" : "#f0564a") : ac};border-radius:16px 0 0 16px"></div>
       <div style="padding-left:12px">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
           ${icon}
-          <span style="font-size:0.72rem;font-weight:700;color:var(--text-muted);background:rgba(255,255,255,0.05);padding:2px 8px;border-radius:20px">${q.difficulty||"Medium"}</span>
+          <span style="font-size:0.72rem;font-weight:700;color:var(--text-muted);background:rgba(255,255,255,0.05);padding:2px 8px;border-radius:20px">${q.difficulty || "Medium"}</span>
           ${chapterTag(S.practiceChapter)}
-          ${q.done ? `<span style="margin-left:auto;font-size:0.78rem;font-weight:800;color:${q.correct?"#0fca8c":"#f0564a"}">${q.correct?"Correct ✓":"Wrong ✗"}</span>` : ""}
+          ${q.done ? `<span style="margin-left:auto;font-size:0.78rem;font-weight:800;color:${q.correct ? "#0fca8c" : "#f0564a"}">${q.correct ? "Correct ✓" : "Wrong ✗"}</span>` : ""}
         </div>
-        <div style="font-size:0.93rem;line-height:1.6;color:var(--text);font-weight:500;margin-bottom:${q.done?"12px":"14px"}">${escapeHtml(q.question)}</div>
-        ${!q.done ? `
+        <div style="font-size:0.93rem;line-height:1.6;color:var(--text);font-weight:500;margin-bottom:${q.done ? "12px" : "14px"}">${escapeHtml(q.question)}</div>
+        ${
+          !q.done
+            ? `
           <textarea class="form-textarea" id="pans-${i}" placeholder="${t("type_answer")}" style="min-height:80px;background:rgba(0,0,0,0.3);border-color:${ac}44;border-radius:12px"></textarea>
           <button class="btn btn-primary btn-sm mt-2" onclick="submitPractice(${i})" style="background:${ac};border:none;box-shadow:0 4px 14px ${ac}55">${t("submit_answer")}</button>
-        ` : `
-          <div style="background:${q.correct?"rgba(15,202,140,0.08)":"rgba(240,86,74,0.08)"};border-left:3px solid ${q.correct?"#0fca8c":"#f0564a"};padding:10px 14px;border-radius:0 10px 10px 0;font-size:0.83rem;color:var(--text-secondary);line-height:1.6">${escapeHtml(q.feedback||"")}</div>
-        `}
+        `
+            : `
+          <div style="background:${q.correct ? "rgba(15,202,140,0.08)" : "rgba(240,86,74,0.08)"};border-left:3px solid ${q.correct ? "#0fca8c" : "#f0564a"};padding:10px 14px;border-radius:0 10px 10px 0;font-size:0.83rem;color:var(--text-secondary);line-height:1.6">${escapeHtml(q.feedback || "")}</div>
+        `
+        }
         <div id="pres-${i}"></div>
       </div>
     </div>`;
-      }
-    )
+    })
     .join("");
 }
 
@@ -2901,8 +3155,18 @@ window.submitPractice = async (i) => {
     q.feedback = data.feedback;
     q.submitted = true;
     S.totalPracticed += 1;
-    addXP(data.correct ? 25 : 15, "practice");
-    logQuestion({ subject: S.subjectPreference, chapter: S.practiceChapter, correct: data.correct, source: "practice" });
+    addXP(
+      data.correct
+        ? COUNT_CONFIG[S._practiceCount || 3]?.xp || 10
+        : Math.round((COUNT_CONFIG[S._practiceCount || 3]?.xp || 10) * 0.5),
+      "practice",
+    );
+    logQuestion({
+      subject: S.subjectPreference,
+      chapter: S.practiceChapter,
+      correct: data.correct,
+      source: "practice",
+    });
     S.subjectCounts[S.subjectPreference] =
       (S.subjectCounts[S.subjectPreference] || 0) + 1;
     logSubjectActivity(S.subjectPreference);
@@ -2942,7 +3206,19 @@ function showCountdown(el) {
 // ============================================================
 function renderSaved() {
   const app = document.getElementById("app");
-  const subjects = ["All","Maths","Physics","Biology","Chemistry","History","Geography","Civics","Economics","English","Hindi"];
+  const subjects = [
+    "All",
+    "Maths",
+    "Physics",
+    "Biology",
+    "Chemistry",
+    "History",
+    "Geography",
+    "Civics",
+    "Economics",
+    "English",
+    "Hindi",
+  ];
   app.innerHTML = `
     <div class="section-heading mb-3">${t("saved_answers")}</div>
     <!-- Tabs -->
@@ -2964,7 +3240,7 @@ function renderSaved() {
     <!-- History panel -->
     <div id="history-panel" style="display:none">
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px" id="historyFilters">
-        ${["All","practice","solve","game-quiz","classroom"].map((s,i)=>`<button data-hf="${s}" onclick="filterHistory('${s}')" style="padding:5px 12px;border-radius:20px;border:1.5px solid ${i===0?"#4f8ef7":"rgba(255,255,255,0.1)"};background:${i===0?"rgba(79,142,247,0.15)":"rgba(255,255,255,0.04)"};color:${i===0?"#4f8ef7":"var(--text-muted)"};font-size:0.75rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s">${s==="All"?"All":s==="practice"?"Practice":s==="solve"?"Solve":s==="game-quiz"?"Quiz Game":"Classroom"}</button>`).join("")}
+        ${["All", "practice", "solve", "game-quiz", "classroom"].map((s, i) => `<button data-hf="${s}" onclick="filterHistory('${s}')" style="padding:5px 12px;border-radius:20px;border:1.5px solid ${i === 0 ? "#4f8ef7" : "rgba(255,255,255,0.1)"};background:${i === 0 ? "rgba(79,142,247,0.15)" : "rgba(255,255,255,0.04)"};color:${i === 0 ? "#4f8ef7" : "var(--text-muted)"};font-size:0.75rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s">${s === "All" ? "All" : s === "practice" ? "Practice" : s === "solve" ? "Solve" : s === "game-quiz" ? "Quiz Game" : "Classroom"}</button>`).join("")}
       </div>
       <div id="historyGrid"></div>
     </div>
@@ -2994,10 +3270,12 @@ function renderSaved() {
   };
 
   window.filterHistory = (source) => {
-    document.querySelectorAll("[data-hf]").forEach(btn => {
+    document.querySelectorAll("[data-hf]").forEach((btn) => {
       const active = btn.dataset.hf === source;
       btn.style.borderColor = active ? "#4f8ef7" : "rgba(255,255,255,0.1)";
-      btn.style.background = active ? "rgba(79,142,247,0.15)" : "rgba(255,255,255,0.04)";
+      btn.style.background = active
+        ? "rgba(79,142,247,0.15)"
+        : "rgba(255,255,255,0.04)";
       btn.style.color = active ? "#4f8ef7" : "var(--text-muted)";
     });
     renderHistoryGrid(source);
@@ -3006,36 +3284,56 @@ function renderSaved() {
   function renderHistoryGrid(sourceFilter) {
     const grid = document.getElementById("historyGrid");
     if (!grid) return;
-    const history = (S.questionHistory || []).filter(h => sourceFilter === "All" || h.source === sourceFilter);
+    const history = (S.questionHistory || []).filter(
+      (h) => sourceFilter === "All" || h.source === sourceFilter,
+    );
     if (history.length === 0) {
       grid.innerHTML = `<div style="text-align:center;padding:40px 0;color:var(--text-muted);font-size:0.85rem">No history yet — start solving or practicing!</div>`;
       return;
     }
-    const sourceLabel = { practice:"Practice", solve:"Solve", "game-quiz":"Quiz Game", classroom:"Classroom" };
-    const sourceColor = { practice:"#9b6dff", solve:"#4f8ef7", "game-quiz":"#0fca8c", classroom:"#f0b429" };
+    const sourceLabel = {
+      practice: "Practice",
+      solve: "Solve",
+      "game-quiz": "Quiz Game",
+      classroom: "Classroom",
+    };
+    const sourceColor = {
+      practice: "#9b6dff",
+      solve: "#4f8ef7",
+      "game-quiz": "#0fca8c",
+      classroom: "#f0b429",
+    };
     // Group by date
     const byDate = {};
-    history.forEach(h => {
+    history.forEach((h) => {
       const d = h.date?.split("T")[0] || "Unknown";
       if (!byDate[d]) byDate[d] = [];
       byDate[d].push(h);
     });
-    grid.innerHTML = Object.entries(byDate).slice(0, 14).map(([date, items]) => `
+    grid.innerHTML = Object.entries(byDate)
+      .slice(0, 14)
+      .map(
+        ([date, items]) => `
       <div style="margin-bottom:16px">
-        <div style="font-size:0.68rem;font-weight:900;letter-spacing:0.08em;color:var(--text-muted);text-transform:uppercase;margin-bottom:8px">${new Date(date).toLocaleDateString("en-IN",{weekday:"short",month:"short",day:"numeric"})}</div>
-        ${items.slice(0,20).map(h => {
-          const col = sourceColor[h.source] || "#4f8ef7";
-          return `<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:11px;margin-bottom:6px">
-            <span style="font-size:1rem">${h.correct?"✅":"❌"}</span>
+        <div style="font-size:0.68rem;font-weight:900;letter-spacing:0.08em;color:var(--text-muted);text-transform:uppercase;margin-bottom:8px">${new Date(date).toLocaleDateString("en-IN", { weekday: "short", month: "short", day: "numeric" })}</div>
+        ${items
+          .slice(0, 20)
+          .map((h) => {
+            const col = sourceColor[h.source] || "#4f8ef7";
+            return `<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:11px;margin-bottom:6px">
+            <span style="font-size:1rem">${h.correct ? "✅" : "❌"}</span>
             <div style="flex:1;min-width:0">
-              <div style="font-size:0.82rem;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${h.subject} ${h.chapter?"· "+h.chapter:""}</div>
-              <div style="font-size:0.7rem;color:var(--text-muted);margin-top:1px">${new Date(h.date).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"})}</div>
+              <div style="font-size:0.82rem;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${h.subject} ${h.chapter ? "· " + h.chapter : ""}</div>
+              <div style="font-size:0.7rem;color:var(--text-muted);margin-top:1px">${new Date(h.date).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}</div>
             </div>
-            <span style="background:${col}18;border:1px solid ${col}33;color:${col};font-size:0.62rem;font-weight:800;padding:2px 7px;border-radius:20px;white-space:nowrap">${sourceLabel[h.source]||h.source}</span>
+            <span style="background:${col}18;border:1px solid ${col}33;color:${col};font-size:0.62rem;font-weight:800;padding:2px 7px;border-radius:20px;white-space:nowrap">${sourceLabel[h.source] || h.source}</span>
           </div>`;
-        }).join("")}
-        ${items.length > 20 ? `<div style="font-size:0.75rem;color:var(--text-muted);text-align:center;padding:4px">+${items.length-20} more</div>` : ""}
-      </div>`).join("");
+          })
+          .join("")}
+        ${items.length > 20 ? `<div style="font-size:0.75rem;color:var(--text-muted);text-align:center;padding:4px">+${items.length - 20} more</div>` : ""}
+      </div>`,
+      )
+      .join("");
   }
 
   let activeFilter = "All";
@@ -3153,7 +3451,18 @@ function renderStats() {
       ? S.weeklyAnalysisCache.data
       : null;
 
-  const _subjectColors = {Maths:"#4f8ef7",Physics:"#9b6dff",Biology:"#0fca8c",Chemistry:"#f97316",History:"#f0b429",Geography:"#06b6d4",Civics:"#ec4899",Economics:"#8b5cf6",English:"#10b981",Hindi:"#ef4444"};
+  const _subjectColors = {
+    Maths: "#4f8ef7",
+    Physics: "#9b6dff",
+    Biology: "#0fca8c",
+    Chemistry: "#f97316",
+    History: "#f0b429",
+    Geography: "#06b6d4",
+    Civics: "#ec4899",
+    Economics: "#8b5cf6",
+    English: "#10b981",
+    Hindi: "#ef4444",
+  };
   app.innerHTML = `
     <style>
       @keyframes _xpGrow{from{width:0}to{width:${info.pct}%}}
@@ -3166,14 +3475,14 @@ function renderStats() {
       <div style="background:linear-gradient(160deg,#0f0c29,#302b63,#24243e);padding:24px 20px;text-align:center;position:relative;overflow:hidden">
         <div style="position:absolute;top:-60px;left:50%;transform:translateX(-50%);width:250px;height:250px;border-radius:50%;background:rgba(155,109,255,0.1);filter:blur(50px)"></div>
         <div style="font-size:3.5rem;margin-bottom:8px;filter:drop-shadow(0 0 20px rgba(155,109,255,0.6))">${avatarEmojis[lvlIdx]}</div>
-        <div style="font-size:1.35rem;font-weight:900;color:#fff;margin-bottom:2px">${getName()||"Student"}</div>
+        <div style="font-size:1.35rem;font-weight:900;color:#fff;margin-bottom:2px">${getName() || "Student"}</div>
         <div style="display:inline-block;background:rgba(155,109,255,0.2);border:1px solid rgba(155,109,255,0.5);color:#c4b5fd;font-size:0.7rem;font-weight:800;letter-spacing:0.1em;padding:3px 12px;border-radius:20px;margin-bottom:16px">${LEVELS[lvlIdx].name}</div>
         <div style="max-width:240px;margin:0 auto">
-          <div style="display:flex;justify-content:space-between;font-size:0.72rem;color:rgba(255,255,255,0.5);margin-bottom:6px"><span>${S.xp} XP</span><span>${info.next?LEVELS[lvlIdx+1].name:"MAX"}</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:0.72rem;color:rgba(255,255,255,0.5);margin-bottom:6px"><span>${S.xp} XP</span><span>${info.next ? LEVELS[lvlIdx + 1].name : "MAX"}</span></div>
           <div style="height:8px;background:rgba(255,255,255,0.1);border-radius:100px;overflow:hidden">
             <div style="height:100%;border-radius:100px;background:linear-gradient(90deg,#9b6dff,#4f8ef7);animation:_xpGrow .9s ease forwards;width:${info.pct}%"></div>
           </div>
-          <div style="font-size:0.7rem;color:rgba(255,255,255,0.4);margin-top:5px">${info.next?`${LEVELS[lvlIdx+1].min-S.xp} XP to next level`:"Maximum level!"}</div>
+          <div style="font-size:0.7rem;color:rgba(255,255,255,0.4);margin-top:5px">${info.next ? `${LEVELS[lvlIdx + 1].min - S.xp} XP to next level` : "Maximum level!"}</div>
         </div>
       </div>
       <div style="background:rgba(255,255,255,0.03);border-top:1px solid rgba(255,255,255,0.07);padding:12px 18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
@@ -3208,52 +3517,84 @@ function renderStats() {
     <div class="glass" style="padding:18px;margin-bottom:14px">
       <div style="font-size:0.68rem;font-weight:900;letter-spacing:0.1em;color:var(--text-muted);text-transform:uppercase;margin-bottom:14px">📚 ${t("subject_breakdown")}</div>
       <div style="display:flex;flex-direction:column;gap:8px">
-        ${subjects.map((s)=>{
-          const cnt=S.subjectCounts[s]||0;
-          const w=Math.round((cnt/maxCount)*100);
-          const col=_subjectColors[s]||"#4f8ef7";
-          return `<div style="display:flex;align-items:center;gap:10px">
+        ${subjects
+          .map((s) => {
+            const cnt = S.subjectCounts[s] || 0;
+            const w = Math.round((cnt / maxCount) * 100);
+            const col = _subjectColors[s] || "#4f8ef7";
+            return `<div style="display:flex;align-items:center;gap:10px">
             <div style="width:72px;font-size:0.73rem;color:var(--text-muted);text-align:right;flex-shrink:0">${s}</div>
             <div style="flex:1;height:10px;background:rgba(255,255,255,0.06);border-radius:100px;overflow:hidden">
               <div style="height:100%;width:${w}%;background:${col};border-radius:100px;box-shadow:0 0 8px ${col}66;transition:width 1s ease"></div>
             </div>
-            <div style="width:22px;font-size:0.72rem;color:${cnt?col:"var(--text-muted)"};font-weight:700;text-align:right">${cnt}</div>
+            <div style="width:22px;font-size:0.72rem;color:${cnt ? col : "var(--text-muted)"};font-weight:700;text-align:right">${cnt}</div>
           </div>`;
-        }).join("")}
+          })
+          .join("")}
       </div>
     </div>
     <!-- HEATMAP -->
     <div class="glass" style="padding:18px;margin-bottom:14px">
       <div style="font-size:0.68rem;font-weight:900;letter-spacing:0.1em;color:var(--text-muted);text-transform:uppercase;margin-bottom:12px">🗓 ${t("activity_30")}</div>
-      <div style="display:flex;flex-wrap:wrap;gap:4px">${days30.map((d)=>{
-        const cols=["rgba(255,255,255,0.05)","rgba(79,142,247,0.3)","rgba(79,142,247,0.6)","#4f8ef7"];
-        return `<div class="_hday" style="background:${cols[d.heat]};box-shadow:${d.heat===3?"0 0 6px rgba(79,142,247,0.5)":"none"}" title="${d.d}"></div>`;
-      }).join("")}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px">${days30
+        .map((d) => {
+          const cols = [
+            "rgba(255,255,255,0.05)",
+            "rgba(79,142,247,0.3)",
+            "rgba(79,142,247,0.6)",
+            "#4f8ef7",
+          ];
+          return `<div class="_hday" style="background:${cols[d.heat]};box-shadow:${d.heat === 3 ? "0 0 6px rgba(79,142,247,0.5)" : "none"}" title="${d.d}"></div>`;
+        })
+        .join("")}</div>
     </div>
     <!-- WEEKLY XP BARS -->
     <div class="glass" style="padding:18px;margin-bottom:14px">
       <div style="font-size:0.68rem;font-weight:900;letter-spacing:0.1em;color:var(--text-muted);text-transform:uppercase;margin-bottom:14px">📈 ${t("weekly_xp")}</div>
       <div class="weekly-chart">
-        ${S.weeklyXP.map((xp,i)=>`<div class="weekly-bar-wrap"><div class="weekly-bar-outer"><div class="weekly-bar" style="height:${Math.round((xp/maxW)*100)}%;background:linear-gradient(to top,#9b6dff,#4f8ef7);box-shadow:${xp>0?"0 0 8px rgba(79,142,247,0.4)":"none"}"></div></div><div class="weekly-day">${days[i]}</div></div>`).join("")}
+        ${S.weeklyXP.map((xp, i) => `<div class="weekly-bar-wrap"><div class="weekly-bar-outer"><div class="weekly-bar" style="height:${Math.round((xp / maxW) * 100)}%;background:linear-gradient(to top,#9b6dff,#4f8ef7);box-shadow:${xp > 0 ? "0 0 8px rgba(79,142,247,0.4)" : "none"}"></div></div><div class="weekly-day">${days[i]}</div></div>`).join("")}
       </div>
     </div>
     <!-- WEEKLY ANALYSIS -->
     <div class="glass" style="padding:18px;margin-bottom:14px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
         <div style="font-size:0.68rem;font-weight:900;letter-spacing:0.1em;color:var(--text-muted);text-transform:uppercase">📊 This Week's Analysis</div>
-        <span style="font-size:0.68rem;color:var(--text-muted)">${new Date(weekKey).toLocaleDateString("en-IN",{month:"short",day:"numeric"})} – Today</span>
+        <span style="font-size:0.68rem;color:var(--text-muted)">${new Date(weekKey).toLocaleDateString("en-IN", { month: "short", day: "numeric" })} – Today</span>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
-        ${[{v:wk.totalQuestions,l:"Questions",c:"#4f8ef7"},{v:`${wk.activeDays}/${wk.daysSoFar}`,l:"Active Days",c:"#0fca8c"},{v:wk.topSubject||"—",l:"Top Subject",c:"#9b6dff"},{v:wk.totalXP,l:"XP Earned",c:"#f0b429"}].map(x=>`<div style="background:${x.c}10;border:1px solid ${x.c}30;border-radius:12px;padding:12px;text-align:center"><div style="font-size:1.25rem;font-weight:900;color:${x.c}">${x.v}</div><div style="font-size:0.68rem;color:var(--text-muted);margin-top:3px">${x.l}</div></div>`).join("")}
+        ${[
+          { v: wk.totalQuestions, l: "Questions", c: "#4f8ef7" },
+          {
+            v: `${wk.activeDays}/${wk.daysSoFar}`,
+            l: "Active Days",
+            c: "#0fca8c",
+          },
+          { v: wk.topSubject || "—", l: "Top Subject", c: "#9b6dff" },
+          { v: wk.totalXP, l: "XP Earned", c: "#f0b429" },
+        ]
+          .map(
+            (x) =>
+              `<div style="background:${x.c}10;border:1px solid ${x.c}30;border-radius:12px;padding:12px;text-align:center"><div style="font-size:1.25rem;font-weight:900;color:${x.c}">${x.v}</div><div style="font-size:0.68rem;color:var(--text-muted);margin-top:3px">${x.l}</div></div>`,
+          )
+          .join("")}
       </div>
-      <div class="weekly-chart mb-3">${wk.dailyXP.map((d)=>`<div class="weekly-bar-wrap"><div class="weekly-bar-outer"><div class="weekly-bar" style="height:${Math.round((d.xp/wkMaxXP)*100)}%;background:linear-gradient(to top,#f0b429,#f97316)"></div></div><div class="weekly-day">${d.label}</div></div>`).join("")}</div>
-      ${wkSubjects.length>0?`<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">${wkSubjects.map((s)=>{const col=_subjectColors[s]||"#4f8ef7";return`<div style="display:flex;align-items:center;gap:10px"><div style="width:72px;font-size:0.72rem;color:var(--text-muted);text-align:right">${s}</div><div style="flex:1;height:8px;background:rgba(255,255,255,0.05);border-radius:100px;overflow:hidden"><div style="height:100%;width:${Math.round((wk.subjectTotals[s]/wkMaxCount)*100)}%;background:${col};border-radius:100px"></div></div><div style="font-size:0.7rem;font-weight:700;color:${col};width:18px;text-align:right">${wk.subjectTotals[s]}</div></div>`;}).join("")}</div>`:`<div style="font-size:0.8rem;color:var(--text-muted);text-align:center;padding:10px 0">No activity yet this week.</div>`}
-      <div id="aiInsightsArea" style="border-top:1px solid rgba(255,255,255,0.07);padding-top:14px;margin-top:4px">${cachedAnalysis?renderAIInsightsHTML(cachedAnalysis):renderAIInsightsPrompt()}</div>
+      <div class="weekly-chart mb-3">${wk.dailyXP.map((d) => `<div class="weekly-bar-wrap"><div class="weekly-bar-outer"><div class="weekly-bar" style="height:${Math.round((d.xp / wkMaxXP) * 100)}%;background:linear-gradient(to top,#f0b429,#f97316)"></div></div><div class="weekly-day">${d.label}</div></div>`).join("")}</div>
+      ${
+        wkSubjects.length > 0
+          ? `<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">${wkSubjects
+              .map((s) => {
+                const col = _subjectColors[s] || "#4f8ef7";
+                return `<div style="display:flex;align-items:center;gap:10px"><div style="width:72px;font-size:0.72rem;color:var(--text-muted);text-align:right">${s}</div><div style="flex:1;height:8px;background:rgba(255,255,255,0.05);border-radius:100px;overflow:hidden"><div style="height:100%;width:${Math.round((wk.subjectTotals[s] / wkMaxCount) * 100)}%;background:${col};border-radius:100px"></div></div><div style="font-size:0.7rem;font-weight:700;color:${col};width:18px;text-align:right">${wk.subjectTotals[s]}</div></div>`;
+              })
+              .join("")}</div>`
+          : `<div style="font-size:0.8rem;color:var(--text-muted);text-align:center;padding:10px 0">No activity yet this week.</div>`
+      }
+      <div id="aiInsightsArea" style="border-top:1px solid rgba(255,255,255,0.07);padding-top:14px;margin-top:4px">${cachedAnalysis ? renderAIInsightsHTML(cachedAnalysis) : renderAIInsightsPrompt()}</div>
     </div>
     <!-- BADGES -->
     <div class="glass" style="padding:18px;margin-bottom:14px">
       <div style="font-size:0.68rem;font-weight:900;letter-spacing:0.1em;color:var(--text-muted);text-transform:uppercase;margin-bottom:14px">🏅 Badges</div>
-      <div class="badges-grid">${BADGE_DEFS.map((b)=>`<div class="badge-item ${S.badges[b.id]?"earned":"locked"}" title="${b.desc}"><div class="badge-emoji">${b.emoji}</div><div class="badge-name">${b.name}</div></div>`).join("")}</div>
+      <div class="badges-grid">${BADGE_DEFS.map((b) => `<div class="badge-item ${S.badges[b.id] ? "earned" : "locked"}" title="${b.desc}"><div class="badge-emoji">${b.emoji}</div><div class="badge-name">${b.name}</div></div>`).join("")}</div>
     </div>
   `;
 }
@@ -3278,18 +3619,30 @@ function renderAIInsightsHTML(data) {
       ${data.focusSubject ? `<div style="background:rgba(240,180,41,0.1);border:1px solid rgba(240,180,41,0.25);border-radius:10px;padding:10px 12px"><div style="font-size:0.62rem;font-weight:900;color:#f0b429;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:3px">🎯 Focus Next Week</div><div style="font-size:0.85rem;font-weight:700;color:var(--text)">${escapeHtml(data.focusSubject)}</div></div>` : ""}
       ${data.classroomNote ? `<div style="background:rgba(15,202,140,0.08);border:1px solid rgba(15,202,140,0.2);border-radius:10px;padding:10px 12px"><div style="font-size:0.62rem;font-weight:900;color:#0fca8c;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:3px">🏫 Classroom</div><div style="font-size:0.82rem;color:var(--text-secondary)">${escapeHtml(data.classroomNote)}</div></div>` : ""}
     </div>
-    ${strengths.length ? `<div style="margin-bottom:12px">
+    ${
+      strengths.length
+        ? `<div style="margin-bottom:12px">
       <div style="font-size:0.68rem;font-weight:900;letter-spacing:0.08em;color:#0fca8c;text-transform:uppercase;margin-bottom:8px">✅ Strengths</div>
-      ${strengths.map(s=>`<div style="display:flex;gap:8px;font-size:0.83rem;color:var(--text-secondary);padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04)"><span style="color:#0fca8c;flex-shrink:0">✓</span>${escapeHtml(s)}</div>`).join("")}
-    </div>` : ""}
-    ${weakAreas.length ? `<div style="margin-bottom:12px">
+      ${strengths.map((s) => `<div style="display:flex;gap:8px;font-size:0.83rem;color:var(--text-secondary);padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04)"><span style="color:#0fca8c;flex-shrink:0">✓</span>${escapeHtml(s)}</div>`).join("")}
+    </div>`
+        : ""
+    }
+    ${
+      weakAreas.length
+        ? `<div style="margin-bottom:12px">
       <div style="font-size:0.68rem;font-weight:900;letter-spacing:0.08em;color:#f0b429;text-transform:uppercase;margin-bottom:8px">⚠️ Needs Attention</div>
-      ${weakAreas.map(s=>`<div style="display:flex;gap:8px;font-size:0.83rem;color:var(--text-secondary);padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04)"><span style="color:#f0b429;flex-shrink:0">!</span>${escapeHtml(s)}</div>`).join("")}
-    </div>` : ""}
-    ${tips.length ? `<div style="margin-bottom:12px">
+      ${weakAreas.map((s) => `<div style="display:flex;gap:8px;font-size:0.83rem;color:var(--text-secondary);padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04)"><span style="color:#f0b429;flex-shrink:0">!</span>${escapeHtml(s)}</div>`).join("")}
+    </div>`
+        : ""
+    }
+    ${
+      tips.length
+        ? `<div style="margin-bottom:12px">
       <div style="font-size:0.68rem;font-weight:900;letter-spacing:0.08em;color:#4f8ef7;text-transform:uppercase;margin-bottom:8px">💡 Action Plan</div>
-      ${tips.map((s,i)=>`<div style="display:flex;gap:10px;font-size:0.83rem;color:var(--text-secondary);padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04)"><span style="background:rgba(79,142,247,0.2);color:#4f8ef7;font-size:0.68rem;font-weight:900;min-width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">${i+1}</span>${escapeHtml(s)}</div>`).join("")}
-    </div>` : ""}
+      ${tips.map((s, i) => `<div style="display:flex;gap:10px;font-size:0.83rem;color:var(--text-secondary);padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04)"><span style="background:rgba(79,142,247,0.2);color:#4f8ef7;font-size:0.68rem;font-weight:900;min-width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">${i + 1}</span>${escapeHtml(s)}</div>`).join("")}
+    </div>`
+        : ""
+    }
     <button class="btn btn-secondary btn-sm mt-1" onclick="generateWeeklyAnalysis()">🔄 Regenerate</button>
   `;
 }
@@ -3301,18 +3654,25 @@ window.generateWeeklyAnalysis = async () => {
   try {
     const wk = getWeeklyStats();
     // Build classroom summary
-    const crHistory = (S.classroomHistory || []).filter(h => {
+    const crHistory = (S.classroomHistory || []).filter((h) => {
       const weekStart = getWeekStartKey();
       return h.date >= weekStart;
     });
-    const crSummary = crHistory.length > 0 ? {
-      sessions: crHistory.length,
-      totalCorrect: crHistory.reduce((a,h)=>a+h.correct,0),
-      totalWrong: crHistory.reduce((a,h)=>a+h.wrong,0),
-      totalTimedOut: crHistory.reduce((a,h)=>a+h.timedOut,0),
-      avgRank: Math.round(crHistory.reduce((a,h)=>a+h.rank,0)/crHistory.length*10)/10,
-      subjects: [...new Set(crHistory.map(h=>h.subject))],
-    } : null;
+    const crSummary =
+      crHistory.length > 0
+        ? {
+            sessions: crHistory.length,
+            totalCorrect: crHistory.reduce((a, h) => a + h.correct, 0),
+            totalWrong: crHistory.reduce((a, h) => a + h.wrong, 0),
+            totalTimedOut: crHistory.reduce((a, h) => a + h.timedOut, 0),
+            avgRank:
+              Math.round(
+                (crHistory.reduce((a, h) => a + h.rank, 0) / crHistory.length) *
+                  10,
+              ) / 10,
+            subjects: [...new Set(crHistory.map((h) => h.subject))],
+          }
+        : null;
     const data = await apiPost("/weekly-analysis", {
       subjectTotals: wk.subjectTotals,
       totalQuestions: wk.totalQuestions,
@@ -3327,14 +3687,17 @@ window.generateWeeklyAnalysis = async () => {
       allTimeSubjects: S.subjectCounts || {},
       classroomSessions: crSummary,
     });
-    S.weeklyAnalysisCache = { weekKey: getWeekStartKey(), generatedAt: Date.now(), data };
+    S.weeklyAnalysisCache = {
+      weekKey: getWeekStartKey(),
+      generatedAt: Date.now(),
+      data,
+    };
     saveState();
     area.innerHTML = renderAIInsightsHTML(data);
   } catch (e) {
     area.innerHTML = `<div style="padding:10px 0;color:var(--red);font-size:0.85rem">Could not generate insights: ${e.message}</div><button class="btn btn-secondary btn-sm mt-1" onclick="generateWeeklyAnalysis()">Try Again</button>`;
   }
 };
-
 
 // ============================================================
 // CLASSROOM — multiplayer quiz room
@@ -3350,7 +3713,10 @@ let _crTimedOut = {}; // qIndex -> true
 let _crMyLevel = null; // player's own level string
 
 function stopCrTimer() {
-  if (_crTimerInterval) { clearInterval(_crTimerInterval); _crTimerInterval = null; }
+  if (_crTimerInterval) {
+    clearInterval(_crTimerInterval);
+    _crTimerInterval = null;
+  }
 }
 
 function renderQuiz(state) {
@@ -3360,9 +3726,16 @@ function renderQuiz(state) {
   stopClassroomPoll();
   _crPollTimer = setInterval(async () => {
     try {
-      const data = await apiPost("/classroom/poll", { code: _crRoom.code, playerId: _crRoom.playerId });
-      if (data.status === "finished") { stopClassroomPoll(); stopCrTimer(); renderClassroomResult(data); }
-    } catch(e) {}
+      const data = await apiPost("/classroom/poll", {
+        code: _crRoom.code,
+        playerId: _crRoom.playerId,
+      });
+      if (data.status === "finished") {
+        stopClassroomPoll();
+        stopCrTimer();
+        renderClassroomResult(data);
+      }
+    } catch (e) {}
   }, 2500);
 }
 
@@ -3393,14 +3766,20 @@ function renderCrQuestion() {
       ._cropt.chosen{border-color:#4f8ef7;background:rgba(79,142,247,0.18)}
     </style>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-      <div style="font-size:0.75rem;font-weight:800;color:var(--text-muted)">Q${qi+1} of ${total}</div>
+      <div style="font-size:0.75rem;font-weight:800;color:var(--text-muted)">Q${qi + 1} of ${total}</div>
       <div style="display:flex;align-items:center;gap:10px">
         <div style="display:flex;align-items:center;gap:5px">
           <span style="font-size:1rem">⏱</span>
           <span id="cr-timer-num" style="font-size:1rem;font-weight:900;color:#f0b429;min-width:24px;text-align:right">30</span>
         </div>
         <div style="display:flex;gap:5px">
-          ${_crState.players.slice(0,4).map(p=>`<div title="${p.name}" style="width:26px;height:26px;border-radius:50%;background:rgba(79,142,247,0.3);border:1.5px solid rgba(79,142,247,0.4);display:flex;align-items:center;justify-content:center;font-size:0.68rem;font-weight:900">${p.name[0].toUpperCase()}</div>`).join("")}
+          ${_crState.players
+            .slice(0, 4)
+            .map(
+              (p) =>
+                `<div title="${p.name}" style="width:26px;height:26px;border-radius:50%;background:rgba(79,142,247,0.3);border:1.5px solid rgba(79,142,247,0.4);display:flex;align-items:center;justify-content:center;font-size:0.68rem;font-weight:900">${p.name[0].toUpperCase()}</div>`,
+            )
+            .join("")}
         </div>
       </div>
     </div>
@@ -3411,10 +3790,10 @@ function renderCrQuestion() {
       <div id="cr-timerbar" style="height:100%;width:100%;background:linear-gradient(90deg,#f0b429,#f97316);border-radius:100px;transition:width 1s linear"></div>
     </div>
     <div class="_crq-wrap" style="animation:_crSlide .3s ease">
-      <div style="font-size:0.65rem;font-weight:900;letter-spacing:0.12em;color:#4f8ef7;text-transform:uppercase;margin-bottom:10px">Question ${qi+1}</div>
+      <div style="font-size:0.65rem;font-weight:900;letter-spacing:0.12em;color:#4f8ef7;text-transform:uppercase;margin-bottom:10px">Question ${qi + 1}</div>
       <div style="font-size:1.05rem;font-weight:700;line-height:1.65;color:#fff;margin-bottom:22px">${escapeHtml(q.q)}</div>
       <div id="cr-options">
-        ${q.options.map(opt=>`<button class="_cropt" onclick="selectCrOption(this,'${opt.replace(/'/g,"\\'").replace(/"/g,"&quot;")}')">${escapeHtml(opt)}</button>`).join("")}
+        ${q.options.map((opt) => `<button class="_cropt" onclick="selectCrOption(this,'${opt.replace(/'/g, "\\'").replace(/"/g, "&quot;")}')">${escapeHtml(opt)}</button>`).join("")}
       </div>
       <div id="cr-feedback" style="margin-top:14px">
         <button id="cr-next-btn" onclick="confirmCrAnswer(${qi})" class="btn btn-primary" style="width:100%;padding:13px;font-size:0.95rem;background:linear-gradient(135deg,#4f8ef7,#9b6dff);border:none;opacity:0.4;pointer-events:none">Select an answer to continue</button>
@@ -3430,18 +3809,31 @@ function renderCrQuestion() {
     const barEl = document.getElementById("cr-timerbar");
     if (numEl) {
       numEl.textContent = _crTimeLeft;
-      numEl.style.color = _crTimeLeft <= 10 ? "#f0564a" : _crTimeLeft <= 20 ? "#f0b429" : "#f0b429";
+      numEl.style.color =
+        _crTimeLeft <= 10
+          ? "#f0564a"
+          : _crTimeLeft <= 20
+            ? "#f0b429"
+            : "#f0b429";
     }
-    if (barEl) barEl.style.width = (_crTimeLeft / 30 * 100) + "%";
+    if (barEl) barEl.style.width = (_crTimeLeft / 30) * 100 + "%";
     if (_crTimeLeft <= 0) {
       stopCrTimer();
       _crTimedOut[qi] = true;
       _crAnswered[qi] = "TIMEOUT";
-      document.querySelectorAll("._cropt").forEach(b => b.disabled = true);
+      document.querySelectorAll("._cropt").forEach((b) => (b.disabled = true));
       const fb = document.getElementById("cr-feedback");
-      if (fb) fb.innerHTML = `<div style="background:rgba(240,86,74,0.1);border:1.5px solid rgba(240,86,74,0.35);border-radius:12px;padding:12px 16px;color:#f0564a;font-weight:700;font-size:0.85rem;margin-bottom:10px">⏰ Time's up!</div>
+      if (fb)
+        fb.innerHTML = `<div style="background:rgba(240,86,74,0.1);border:1.5px solid rgba(240,86,74,0.35);border-radius:12px;padding:12px 16px;color:#f0564a;font-weight:700;font-size:0.85rem;margin-bottom:10px">⏰ Time's up!</div>
         <button onclick="goNextCrQ()" class="btn btn-primary" style="width:100%;padding:13px;background:linear-gradient(135deg,#4f8ef7,#9b6dff);border:none">Next →</button>`;
-      try { apiPost("/classroom/answer", { code: _crRoom.code, playerId: _crRoom.playerId, qIndex: qi, chosen: "TIMEOUT" }); } catch(e) {}
+      try {
+        apiPost("/classroom/answer", {
+          code: _crRoom.code,
+          playerId: _crRoom.playerId,
+          qIndex: qi,
+          chosen: "TIMEOUT",
+        });
+      } catch (e) {}
     }
   }, 1000);
 }
@@ -3463,17 +3855,24 @@ window.forceFinishRoom = async () => {
   stopClassroomPoll();
   stopCrTimer();
   try {
-    const data = await apiPost("/classroom/poll", { code: _crRoom.code, playerId: _crRoom.playerId });
+    const data = await apiPost("/classroom/poll", {
+      code: _crRoom.code,
+      playerId: _crRoom.playerId,
+    });
     data.status = "finished";
     renderClassroomResult(data);
-  } catch(e) { alert("Error: " + e.message); }
+  } catch (e) {
+    alert("Error: " + e.message);
+  }
 };
 
 let _crSelectedOption = null; // currently highlighted option text
 
 window.selectCrOption = (btn, opt) => {
   // unhighlight all, highlight clicked
-  document.querySelectorAll("._cropt").forEach(b => b.classList.remove("chosen"));
+  document
+    .querySelectorAll("._cropt")
+    .forEach((b) => b.classList.remove("chosen"));
   btn.classList.add("chosen");
   _crSelectedOption = opt;
   // enable next button
@@ -3495,12 +3894,21 @@ window.submitCrAnswer = async (qIndex, chosen) => {
   stopCrTimer();
   _crAnswered[qIndex] = chosen;
   _crSelectedOption = null;
-  document.querySelectorAll("._cropt").forEach(b => { b.disabled = true; });
+  document.querySelectorAll("._cropt").forEach((b) => {
+    b.disabled = true;
+  });
   const total = _crState.questions.length;
   const answered = Object.keys(_crAnswered).length;
   const prog = document.getElementById("cr-progbar");
-  if (prog) prog.style.width = (answered / total * 100) + "%";
-  try { await apiPost("/classroom/answer", { code: _crRoom.code, playerId: _crRoom.playerId, qIndex, chosen }); } catch(e) {}
+  if (prog) prog.style.width = (answered / total) * 100 + "%";
+  try {
+    await apiPost("/classroom/answer", {
+      code: _crRoom.code,
+      playerId: _crRoom.playerId,
+      qIndex,
+      chosen,
+    });
+  } catch (e) {}
   const fb = document.getElementById("cr-feedback");
   if (!fb) return;
   if (answered < total) {
@@ -3515,17 +3923,32 @@ function renderClassroomResult(state) {
   const app = document.getElementById("app");
   const qs = _crState?.questions || [];
   const total = qs.length;
-  let correct = 0, wrong = 0, timedOut = 0;
+  let correct = 0,
+    wrong = 0,
+    timedOut = 0;
   const qResults = qs.map((q, i) => {
     const chosen = _crAnswered[i];
-    if (!chosen || chosen === "TIMEOUT") { timedOut++; return { q, chosen: null, status: "timeout" }; }
+    if (!chosen || chosen === "TIMEOUT") {
+      timedOut++;
+      return { q, chosen: null, status: "timeout" };
+    }
     const isCorrect = chosen === q.answer;
-    if (isCorrect) correct++; else wrong++;
+    if (isCorrect) correct++;
+    else wrong++;
     return { q, chosen, status: isCorrect ? "correct" : "wrong" };
   });
   // leaderboard
-  const myRank = (state.players.findIndex(p => p.id === _crRoom.playerId) + 1) || 1;
-  const xpAward = myRank === 1 ? 50 : myRank === 2 ? 35 : myRank === 3 ? 25 : 15;
+  const myRank =
+    state.players.findIndex((p) => p.id === _crRoom.playerId) + 1 || 1;
+  const baseXP = COUNT_CONFIG[qs.length] ? COUNT_CONFIG[qs.length].xp : 20;
+  const xpAward =
+    myRank === 1
+      ? baseXP
+      : myRank === 2
+        ? Math.round(baseXP * 0.7)
+        : myRank === 3
+          ? Math.round(baseXP * 0.5)
+          : Math.round(baseXP * 0.3);
   addXP(xpAward, "Classroom Quiz");
   // save to stats for AI insights
   S.classroomHistory = S.classroomHistory || [];
@@ -3533,13 +3956,19 @@ function renderClassroomResult(state) {
     date: new Date().toISOString().split("T")[0],
     subject: state.subject || "",
     chapter: state.chapter || "",
-    total, correct, wrong, timedOut,
-    rank: myRank, players: state.players.length,
+    total,
+    correct,
+    wrong,
+    timedOut,
+    rank: myRank,
+    players: state.players.length,
   });
-  if (S.classroomHistory.length > 20) S.classroomHistory = S.classroomHistory.slice(-20);
+  if (S.classroomHistory.length > 20)
+    S.classroomHistory = S.classroomHistory.slice(-20);
   saveState();
 
-  const rankEmoji = myRank === 1 ? "🥇" : myRank === 2 ? "🥈" : myRank === 3 ? "🥉" : "🎯";
+  const rankEmoji =
+    myRank === 1 ? "🥇" : myRank === 2 ? "🥈" : myRank === 3 ? "🥉" : "🎯";
   app.innerHTML = `
     <style>
       @keyframes _crIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
@@ -3569,39 +3998,59 @@ function renderClassroomResult(state) {
     <!-- Leaderboard -->
     <div class="_crri" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:16px;overflow:hidden;margin-bottom:14px;animation-delay:.1s">
       <div style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.06);font-size:0.68rem;font-weight:900;letter-spacing:0.1em;color:var(--text-muted);text-transform:uppercase">🏆 Leaderboard</div>
-      ${state.players.map((p,i)=>{
-        const isMe = p.id === _crRoom.playerId;
-        const col = ["#f0b429","#9b6dff","#0fca8c"][i]||"rgba(255,255,255,0.4)";
-        return `<div style="display:flex;align-items:center;gap:12px;padding:11px 16px;${isMe?"background:rgba(79,142,247,0.08);":""}border-bottom:1px solid rgba(255,255,255,0.04)">
-          <div style="font-size:1.1rem;width:24px;text-align:center">${["🥇","🥈","🥉"][i]||`${i+1}.`}</div>
-          <div style="flex:1;font-weight:${isMe?900:600};color:${isMe?"#fff":"var(--text-secondary)"}">${p.name}${isMe?" (you)":""}</div>
+      ${state.players
+        .map((p, i) => {
+          const isMe = p.id === _crRoom.playerId;
+          const col =
+            ["#f0b429", "#9b6dff", "#0fca8c"][i] || "rgba(255,255,255,0.4)";
+          return `<div style="display:flex;align-items:center;gap:12px;padding:11px 16px;${isMe ? "background:rgba(79,142,247,0.08);" : ""}border-bottom:1px solid rgba(255,255,255,0.04)">
+          <div style="font-size:1.1rem;width:24px;text-align:center">${["🥇", "🥈", "🥉"][i] || `${i + 1}.`}</div>
+          <div style="flex:1;font-weight:${isMe ? 900 : 600};color:${isMe ? "#fff" : "var(--text-secondary)"}">${p.name}${isMe ? " (you)" : ""}</div>
           <div style="font-weight:900;color:${col}">${p.score} pts</div>
         </div>`;
-      }).join("")}
+        })
+        .join("")}
     </div>
     <!-- Question-by-question report -->
     <div class="_crri" style="animation-delay:.2s">
       <div style="font-size:0.68rem;font-weight:900;letter-spacing:0.1em;color:var(--text-muted);text-transform:uppercase;margin-bottom:12px">📋 Your Answer Report</div>
-      ${qResults.map((r,i)=>{
-        const bg = r.status==="correct" ? "rgba(15,202,140,0.07)" : r.status==="wrong" ? "rgba(240,86,74,0.07)" : "rgba(240,180,41,0.07)";
-        const border = r.status==="correct" ? "rgba(15,202,140,0.3)" : r.status==="wrong" ? "rgba(240,86,74,0.3)" : "rgba(240,180,41,0.3)";
-        const icon = r.status==="correct" ? "✅" : r.status==="wrong" ? "❌" : "⏰";
-        const showAnswer = r.status !== "correct";
-        return `<div style="background:${bg};border:1.5px solid ${border};border-radius:14px;padding:14px 16px;margin-bottom:10px">
-          <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:${showAnswer?8:0}px">
+      ${qResults
+        .map((r, i) => {
+          const bg =
+            r.status === "correct"
+              ? "rgba(15,202,140,0.07)"
+              : r.status === "wrong"
+                ? "rgba(240,86,74,0.07)"
+                : "rgba(240,180,41,0.07)";
+          const border =
+            r.status === "correct"
+              ? "rgba(15,202,140,0.3)"
+              : r.status === "wrong"
+                ? "rgba(240,86,74,0.3)"
+                : "rgba(240,180,41,0.3)";
+          const icon =
+            r.status === "correct" ? "✅" : r.status === "wrong" ? "❌" : "⏰";
+          const showAnswer = r.status !== "correct";
+          return `<div style="background:${bg};border:1.5px solid ${border};border-radius:14px;padding:14px 16px;margin-bottom:10px">
+          <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:${showAnswer ? 8 : 0}px">
             <span style="font-size:1rem;flex-shrink:0;margin-top:1px">${icon}</span>
             <div style="flex:1">
-              <div style="font-size:0.72rem;font-weight:800;color:var(--text-muted);margin-bottom:4px">Q${i+1}</div>
+              <div style="font-size:0.72rem;font-weight:800;color:var(--text-muted);margin-bottom:4px">Q${i + 1}</div>
               <div style="font-size:0.88rem;font-weight:600;line-height:1.5;color:var(--text)">${escapeHtml(r.q.q)}</div>
             </div>
           </div>
-          ${showAnswer ? `
+          ${
+            showAnswer
+              ? `
             <div style="padding-left:30px">
-              ${r.chosen && r.chosen!=="TIMEOUT" ? `<div style="font-size:0.78rem;color:#f0564a;margin-bottom:4px">Your answer: <strong>${escapeHtml(r.chosen)}</strong></div>` : `<div style="font-size:0.78rem;color:#f0b429;margin-bottom:4px">You didn't answer in time</div>`}
-              <div style="font-size:0.78rem;color:#0fca8c;font-weight:700">✓ Correct: <strong>${escapeHtml(r.q.answer||"—")}</strong></div>
-            </div>` : ""}
+              ${r.chosen && r.chosen !== "TIMEOUT" ? `<div style="font-size:0.78rem;color:#f0564a;margin-bottom:4px">Your answer: <strong>${escapeHtml(r.chosen)}</strong></div>` : `<div style="font-size:0.78rem;color:#f0b429;margin-bottom:4px">You didn't answer in time</div>`}
+              <div style="font-size:0.78rem;color:#0fca8c;font-weight:700">✓ Correct: <strong>${escapeHtml(r.q.answer || "—")}</strong></div>
+            </div>`
+              : ""
+          }
         </div>`;
-      }).join("")}
+        })
+        .join("")}
     </div>
     <div style="display:flex;gap:10px;margin-top:16px">
       <button onclick="_crAnswered={};_crTimedOut={};_crCurrentQ=0;renderClassroomLobby()" class="btn btn-primary" style="flex:1;padding:13px">Play Again</button>
@@ -3610,10 +4059,11 @@ function renderClassroomResult(state) {
   `;
 }
 
-
-
 function stopClassroomPoll() {
-  if (_crPollTimer) { clearInterval(_crPollTimer); _crPollTimer = null; }
+  if (_crPollTimer) {
+    clearInterval(_crPollTimer);
+    _crPollTimer = null;
+  }
 }
 
 async function apiGet(path) {
@@ -3650,7 +4100,18 @@ function renderClassroomLobby() {
 
 function showCreateRoom() {
   const app = document.getElementById("app");
-  const subjects = ["Maths","Physics","Chemistry","Biology","History","Geography","Civics","Economics","English","Hindi"];
+  const subjects = [
+    "Maths",
+    "Physics",
+    "Chemistry",
+    "Biology",
+    "History",
+    "Geography",
+    "Civics",
+    "Economics",
+    "English",
+    "Hindi",
+  ];
   const cls = S.classPreference || "10";
   const subj = S.subjectPreference || "Maths";
   const chapters = getChapters(cls, subj);
@@ -3662,26 +4123,26 @@ function showCreateRoom() {
     <div style="display:flex;flex-direction:column;gap:14px;margin-bottom:20px">
       <div>
         <label class="form-label">Your Name</label>
-        <input id="cr-name" class="form-input" placeholder="Enter your name" value="${getName()||""}" style="margin-top:4px">
+        <input id="cr-name" class="form-input" placeholder="Enter your name" value="${getName() || ""}" style="margin-top:4px">
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <div>
           <label class="form-label">Class</label>
           <select id="cr-class" class="form-select" style="margin-top:4px" onchange="updateCrChapters()">
-            ${["6","7","8","9","10"].map(c=>`<option value="${c}" ${cls===c?"selected":""}>${c}</option>`).join("")}
+            ${["6", "7", "8", "9", "10"].map((c) => `<option value="${c}" ${cls === c ? "selected" : ""}>${c}</option>`).join("")}
           </select>
         </div>
         <div>
           <label class="form-label">Subject</label>
           <select id="cr-subject" class="form-select" style="margin-top:4px" onchange="updateCrChapters()">
-            ${subjects.map(s=>`<option value="${s}" ${subj===s?"selected":""}>${s}</option>`).join("")}
+            ${subjects.map((s) => `<option value="${s}" ${subj === s ? "selected" : ""}>${s}</option>`).join("")}
           </select>
         </div>
       </div>
       <div>
         <label class="form-label">Chapter</label>
         <select id="cr-chapter" class="form-select" style="margin-top:4px">
-          ${chapters.map(c=>`<option value="${c}">${c}</option>`).join("")}
+          ${chapters.map((c) => `<option value="${c}">${c}</option>`).join("")}
         </select>
       </div>
     </div>
@@ -3690,8 +4151,13 @@ function showCreateRoom() {
   `;
   window.updateCrChapters = () => {
     const sel = document.getElementById("cr-chapter");
-    const chs = getChapters(document.getElementById("cr-class").value, document.getElementById("cr-subject").value);
-    sel.innerHTML = chs.map(c=>`<option value="${c}">${c}</option>`).join("");
+    const chs = getChapters(
+      document.getElementById("cr-class").value,
+      document.getElementById("cr-subject").value,
+    );
+    sel.innerHTML = chs
+      .map((c) => `<option value="${c}">${c}</option>`)
+      .join("");
   };
 }
 
@@ -3705,7 +4171,7 @@ function showJoinRoom() {
     <div style="display:flex;flex-direction:column;gap:14px;margin-bottom:20px">
       <div>
         <label class="form-label">Your Name</label>
-        <input id="jr-name" class="form-input" placeholder="Enter your name" value="${getName()||""}" style="margin-top:4px">
+        <input id="jr-name" class="form-input" placeholder="Enter your name" value="${getName() || ""}" style="margin-top:4px">
       </div>
       <div>
         <label class="form-label">Room Code</label>
@@ -3723,30 +4189,51 @@ window.doCreateRoom = async () => {
   const subject = document.getElementById("cr-subject")?.value;
   const chapter = document.getElementById("cr-chapter")?.value;
   const err = document.getElementById("cr-err");
-  if (!name) { err.textContent = "Enter your name"; return; }
-  if (!chapter) { err.textContent = "Select a chapter"; return; }
+  if (!name) {
+    err.textContent = "Enter your name";
+    return;
+  }
+  if (!chapter) {
+    err.textContent = "Select a chapter";
+    return;
+  }
   try {
-    const data = await apiPost("/classroom/create", { hostName: name, subject, chapter, classNum });
+    const data = await apiPost("/classroom/create", {
+      hostName: name,
+      subject,
+      chapter,
+      classNum,
+    });
     _crRoom = { code: data.code, playerId: data.playerId, isHost: true };
     _crAnswered = {};
     _crCurrentQ = 0;
     renderWaitingRoom();
-  } catch(e) { err.textContent = "Error: " + e.message; }
+  } catch (e) {
+    err.textContent = "Error: " + e.message;
+  }
 };
 
 window.doJoinRoom = async () => {
   const name = document.getElementById("jr-name")?.value?.trim();
   const code = document.getElementById("jr-code")?.value?.trim().toUpperCase();
   const err = document.getElementById("jr-err");
-  if (!name) { err.textContent = "Enter your name"; return; }
-  if (!code || code.length < 4) { err.textContent = "Enter a valid room code"; return; }
+  if (!name) {
+    err.textContent = "Enter your name";
+    return;
+  }
+  if (!code || code.length < 4) {
+    err.textContent = "Enter a valid room code";
+    return;
+  }
   try {
     const data = await apiPost("/classroom/join", { playerName: name, code });
     _crRoom = { code: data.code, playerId: data.playerId, isHost: false };
     _crAnswered = {};
     _crCurrentQ = 0;
     renderWaitingRoom();
-  } catch(e) { err.textContent = e.message.includes("404") ? "Room not found" : e.message; }
+  } catch (e) {
+    err.textContent = e.message.includes("404") ? "Room not found" : e.message;
+  }
 };
 
 function renderWaitingRoom() {
@@ -3768,17 +4255,34 @@ function renderWaitingRoom() {
 
 async function pollWaiting() {
   try {
-    const data = await apiPost("/classroom/poll", { code: _crRoom.code, playerId: _crRoom.playerId });
-    if (data.status === "active") { stopClassroomPoll(); renderQuiz(data); return; }
+    const data = await apiPost("/classroom/poll", {
+      code: _crRoom.code,
+      playerId: _crRoom.playerId,
+    });
+    if (data.status === "active") {
+      stopClassroomPoll();
+      renderQuiz(data);
+      return;
+    }
     const pl = document.getElementById("wr-players");
-    if (!pl) { stopClassroomPoll(); return; }
+    if (!pl) {
+      stopClassroomPoll();
+      return;
+    }
     pl.innerHTML = `
       <div style="font-size:0.7rem;font-weight:800;letter-spacing:0.08em;color:var(--text-muted);text-transform:uppercase;margin-bottom:10px">Players (${data.players.length})</div>
-      ${data.players.map((p,i)=>`<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;margin-bottom:8px">
-        <div style="width:28px;height:28px;border-radius:50%;background:${["#4f8ef7","#9b6dff","#0fca8c","#f0b429","#f97316","#ec4899"][i%6]};display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:900;color:#fff">${p.name[0].toUpperCase()}</div>
+      ${data.players
+        .map(
+          (
+            p,
+            i,
+          ) => `<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;margin-bottom:8px">
+        <div style="width:28px;height:28px;border-radius:50%;background:${["#4f8ef7", "#9b6dff", "#0fca8c", "#f0b429", "#f97316", "#ec4899"][i % 6]};display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:900;color:#fff">${p.name[0].toUpperCase()}</div>
         <span style="font-weight:700;flex:1">${p.name}</span>
-        ${i===0?`<span style="font-size:0.65rem;background:rgba(240,180,41,0.2);border:1px solid rgba(240,180,41,0.4);color:#f0b429;padding:2px 8px;border-radius:20px;font-weight:800">HOST</span>`:""}
-      </div>`).join("")}
+        ${i === 0 ? `<span style="font-size:0.65rem;background:rgba(240,180,41,0.2);border:1px solid rgba(240,180,41,0.4);color:#f0b429;padding:2px 8px;border-radius:20px;font-weight:800">HOST</span>` : ""}
+      </div>`,
+        )
+        .join("")}
     `;
     const btn = document.getElementById("wr-start-btn");
     if (btn) {
@@ -3790,24 +4294,36 @@ async function pollWaiting() {
         btn.textContent = "Waiting for at least 2 players...";
       }
     }
-  } catch(e) { /* ignore poll errors */ }
+  } catch (e) {
+    /* ignore poll errors */
+  }
 }
 
 window.doStartRoom = async () => {
-  const btn = document.getElementById("wr-start-btn");
-  if (btn) { btn.disabled = true; btn.textContent = "Generating questions..."; }
-  try {
-    // Send current player's level so server can personalise
-    const myLevel = getPerf()?.level || "developing";
-    await apiPost("/classroom/start", {
-      code: _crRoom.code,
-      playerId: _crRoom.playerId,
-      playerLevels: { [_crRoom.playerId]: myLevel },
-    });
-  } catch(e) {
-    if (btn) { btn.disabled = false; btn.textContent = "Try Again"; }
-    alert("Error: " + e.message);
-  }
+  // Show difficulty/count picker first
+  renderDifficultyPicker({
+    title: "🏫 Classroom Quiz",
+    color: "#f0b429",
+    backFn: "renderWaitingRoom",
+    onConfirm: async () => {
+      const btn = document.createElement("div");
+      const app = document.getElementById("app");
+      app.innerHTML = `<div style="text-align:center;padding:60px 20px">${typingLoader()}<div style="font-size:0.85rem;color:var(--text-muted);margin-top:12px">Generating ${_gameConfig.count} ${_gameConfig.difficulty} questions...</div></div>`;
+      try {
+        const myLevel = getPerf()?.level || "developing";
+        await apiPost("/classroom/start", {
+          code: _crRoom.code,
+          playerId: _crRoom.playerId,
+          playerLevels: { [_crRoom.playerId]: myLevel },
+          difficulty: _gameConfig.difficulty || "medium",
+          count: _gameConfig.count || 10,
+        });
+      } catch (e) {
+        renderWaitingRoom();
+        alert("Error: " + e.message);
+      }
+    },
+  });
 };
 
 window.renderClassroomLobby = renderClassroomLobby;
@@ -3910,25 +4426,25 @@ function renderGames() {
         <div>
           <label class="form-label" style="margin-bottom:4px">${t("class_label")}</label>
           <select id="gameClass" class="form-select" onchange="onGameClassChange()">
-            ${["6","7","8","9","10"].map((c)=>`<option value="${c}" ${initClass===c?"selected":""}>${c}</option>`).join("")}
+            ${["6", "7", "8", "9", "10"].map((c) => `<option value="${c}" ${initClass === c ? "selected" : ""}>${c}</option>`).join("")}
           </select>
         </div>
         <div>
           <label class="form-label" style="margin-bottom:4px">${t("subject")}</label>
           <select id="gameSubject" class="form-select" onchange="onGameSubjectChange()">
-            ${subjects.map((s)=>`<option value="${s}" ${initSubject===s?"selected":""}>${s}</option>`).join("")}
+            ${subjects.map((s) => `<option value="${s}" ${initSubject === s ? "selected" : ""}>${s}</option>`).join("")}
           </select>
         </div>
       </div>
-      <div id="gameHindiCourseWrap" style="display:${initSubject==="Hindi"?"block":"none"}">${hindiCourseToggle()}</div>
+      <div id="gameHindiCourseWrap" style="display:${initSubject === "Hindi" ? "block" : "none"}">${hindiCourseToggle()}</div>
       <label class="form-label" style="margin-bottom:4px">${t("chapter")}</label>
       <select id="gameChapter" class="form-select">
         <option value="">${t("select_chapter")}</option>
-        ${initChapters.map((ch)=>`<option value="${ch}" ${S.chapterPreference===ch?"selected":""}>${ch}</option>`).join("")}
+        ${initChapters.map((ch) => `<option value="${ch}" ${S.chapterPreference === ch ? "selected" : ""}>${ch}</option>`).join("")}
       </select>
     </div>
     <div style="display:flex;flex-direction:column;gap:14px">
-      <div onclick="startGame('quiz')" style="cursor:pointer;border-radius:20px;overflow:hidden;border:1.5px solid rgba(79,142,247,0.4);transition:all .25s" onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 12px 40px rgba(79,142,247,0.3)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+      <div onclick="showQuizPicker()" style="cursor:pointer;border-radius:20px;overflow:hidden;border:1.5px solid rgba(79,142,247,0.4);transition:all .25s" onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 12px 40px rgba(79,142,247,0.3)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
         <div style="background:linear-gradient(135deg,rgba(79,142,247,0.25),rgba(79,142,247,0.08));padding:20px;display:flex;align-items:center;gap:16px;position:relative;overflow:hidden">
           <div style="position:absolute;top:-30px;right:-30px;width:120px;height:120px;border-radius:50%;background:rgba(79,142,247,0.15);filter:blur(30px)"></div>
           <div style="width:60px;height:60px;border-radius:16px;background:rgba(79,142,247,0.2);border:2px solid rgba(79,142,247,0.5);display:flex;align-items:center;justify-content:center;font-size:2rem;flex-shrink:0;box-shadow:0 0 20px rgba(79,142,247,0.3)">🧠</div>
@@ -4025,7 +4541,14 @@ function renderGames() {
     S.subjectPreference = subject;
     S.chapterPreference = chapter;
     saveState();
-    _gameConfig = { classNum, subject, chapter, level: getPerf().level };
+    _gameConfig = {
+      classNum,
+      subject,
+      chapter,
+      level: getPerf().level,
+      difficulty: _gameConfig.difficulty || "medium",
+      count: _gameConfig.count || 10,
+    };
     await _launchGame(type, classNum, subject, chapter);
   };
   window.replayGame = async (type) => {
@@ -4044,19 +4567,58 @@ async function _launchGame(type, classNum, subject, chapter) {
         subject,
         chapter,
         level: _gameConfig.level || getPerf().level,
+        difficulty: _gameConfig.difficulty || "medium",
+        count: _gameConfig.count || 10,
       });
       navigate("quiz", { questions: data.questions || [], subject, chapter });
     } else if (type === "scramble") {
       const data = await apiPost("/scramble", { classNum, subject, chapter });
       navigate("scramble", { words: data.words || [], subject, chapter });
     } else if (type === "math") {
-      const data = await apiPost("/mathchallenge", { classNum, chapter });
+      const data = await apiPost("/mathchallenge", {
+        classNum,
+        chapter,
+        count: _gameConfig.count || 10,
+        difficulty: _gameConfig.difficulty || "medium",
+      });
       navigate("math", { problems: data.problems || [], chapter });
     }
   } catch (e) {
     app2.innerHTML = `<div class="glass" style="padding:20px;color:var(--red)">Failed to load game: ${e.message}<br><br><button class="btn btn-secondary btn-sm" onclick="navigate('games')">Back</button></div>`;
   }
 }
+
+window.showQuizPicker = () => {
+  const classNum =
+    document.getElementById("gameClass")?.value || S.classPreference;
+  const subject =
+    document.getElementById("gameSubject")?.value || S.subjectPreference;
+  const chapter =
+    document.getElementById("gameChapter")?.value || S.chapterPreference;
+  if (!chapter) {
+    alert("Please select a chapter first!");
+    return;
+  }
+  _gameConfig = {
+    ..._gameConfig,
+    classNum,
+    subject,
+    chapter,
+    level: getPerf().level,
+  };
+  renderDifficultyPicker({
+    title: "🧠 Quiz Battle",
+    color: "#4f8ef7",
+    backFn: "renderGames",
+    onConfirm: () =>
+      _launchGame(
+        "quiz",
+        _gameConfig.classNum,
+        _gameConfig.subject,
+        _gameConfig.chapter,
+      ),
+  });
+};
 
 // ============================================================
 // QUIZ GAME
@@ -4110,7 +4672,14 @@ function renderQuizGame(extra) {
       score++;
       addXP(10, "quiz");
     }
-    logQuestion({ subject: document.getElementById("gameSubject")?.value || S.subjectPreference, chapter: document.getElementById("gameChapter")?.value || S.chapterPreference, correct: isCorrect, source: "game-quiz" });
+    logQuestion({
+      subject:
+        document.getElementById("gameSubject")?.value || S.subjectPreference,
+      chapter:
+        document.getElementById("gameChapter")?.value || S.chapterPreference,
+      correct: isCorrect,
+      source: "game-quiz",
+    });
     document.querySelectorAll(".quiz-option").forEach((el, i) => {
       if (i === correctIdx) el.classList.add("correct");
       else if (i === idx && !isCorrect) el.classList.add("wrong");
@@ -4595,12 +5164,19 @@ function renderPapersTab() {
     PYQ: "rgba(155,109,255,0.12)",
     "Marking Scheme": "rgba(15,202,140,0.1)",
   };
-  const SUBJECTS = ["All","Maths","Science","Social Science","English","Hindi"];
+  const SUBJECTS = [
+    "All",
+    "Maths",
+    "Science",
+    "Social Science",
+    "English",
+    "Hindi",
+  ];
 
   const filterPills = `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px">
-    ${SUBJECTS.map((s,i)=>{
-      const active=i===0;
-      return `<button class="subject-filter-pill${active?" active":""}" data-subject="${s}" onclick="filterPapers('${s}')" style="padding:7px 15px;border-radius:22px;border:1.5px solid ${active?"#4f8ef7":"rgba(255,255,255,0.1)"};background:${active?"rgba(79,142,247,0.18)":"rgba(255,255,255,0.04)"};color:${active?"#4f8ef7":"var(--text-muted)"};font-size:0.76rem;font-weight:800;cursor:pointer;font-family:inherit;transition:all .2s;letter-spacing:0.02em;box-shadow:${active?"0 0 12px rgba(79,142,247,0.25)":"none"}">${s}</button>`;
+    ${SUBJECTS.map((s, i) => {
+      const active = i === 0;
+      return `<button class="subject-filter-pill${active ? " active" : ""}" data-subject="${s}" onclick="filterPapers('${s}')" style="padding:7px 15px;border-radius:22px;border:1.5px solid ${active ? "#4f8ef7" : "rgba(255,255,255,0.1)"};background:${active ? "rgba(79,142,247,0.18)" : "rgba(255,255,255,0.04)"};color:${active ? "#4f8ef7" : "var(--text-muted)"};font-size:0.76rem;font-weight:800;cursor:pointer;font-family:inherit;transition:all .2s;letter-spacing:0.02em;box-shadow:${active ? "0 0 12px rgba(79,142,247,0.25)" : "none"}">${s}</button>`;
     }).join("")}
   </div>`;
 
@@ -4620,7 +5196,9 @@ function renderPapersTab() {
         <span style="font-size:0.7rem;font-weight:900;letter-spacing:0.12em;color:${color};text-transform:uppercase">${tag}s</span>
         <span style="background:${color}18;color:${color};border:1px solid ${color}33;font-size:0.65rem;font-weight:800;padding:1px 8px;border-radius:20px">${items.length}</span>
       </div>
-      ${items.map((p)=>`
+      ${items
+        .map(
+          (p) => `
         <div data-subject="${p.subject}" class="paper-card" onclick="showPaper('${p.id}')" style="margin-bottom:10px;cursor:pointer">
           <div style="background:${bg};border:1.5px solid ${color}25;border-radius:16px;padding:16px;transition:all .25s;position:relative;overflow:hidden"
             onmouseover="this.style.borderColor='${color}66';this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 30px ${color}22'"
@@ -4638,7 +5216,9 @@ function renderPapersTab() {
               <div style="flex-shrink:0;background:${color};color:#fff;border-radius:12px;padding:8px 16px;font-size:0.78rem;font-weight:900;box-shadow:0 4px 14px ${color}55;white-space:nowrap">View →</div>
             </div>
           </div>
-        </div>`).join("")}
+        </div>`,
+        )
+        .join("")}
     </div>`;
   });
 
@@ -4648,7 +5228,9 @@ function renderPapersTab() {
     document.querySelectorAll(".subject-filter-pill").forEach((btn) => {
       const active = btn.dataset.subject === subject;
       btn.style.borderColor = active ? "#4f8ef7" : "rgba(255,255,255,0.1)";
-      btn.style.background = active ? "rgba(79,142,247,0.18)" : "rgba(255,255,255,0.04)";
+      btn.style.background = active
+        ? "rgba(79,142,247,0.18)"
+        : "rgba(255,255,255,0.04)";
       btn.style.color = active ? "#4f8ef7" : "var(--text-muted)";
       btn.style.boxShadow = active ? "0 0 12px rgba(79,142,247,0.25)" : "none";
     });
@@ -4657,7 +5239,9 @@ function renderPapersTab() {
       card.style.display = show ? "block" : "none";
     });
     document.querySelectorAll(".papers-group").forEach((group) => {
-      const visible = [...group.querySelectorAll(".paper-card")].some((c) => c.style.display !== "none");
+      const visible = [...group.querySelectorAll(".paper-card")].some(
+        (c) => c.style.display !== "none",
+      );
       group.style.display = visible ? "block" : "none";
     });
   };

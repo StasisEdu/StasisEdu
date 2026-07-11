@@ -189,22 +189,29 @@ Return ONLY valid JSON: {"solution": "direct one-line answer", "steps": ["detail
 });
 
 router.post("/practice", async (req, res) => {
-  const { classNum, subject, chapter, level } = req.body as Record<
-    string,
-    string
-  >;
+  const { classNum, subject, chapter, level, difficulty, count } =
+    req.body as Record<string, string>;
   if (!classNum || !subject) {
     res.status(400).json({ error: "Missing fields" });
     return;
   }
+  const qCount = Math.min(parseInt(count as string) || 3, 10);
   const chapterCtx = chapter ? `Chapter: ${chapter}` : "";
-  const practicePrompts: Record<string, string> = {
-    beginner: `Generate 3 CBSE Class ${classNum} ${subject} ${chapterCtx} practice questions. The student is a beginner (scored below 40%). All 3 questions must be easy, direct, and straightforward. Focus on basic definitions, simple recall, and one-step problems. Return ONLY valid JSON: {"questions":[{"question":"...","difficulty":"Easy"}]}`,
-    developing: `Generate 3 CBSE Class ${classNum} ${subject} ${chapterCtx} practice questions. The student is developing (scored 40-65%). Give 2 easy questions and 1 medium question. Return ONLY valid JSON: {"questions":[{"question":"...","difficulty":"Easy|Medium"}]}`,
-    proficient: `Generate 3 CBSE Class ${classNum} ${subject} ${chapterCtx} practice questions. The student is proficient (scored 65-85%). Give 1 easy, 1 medium, and 1 hard question. Return ONLY valid JSON: {"questions":[{"question":"...","difficulty":"Easy|Medium|Hard"}]}`,
-    advanced: `Generate 3 CBSE Class ${classNum} ${subject} ${chapterCtx} practice questions. The student is advanced (scored above 85%). Give 1 medium and 2 hard questions. Include at least one HOTS (Higher Order Thinking Skills) question. Return ONLY valid JSON: {"questions":[{"question":"...","difficulty":"Medium|Hard"}]}`,
+  const diffMap: Record<string, string> = {
+    easy: "easy, direct, basic recall and definitions",
+    hard: "hard, application-based, tricky distractors",
+    "very hard": "very hard, HOTS level, higher-order thinking and analysis",
   };
-  const prompt = practicePrompts[level] ?? practicePrompts.developing;
+  const diffDesc = diffMap[difficulty] || diffMap.easy;
+  const levelMap: Record<string, string> = {
+    beginner: "beginner student (below 40%), keep it simple",
+    developing: "developing student (40-65%), mix of easy and medium",
+    proficient: "proficient student (65-85%), mix medium and hard",
+    advanced: "advanced student (above 85%), mostly hard with HOTS",
+  };
+  const levelDesc = levelMap[level] || levelMap.developing;
+  const prompt = `Generate exactly ${qCount} CBSE Class ${classNum} ${subject} ${chapterCtx} practice questions. Difficulty: ${diffDesc}. Student level: ${levelDesc}.
+Return ONLY valid JSON: {"questions":[{"question":"...","difficulty":"Easy|Medium|Hard"}]}`;
   try {
     const text = await ask(prompt);
     const parsed = safeJson(text) as { questions?: unknown[] } | null;
@@ -212,20 +219,12 @@ router.post("/practice", async (req, res) => {
       res.json(parsed);
     } else {
       res.json({
-        questions: [
-          {
-            question: `Explain an important concept from Class ${classNum} ${subject}${chapter ? ` - ${chapter}` : ""}.`,
+        questions: Array(qCount)
+          .fill(null)
+          .map((_, i) => ({
+            question: `Class ${classNum} ${subject}${chapter ? ` - ${chapter}` : ""} question ${i + 1}.`,
             difficulty: "Medium",
-          },
-          {
-            question: `Solve a problem from Class ${classNum} ${subject}${chapter ? ` - ${chapter}` : ""}.`,
-            difficulty: "Medium",
-          },
-          {
-            question: `Give an example from Class ${classNum} ${subject}${chapter ? ` - ${chapter}` : ""}.`,
-            difficulty: "Easy",
-          },
-        ],
+          })),
       });
     }
   } catch (e) {
@@ -295,29 +294,25 @@ router.post("/hint", async (req, res) => {
 });
 
 router.post("/quiz", async (req, res) => {
-  const { classNum, subject, chapter, level } = req.body as Record<
-    string,
-    string
-  >;
+  const { classNum, subject, chapter, level, difficulty, count } =
+    req.body as Record<string, string>;
   if (!classNum || !subject) {
     res.status(400).json({ error: "Missing fields" });
     return;
   }
+  const qCount = Math.min(parseInt(count as string) || 5, 15);
   const chapterClause = chapter
     ? ` from CBSE Class ${classNum} ${subject} Chapter: ${chapter}`
     : ` for Class ${classNum} ${subject}`;
-  const diffHints: Record<string, string> = {
-    beginner:
-      "Generate 5 EASY MCQ questions. Use simple language and straightforward options. Focus on basic recall and definitions.",
-    developing: "Generate 5 MCQ questions (3 easy, 2 medium).",
-    proficient: "Generate 5 MCQ questions (2 easy, 2 medium, 1 hard).",
-    advanced:
-      "Generate 5 MCQ questions (1 medium, 3 hard, 1 HOTS — Higher Order Thinking Skills). Make the hard questions application-based.",
+  const diffMap: Record<string, string> = {
+    easy: `Generate ${qCount} EASY MCQ questions. Simple language, basic recall and definitions.`,
+    hard: `Generate ${qCount} HARD MCQ questions. Application-based, tricky distractors, conceptual depth.`,
+    "very hard": `Generate ${qCount} VERY HARD MCQ questions. HOTS level, analysis and evaluation, complex scenarios.`,
   };
-  const diffHint = diffHints[level] ?? diffHints.developing;
+  const diffHint = diffMap[difficulty] || diffMap.easy;
   try {
     const text = await ask(
-      `${diffHint}${chapterClause}. Important: All 5 questions must be completely different from each other — no repeated topics or similar phrasing. Return ONLY valid JSON: {"questions":[{"question":"...","options":["A. ...","B. ...","C. ...","D. ..."],"answer":"A"}]}`,
+      `${diffHint}${chapterClause}. All questions must be completely different — no repeated topics. Return ONLY valid JSON: {"questions":[{"question":"...","options":["A. ...","B. ...","C. ...","D. ..."],"answer":"A"}]}`,
     );
     const parsed = safeJson(text) as { questions?: unknown[] } | null;
     if (parsed?.questions && (parsed.questions as unknown[]).length > 0) {
@@ -326,7 +321,7 @@ router.post("/quiz", async (req, res) => {
       res.json({
         questions: [
           {
-            question: `Which is a key concept in Class ${classNum} ${subject}${chapter ? ` - ${chapter}` : ""}?`,
+            question: `Key concept in Class ${classNum} ${subject}${chapter ? ` - ${chapter}` : ""}?`,
             options: [
               "A. Concept A",
               "B. Concept B",
@@ -787,10 +782,12 @@ router.post("/classroom/join", (req, res) => {
 
 // POST /api/classroom/start — host starts, questions generated per player's level
 router.post("/classroom/start", async (req, res) => {
-  const { code, playerId, playerLevels } = req.body as {
+  const { code, playerId, playerLevels, difficulty, count } = req.body as {
     code: string;
     playerId: string;
     playerLevels?: Record<string, string>;
+    difficulty?: string;
+    count?: number;
   };
   const room = ROOMS[code];
   if (!room) {
@@ -806,20 +803,27 @@ router.post("/classroom/start", async (req, res) => {
     return;
   }
   try {
-    // Generate a master set of questions (used as fallback)
-    const masterPrompt = `Generate exactly 10 multiple choice questions for CBSE Class ${room.classNum} ${room.subject}, chapter: "${room.chapter}". Medium difficulty.
+    const qCount = Math.min(count || 5, 10);
+    const diff = difficulty || "easy";
+    const diffDesc =
+      diff === "easy"
+        ? "straightforward basic recall, simple vocabulary"
+        : diff === "hard"
+          ? "challenging application questions, tricky options"
+          : "very hard, higher-order thinking, conceptual and analytical";
+    const masterPrompt = `Generate exactly ${qCount} multiple choice questions for CBSE Class ${room.classNum} ${room.subject}, chapter: "${room.chapter}". Difficulty: ${diffDesc}.
 Return ONLY a JSON array (no markdown): [{"q":"...","options":["A","B","C","D"],"answer":"exact correct option text"}]`;
     const masterRaw = await ask(masterPrompt, 2000);
     const masterQs = safeJson(masterRaw) as
       | { q: string; options: string[]; answer: string }[]
       | null;
-    if (!Array.isArray(masterQs) || masterQs.length < 5) {
+    if (!Array.isArray(masterQs) || masterQs.length < Math.min(3, qCount)) {
       res
         .status(500)
         .json({ error: "Failed to generate questions, try again" });
       return;
     }
-    room.questions = masterQs.slice(0, 10);
+    room.questions = masterQs.slice(0, qCount);
 
     // Generate personalised questions for each player based on their level
     if (playerLevels && Object.keys(playerLevels).length > 0) {
@@ -832,15 +836,15 @@ Return ONLY a JSON array (no markdown): [{"q":"...","options":["A","B","C","D"],
       for (const [pid, level] of Object.entries(playerLevels)) {
         if (!room.players[pid]) continue;
         const diff = levelMap[level] || levelMap.developing;
-        const lvlPrompt = `Generate exactly 10 CBSE Class ${room.classNum} ${room.subject} MCQs for chapter "${room.chapter}". Difficulty: ${diff}.
+        const lvlPrompt = `Generate exactly ${qCount} CBSE Class ${room.classNum} ${room.subject} MCQs for chapter "${room.chapter}". Difficulty: ${diff} — ${levelMap[level] || levelMap.developing}.
 Return ONLY JSON array: [{"q":"...","options":["A","B","C","D"],"answer":"exact correct option text"}]`;
         try {
           const raw = await ask(lvlPrompt, 2000);
           const qs = safeJson(raw) as
             | { q: string; options: string[]; answer: string }[]
             | null;
-          if (Array.isArray(qs) && qs.length >= 5) {
-            room.players[pid].personalQuestions = qs.slice(0, 10);
+          if (Array.isArray(qs) && qs.length >= Math.min(3, qCount)) {
+            room.players[pid].personalQuestions = qs.slice(0, qCount);
           }
         } catch {
           /* fallback to master */
