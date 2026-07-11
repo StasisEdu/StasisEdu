@@ -529,6 +529,11 @@ router.post("/weekly-analysis", async (req, res) => {
     daysSoFar,
     level,
     classNum,
+    streak,
+    bestStreak,
+    totalSolved,
+    allTimeSubjects,
+    classroomSessions,
   } = req.body as {
     subjectTotals?: Record<string, number>;
     totalQuestions?: number;
@@ -537,47 +542,87 @@ router.post("/weekly-analysis", async (req, res) => {
     daysSoFar?: number;
     level?: string;
     classNum?: string;
+    streak?: number;
+    bestStreak?: number;
+    totalSolved?: number;
+    allTimeSubjects?: Record<string, number>;
+    classroomSessions?: {
+      sessions: number;
+      totalCorrect: number;
+      totalWrong: number;
+      totalTimedOut: number;
+      avgRank: number;
+      subjects: string[];
+    } | null;
   };
 
   const totals = subjectTotals ?? {};
   const subjectLines = Object.entries(totals)
     .sort((a, b) => b[1] - a[1])
-    .map(([s, c]) => `${s}: ${c} question${c === 1 ? "" : "s"}`)
+    .map(([s, c]) => `${s}: ${c}q`)
     .join(", ");
+  const allTimeLines = Object.entries(allTimeSubjects ?? {})
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([s, c]) => `${s}: ${c}`)
+    .join(", ");
+  const neglectedSubjects = [
+    "Maths",
+    "Physics",
+    "Chemistry",
+    "Biology",
+    "History",
+    "Geography",
+    "Civics",
+    "Economics",
+    "English",
+    "Hindi",
+  ]
+    .filter((s) => !totals[s] || totals[s] === 0)
+    .slice(0, 4)
+    .join(", ");
+  const crBlock = classroomSessions
+    ? `- Classroom sessions: ${classroomSessions.sessions} (${classroomSessions.subjects.join(", ")})\n- Correct/Wrong/Timed-out: ${classroomSessions.totalCorrect}/${classroomSessions.totalWrong}/${classroomSessions.totalTimedOut}\n- Avg rank: #${classroomSessions.avgRank}`
+    : "- No classroom quiz sessions this week";
 
   if (!totalQuestions || totalQuestions === 0) {
     res.json({
       summary:
-        "No questions solved or practiced yet this week — nothing to analyze. Solve or practice a few questions and check back!",
+        "No questions solved yet this week. Start with Daily Practice or the Solve page!",
       strengths: [],
       weakAreas: [],
       tips: [
-        "Try the Solve page for a quick question, or start today's Daily Practice to begin building your weekly stats.",
+        "Try at least 5 questions today.",
+        "Use Daily Practice for a quick 3-question session.",
+        "Invite a friend to a Classroom quiz for extra XP.",
       ],
+      classroomNote: null,
+      focusSubject: null,
+      motivationLine: "Every expert was once a beginner — start today!",
     });
     return;
   }
 
   try {
     const text = await ask(
-      `You are Stasis, an encouraging CBSE tutor. A Class ${classNum ?? "10"} student (learning level: ${level ?? "developing"}) had this activity in the current week so far:
-- Days active: ${activeDays ?? 0} out of ${daysSoFar ?? 1} days so far this week
-- Total questions solved/practiced: ${totalQuestions}
-- Total XP earned: ${totalXP ?? 0}
-- Subject breakdown: ${subjectLines || "none"}
+      `You are Stasis, a detailed CBSE tutor AI. A Class ${classNum ?? "10"} student (level: ${level ?? "developing"}) stats this week:
 
-Write a short, encouraging weekly analysis for this student. Return ONLY valid JSON in this exact shape:
-{"summary": "2-3 sentence friendly overview of their week", "strengths": ["1-3 short strength points based on the data, e.g. consistency or a strong subject"], "weakAreas": ["1-3 short points on subjects neglected or low activity, be gentle and specific"], "tips": ["2-3 short, concrete, actionable tips for next week"]}
-Keep every string under 20 words. Do not invent subjects or numbers not present in the data above.`,
-      700,
+WEEKLY: Days active: ${activeDays ?? 0}/${daysSoFar ?? 7}, Questions: ${totalQuestions}, XP: ${totalXP ?? 0}
+Subject breakdown: ${subjectLines || "none"}
+Not practiced this week: ${neglectedSubjects || "none"}
+All-time top subjects: ${allTimeLines || "none"}
+Streak: ${streak ?? 0} days current, ${bestStreak ?? 0} best. Total ever: ${totalSolved ?? 0}q
+
+CLASSROOM QUIZ:
+${crBlock}
+
+Return ONLY valid JSON:
+{"summary":"3-4 sentence overview with specific subjects and numbers","strengths":["3-4 specific points with subject names/numbers"],"weakAreas":["2-3 gentle specific points on missed subjects"],"tips":["3-4 concrete actionable tips for next week"],"classroomNote":"1-2 sentences on classroom performance or null","focusSubject":"one subject to focus next week","motivationLine":"one punchy motivational line"}
+Max 30 words per string. Use actual numbers and subject names from the data.`,
+      950,
     );
-    const parsed = safeJson(text) as {
-      summary?: string;
-      strengths?: string[];
-      weakAreas?: string[];
-      tips?: string[];
-    } | null;
-    if (parsed && (parsed.summary || parsed.strengths || parsed.tips)) {
+    const parsed = safeJson(text) as Record<string, unknown> | null;
+    if (parsed && (parsed.summary || parsed.strengths)) {
       res.json(parsed);
     } else {
       res.json({
@@ -585,6 +630,7 @@ Keep every string under 20 words. Do not invent subjects or numbers not present 
         strengths: [],
         weakAreas: [],
         tips: [],
+        classroomNote: null,
       });
     }
   } catch (e) {
@@ -637,9 +683,10 @@ router.post("/chatbot", async (req, res) => {
 interface RoomPlayer {
   name: string;
   score: number;
-  answers: Record<number, string>; // qIndex -> chosen option
+  answers: Record<number, string>;
   joinedAt: number;
   done: boolean;
+  personalQuestions?: { q: string; options: string[]; answer: string }[];
 }
 interface ClassroomRoom {
   code: string;
@@ -738,9 +785,13 @@ router.post("/classroom/join", (req, res) => {
   });
 });
 
-// POST /api/classroom/start — host generates questions via Groq and starts
+// POST /api/classroom/start — host starts, questions generated per player's level
 router.post("/classroom/start", async (req, res) => {
-  const { code, playerId } = req.body as Record<string, string>;
+  const { code, playerId, playerLevels } = req.body as {
+    code: string;
+    playerId: string;
+    playerLevels?: Record<string, string>;
+  };
   const room = ROOMS[code];
   if (!room) {
     res.status(404).json({ error: "Room not found" });
@@ -755,21 +806,48 @@ router.post("/classroom/start", async (req, res) => {
     return;
   }
   try {
-    const prompt = `Generate exactly 10 multiple choice questions for CBSE Class ${room.classNum} ${room.subject}, chapter: "${room.chapter}".
-Return ONLY a JSON array with this exact shape (no markdown):
-[{"q":"question text","options":["A","B","C","D"],"answer":"exact text of correct option"}]
-Make questions exam-quality, varied difficulty, all 4 options plausible.`;
-    const raw = await ask(prompt, 2000);
-    const parsed = safeJson(raw) as
+    // Generate a master set of questions (used as fallback)
+    const masterPrompt = `Generate exactly 10 multiple choice questions for CBSE Class ${room.classNum} ${room.subject}, chapter: "${room.chapter}". Medium difficulty.
+Return ONLY a JSON array (no markdown): [{"q":"...","options":["A","B","C","D"],"answer":"exact correct option text"}]`;
+    const masterRaw = await ask(masterPrompt, 2000);
+    const masterQs = safeJson(masterRaw) as
       | { q: string; options: string[]; answer: string }[]
       | null;
-    if (!Array.isArray(parsed) || parsed.length < 5) {
+    if (!Array.isArray(masterQs) || masterQs.length < 5) {
       res
         .status(500)
         .json({ error: "Failed to generate questions, try again" });
       return;
     }
-    room.questions = parsed.slice(0, 10);
+    room.questions = masterQs.slice(0, 10);
+
+    // Generate personalised questions for each player based on their level
+    if (playerLevels && Object.keys(playerLevels).length > 0) {
+      const levelMap: Record<string, string> = {
+        beginner: "very simple, basic recall questions, easy vocabulary",
+        developing: "moderate difficulty, some application questions",
+        proficient: "challenging questions with application and analysis",
+        advanced: "hard, conceptual and higher-order thinking questions",
+      };
+      for (const [pid, level] of Object.entries(playerLevels)) {
+        if (!room.players[pid]) continue;
+        const diff = levelMap[level] || levelMap.developing;
+        const lvlPrompt = `Generate exactly 10 CBSE Class ${room.classNum} ${room.subject} MCQs for chapter "${room.chapter}". Difficulty: ${diff}.
+Return ONLY JSON array: [{"q":"...","options":["A","B","C","D"],"answer":"exact correct option text"}]`;
+        try {
+          const raw = await ask(lvlPrompt, 2000);
+          const qs = safeJson(raw) as
+            | { q: string; options: string[]; answer: string }[]
+            | null;
+          if (Array.isArray(qs) && qs.length >= 5) {
+            room.players[pid].personalQuestions = qs.slice(0, 10);
+          }
+        } catch {
+          /* fallback to master */
+        }
+      }
+    }
+
     room.status = "active";
     room.startedAt = Date.now();
     res.json({ ok: true });
@@ -787,11 +865,15 @@ router.post("/classroom/poll", (req, res) => {
     return;
   }
   const me = room.players[playerId];
-  // Strip answers from questions when sending to client (only send answer after room finishes)
+  // Use personal questions if available, else master
+  const myQs =
+    me?.personalQuestions && me.personalQuestions.length > 0
+      ? me.personalQuestions
+      : room.questions;
   const safeQuestions =
     room.status === "finished"
-      ? room.questions
-      : room.questions.map(({ q, options }) => ({ q, options, answer: "" }));
+      ? myQs
+      : myQs.map(({ q, options }) => ({ q, options, answer: "" }));
   const leaderboard = Object.entries(room.players)
     .map(([id, p]) => ({ id, name: p.name, score: p.score, done: p.done }))
     .sort((a, b) => b.score - a.score);

@@ -3122,29 +3122,34 @@ function renderAIInsightsHTML(data) {
   const weakAreas = Array.isArray(data.weakAreas) ? data.weakAreas : [];
   const tips = Array.isArray(data.tips) ? data.tips : [];
   return `
-    ${data.summary ? `<div style="font-size:0.85rem;line-height:1.6;color:var(--text-secondary);margin-bottom:12px">${escapeHtml(data.summary)}</div>` : ""}
+    ${data.motivationLine ? `<div style="background:linear-gradient(135deg,rgba(79,142,247,0.12),rgba(155,109,255,0.08));border:1px solid rgba(155,109,255,0.25);border-radius:12px;padding:10px 14px;font-size:0.85rem;font-weight:700;color:#c4b5fd;margin-bottom:12px;font-style:italic">"${escapeHtml(data.motivationLine)}"</div>` : ""}
+    ${data.summary ? `<div style="font-size:0.85rem;line-height:1.65;color:var(--text-secondary);margin-bottom:14px">${escapeHtml(data.summary)}</div>` : ""}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+      ${data.focusSubject ? `<div style="background:rgba(240,180,41,0.1);border:1px solid rgba(240,180,41,0.25);border-radius:10px;padding:10px 12px"><div style="font-size:0.62rem;font-weight:900;color:#f0b429;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:3px">🎯 Focus Next Week</div><div style="font-size:0.85rem;font-weight:700;color:var(--text)">${escapeHtml(data.focusSubject)}</div></div>` : ""}
+      ${data.classroomNote ? `<div style="background:rgba(15,202,140,0.08);border:1px solid rgba(15,202,140,0.2);border-radius:10px;padding:10px 12px"><div style="font-size:0.62rem;font-weight:900;color:#0fca8c;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:3px">🏫 Classroom</div><div style="font-size:0.82rem;color:var(--text-secondary)">${escapeHtml(data.classroomNote)}</div></div>` : ""}
+    </div>
     ${
       strengths.length
-        ? `<div style="margin-bottom:10px">
-            <div style="font-size:0.72rem;font-weight:800;letter-spacing:0.06em;color:var(--green);text-transform:uppercase;margin-bottom:6px">✅ Strengths</div>
-            ${strengths.map((s) => `<div style="font-size:0.83rem;color:var(--text-secondary);padding:3px 0">• ${escapeHtml(s)}</div>`).join("")}
-          </div>`
+        ? `<div style="margin-bottom:12px">
+      <div style="font-size:0.68rem;font-weight:900;letter-spacing:0.08em;color:#0fca8c;text-transform:uppercase;margin-bottom:8px">✅ Strengths</div>
+      ${strengths.map((s) => `<div style="display:flex;gap:8px;font-size:0.83rem;color:var(--text-secondary);padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04)"><span style="color:#0fca8c;flex-shrink:0">✓</span>${escapeHtml(s)}</div>`).join("")}
+    </div>`
         : ""
     }
     ${
       weakAreas.length
-        ? `<div style="margin-bottom:10px">
-            <div style="font-size:0.72rem;font-weight:800;letter-spacing:0.06em;color:var(--gold);text-transform:uppercase;margin-bottom:6px">⚠️ Weak Areas</div>
-            ${weakAreas.map((s) => `<div style="font-size:0.83rem;color:var(--text-secondary);padding:3px 0">• ${escapeHtml(s)}</div>`).join("")}
-          </div>`
+        ? `<div style="margin-bottom:12px">
+      <div style="font-size:0.68rem;font-weight:900;letter-spacing:0.08em;color:#f0b429;text-transform:uppercase;margin-bottom:8px">⚠️ Needs Attention</div>
+      ${weakAreas.map((s) => `<div style="display:flex;gap:8px;font-size:0.83rem;color:var(--text-secondary);padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04)"><span style="color:#f0b429;flex-shrink:0">!</span>${escapeHtml(s)}</div>`).join("")}
+    </div>`
         : ""
     }
     ${
       tips.length
-        ? `<div style="margin-bottom:10px">
-            <div style="font-size:0.72rem;font-weight:800;letter-spacing:0.06em;color:#4f8ef7;text-transform:uppercase;margin-bottom:6px">💡 Tips</div>
-            ${tips.map((s) => `<div style="font-size:0.83rem;color:var(--text-secondary);padding:3px 0">• ${escapeHtml(s)}</div>`).join("")}
-          </div>`
+        ? `<div style="margin-bottom:12px">
+      <div style="font-size:0.68rem;font-weight:900;letter-spacing:0.08em;color:#4f8ef7;text-transform:uppercase;margin-bottom:8px">💡 Action Plan</div>
+      ${tips.map((s, i) => `<div style="display:flex;gap:10px;font-size:0.83rem;color:var(--text-secondary);padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04)"><span style="background:rgba(79,142,247,0.2);color:#4f8ef7;font-size:0.68rem;font-weight:900;min-width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">${i + 1}</span>${escapeHtml(s)}</div>`).join("")}
+    </div>`
         : ""
     }
     <button class="btn btn-secondary btn-sm mt-1" onclick="generateWeeklyAnalysis()">🔄 Regenerate</button>
@@ -3157,6 +3162,26 @@ window.generateWeeklyAnalysis = async () => {
   area.innerHTML = `<div class="text-center">${typingLoader()}<div style="font-size:0.8rem;color:var(--text-muted);margin-top:8px">Analyzing your week...</div></div>`;
   try {
     const wk = getWeeklyStats();
+    // Build classroom summary
+    const crHistory = (S.classroomHistory || []).filter((h) => {
+      const weekStart = getWeekStartKey();
+      return h.date >= weekStart;
+    });
+    const crSummary =
+      crHistory.length > 0
+        ? {
+            sessions: crHistory.length,
+            totalCorrect: crHistory.reduce((a, h) => a + h.correct, 0),
+            totalWrong: crHistory.reduce((a, h) => a + h.wrong, 0),
+            totalTimedOut: crHistory.reduce((a, h) => a + h.timedOut, 0),
+            avgRank:
+              Math.round(
+                (crHistory.reduce((a, h) => a + h.rank, 0) / crHistory.length) *
+                  10,
+              ) / 10,
+            subjects: [...new Set(crHistory.map((h) => h.subject))],
+          }
+        : null;
     const data = await apiPost("/weekly-analysis", {
       subjectTotals: wk.subjectTotals,
       totalQuestions: wk.totalQuestions,
@@ -3165,6 +3190,11 @@ window.generateWeeklyAnalysis = async () => {
       daysSoFar: wk.daysSoFar,
       level: getPerf().level,
       classNum: S.classPreference,
+      streak: S.streak,
+      bestStreak: S.bestStreak,
+      totalSolved: S.totalSolved,
+      allTimeSubjects: S.subjectCounts || {},
+      classroomSessions: crSummary,
     });
     S.weeklyAnalysisCache = {
       weekKey: getWeekStartKey(),
@@ -3181,10 +3211,328 @@ window.generateWeeklyAnalysis = async () => {
 // ============================================================
 // CLASSROOM — multiplayer quiz room
 // ============================================================
-let _crRoom = null; // { code, playerId, isHost }
+let _crRoom = null;
 let _crPollTimer = null;
-let _crState = null; // last polled state
-let _crAnswered = {}; // qIndex -> chosen (local cache)
+let _crState = null;
+let _crAnswered = {}; // qIndex -> chosen | "TIMEOUT"
+let _crCurrentQ = 0;
+let _crTimerInterval = null;
+let _crTimeLeft = 30;
+let _crTimedOut = {}; // qIndex -> true
+let _crMyLevel = null; // player's own level string
+
+function stopCrTimer() {
+  if (_crTimerInterval) {
+    clearInterval(_crTimerInterval);
+    _crTimerInterval = null;
+  }
+}
+
+function renderQuiz(state) {
+  _crState = state;
+  _crCurrentQ = 0;
+  renderCrQuestion();
+  stopClassroomPoll();
+  _crPollTimer = setInterval(async () => {
+    try {
+      const data = await apiPost("/classroom/poll", {
+        code: _crRoom.code,
+        playerId: _crRoom.playerId,
+      });
+      if (data.status === "finished") {
+        stopClassroomPoll();
+        stopCrTimer();
+        renderClassroomResult(data);
+      }
+    } catch (e) {}
+  }, 2500);
+}
+
+window.goNextCrQ = () => {
+  stopCrTimer();
+  _crCurrentQ++;
+  if (_crCurrentQ >= _crState.questions.length) {
+    showCrAllDone();
+  } else {
+    renderCrQuestion();
+  }
+};
+
+function renderCrQuestion() {
+  const app = document.getElementById("app");
+  const total = _crState.questions.length;
+  const qi = _crCurrentQ;
+  const q = _crState.questions[qi];
+  const pct = Math.round((qi / total) * 100);
+  _crTimeLeft = 30;
+
+  app.innerHTML = `
+    <style>
+      @keyframes _crSlide{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:translateX(0)}}
+      @keyframes _crTimer{from{width:100%}to{width:0%}}
+      ._cropt{border-radius:14px;padding:14px 18px;cursor:pointer;border:1.5px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);transition:all .2s;font-size:0.92rem;font-weight:600;text-align:left;width:100%;font-family:inherit;color:var(--text);margin-bottom:10px;display:block}
+      ._cropt:hover:not(:disabled){border-color:rgba(79,142,247,0.5);background:rgba(79,142,247,0.1);transform:translateX(4px)}
+      ._cropt.chosen{border-color:#4f8ef7;background:rgba(79,142,247,0.18)}
+    </style>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div style="font-size:0.75rem;font-weight:800;color:var(--text-muted)">Q${qi + 1} of ${total}</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="display:flex;align-items:center;gap:5px">
+          <span style="font-size:1rem">⏱</span>
+          <span id="cr-timer-num" style="font-size:1rem;font-weight:900;color:#f0b429;min-width:24px;text-align:right">30</span>
+        </div>
+        <div style="display:flex;gap:5px">
+          ${_crState.players
+            .slice(0, 4)
+            .map(
+              (p) =>
+                `<div title="${p.name}" style="width:26px;height:26px;border-radius:50%;background:rgba(79,142,247,0.3);border:1.5px solid rgba(79,142,247,0.4);display:flex;align-items:center;justify-content:center;font-size:0.68rem;font-weight:900">${p.name[0].toUpperCase()}</div>`,
+            )
+            .join("")}
+        </div>
+      </div>
+    </div>
+    <div style="height:4px;background:rgba(255,255,255,0.07);border-radius:100px;margin-bottom:6px;overflow:hidden">
+      <div id="cr-progbar" style="height:100%;width:${pct}%;background:linear-gradient(90deg,#4f8ef7,#9b6dff);border-radius:100px;transition:width .4s"></div>
+    </div>
+    <div style="height:3px;background:rgba(240,180,41,0.15);border-radius:100px;margin-bottom:20px;overflow:hidden">
+      <div id="cr-timerbar" style="height:100%;width:100%;background:linear-gradient(90deg,#f0b429,#f97316);border-radius:100px;transition:width 1s linear"></div>
+    </div>
+    <div class="_crq-wrap" style="animation:_crSlide .3s ease">
+      <div style="font-size:0.65rem;font-weight:900;letter-spacing:0.12em;color:#4f8ef7;text-transform:uppercase;margin-bottom:10px">Question ${qi + 1}</div>
+      <div style="font-size:1.05rem;font-weight:700;line-height:1.65;color:#fff;margin-bottom:22px">${escapeHtml(q.q)}</div>
+      <div id="cr-options">
+        ${q.options.map((opt) => `<button class="_cropt" onclick="submitCrAnswer(${qi},'${opt.replace(/'/g, "\\'").replace(/"/g, "&quot;")}',this)">${escapeHtml(opt)}</button>`).join("")}
+      </div>
+      <div id="cr-feedback" style="margin-top:14px"></div>
+    </div>
+  `;
+
+  // start countdown
+  stopCrTimer();
+  _crTimerInterval = setInterval(() => {
+    _crTimeLeft--;
+    const numEl = document.getElementById("cr-timer-num");
+    const barEl = document.getElementById("cr-timerbar");
+    if (numEl) {
+      numEl.textContent = _crTimeLeft;
+      numEl.style.color =
+        _crTimeLeft <= 10
+          ? "#f0564a"
+          : _crTimeLeft <= 20
+            ? "#f0b429"
+            : "#f0b429";
+    }
+    if (barEl) barEl.style.width = (_crTimeLeft / 30) * 100 + "%";
+    if (_crTimeLeft <= 0) {
+      stopCrTimer();
+      _crTimedOut[qi] = true;
+      _crAnswered[qi] = "TIMEOUT";
+      document.querySelectorAll("._cropt").forEach((b) => (b.disabled = true));
+      const fb = document.getElementById("cr-feedback");
+      if (fb)
+        fb.innerHTML = `<div style="background:rgba(240,86,74,0.1);border:1.5px solid rgba(240,86,74,0.35);border-radius:12px;padding:12px 16px;color:#f0564a;font-weight:700;font-size:0.85rem;margin-bottom:10px">⏰ Time's up!</div>
+        <button onclick="goNextCrQ()" class="btn btn-primary" style="width:100%;padding:13px;background:linear-gradient(135deg,#4f8ef7,#9b6dff);border:none">Next →</button>`;
+      try {
+        apiPost("/classroom/answer", {
+          code: _crRoom.code,
+          playerId: _crRoom.playerId,
+          qIndex: qi,
+          chosen: "TIMEOUT",
+        });
+      } catch (e) {}
+    }
+  }, 1000);
+}
+
+function showCrAllDone() {
+  stopCrTimer();
+  const app = document.getElementById("app");
+  app.innerHTML = `
+    <div style="text-align:center;padding:40px 20px">
+      <div style="font-size:3rem;margin-bottom:12px">✅</div>
+      <div style="font-size:1.4rem;font-weight:900;color:#0fca8c;margin-bottom:8px">All Done!</div>
+      <div style="font-size:0.85rem;color:var(--text-muted);margin-bottom:24px">Waiting for others... or see your results now</div>
+      <button onclick="forceFinishRoom()" class="btn btn-primary" style="background:linear-gradient(135deg,#f0b429,#f97316);border:none;padding:12px 32px;font-size:1rem;font-weight:800">See Results →</button>
+    </div>
+  `;
+}
+
+window.forceFinishRoom = async () => {
+  stopClassroomPoll();
+  stopCrTimer();
+  try {
+    const data = await apiPost("/classroom/poll", {
+      code: _crRoom.code,
+      playerId: _crRoom.playerId,
+    });
+    data.status = "finished";
+    renderClassroomResult(data);
+  } catch (e) {
+    alert("Error: " + e.message);
+  }
+};
+
+window.submitCrAnswer = async (qIndex, chosen, btn) => {
+  if (_crAnswered[qIndex] !== undefined) return;
+  stopCrTimer();
+  _crAnswered[qIndex] = chosen;
+  document.querySelectorAll("._cropt").forEach((b) => (b.disabled = true));
+  btn.classList.add("chosen");
+  const total = _crState.questions.length;
+  const answered = Object.keys(_crAnswered).length;
+  const prog = document.getElementById("cr-progbar");
+  if (prog) prog.style.width = (answered / total) * 100 + "%";
+  try {
+    await apiPost("/classroom/answer", {
+      code: _crRoom.code,
+      playerId: _crRoom.playerId,
+      qIndex,
+      chosen,
+    });
+  } catch (e) {}
+  const fb = document.getElementById("cr-feedback");
+  if (!fb) return;
+  if (answered < total) {
+    fb.innerHTML = `<button onclick="goNextCrQ()" class="btn btn-primary" style="width:100%;padding:13px;font-size:0.95rem;background:linear-gradient(135deg,#4f8ef7,#9b6dff);border:none">Next Question →</button>`;
+  } else {
+    showCrAllDone();
+  }
+};
+
+function renderClassroomResult(state) {
+  stopCrTimer();
+  const app = document.getElementById("app");
+  const qs = _crState?.questions || [];
+  const total = qs.length;
+  let correct = 0,
+    wrong = 0,
+    timedOut = 0;
+  const qResults = qs.map((q, i) => {
+    const chosen = _crAnswered[i];
+    if (!chosen || chosen === "TIMEOUT") {
+      timedOut++;
+      return { q, chosen: null, status: "timeout" };
+    }
+    const isCorrect = chosen === q.answer;
+    if (isCorrect) correct++;
+    else wrong++;
+    return { q, chosen, status: isCorrect ? "correct" : "wrong" };
+  });
+  // leaderboard
+  const myRank =
+    state.players.findIndex((p) => p.id === _crRoom.playerId) + 1 || 1;
+  const xpAward =
+    myRank === 1 ? 50 : myRank === 2 ? 35 : myRank === 3 ? 25 : 15;
+  addXP(xpAward, "Classroom Quiz");
+  // save to stats for AI insights
+  S.classroomHistory = S.classroomHistory || [];
+  S.classroomHistory.push({
+    date: new Date().toISOString().split("T")[0],
+    subject: state.subject || "",
+    chapter: state.chapter || "",
+    total,
+    correct,
+    wrong,
+    timedOut,
+    rank: myRank,
+    players: state.players.length,
+  });
+  if (S.classroomHistory.length > 20)
+    S.classroomHistory = S.classroomHistory.slice(-20);
+  saveState();
+
+  const rankEmoji =
+    myRank === 1 ? "🥇" : myRank === 2 ? "🥈" : myRank === 3 ? "🥉" : "🎯";
+  app.innerHTML = `
+    <style>
+      @keyframes _crIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+      ._crri{animation:_crIn .4s ease both}
+    </style>
+    <!-- Score hero -->
+    <div class="_crri" style="background:linear-gradient(135deg,#1a2a6c,#2d1b69);border:1.5px solid rgba(155,109,255,0.3);border-radius:20px;padding:24px;text-align:center;margin-bottom:14px;position:relative;overflow:hidden">
+      <div style="position:absolute;top:-40px;left:50%;transform:translateX(-50%);width:200px;height:200px;border-radius:50%;background:rgba(155,109,255,0.1);filter:blur(40px)"></div>
+      <div style="font-size:3rem;margin-bottom:6px">${rankEmoji}</div>
+      <div style="font-size:1.5rem;font-weight:900;color:#fff;margin-bottom:4px">You ranked #${myRank}</div>
+      <div style="font-size:0.82rem;color:rgba(255,255,255,0.5);margin-bottom:16px">+${xpAward} XP earned</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+        <div style="background:rgba(15,202,140,0.15);border:1px solid rgba(15,202,140,0.3);border-radius:12px;padding:12px">
+          <div style="font-size:1.6rem;font-weight:900;color:#0fca8c">${correct}</div>
+          <div style="font-size:0.68rem;color:rgba(255,255,255,0.5);margin-top:2px">Correct</div>
+        </div>
+        <div style="background:rgba(240,86,74,0.12);border:1px solid rgba(240,86,74,0.3);border-radius:12px;padding:12px">
+          <div style="font-size:1.6rem;font-weight:900;color:#f0564a">${wrong}</div>
+          <div style="font-size:0.68rem;color:rgba(255,255,255,0.5);margin-top:2px">Wrong</div>
+        </div>
+        <div style="background:rgba(240,180,41,0.1);border:1px solid rgba(240,180,41,0.3);border-radius:12px;padding:12px">
+          <div style="font-size:1.6rem;font-weight:900;color:#f0b429">${timedOut}</div>
+          <div style="font-size:0.68rem;color:rgba(255,255,255,0.5);margin-top:2px">Timed Out</div>
+        </div>
+      </div>
+    </div>
+    <!-- Leaderboard -->
+    <div class="_crri" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:16px;overflow:hidden;margin-bottom:14px;animation-delay:.1s">
+      <div style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.06);font-size:0.68rem;font-weight:900;letter-spacing:0.1em;color:var(--text-muted);text-transform:uppercase">🏆 Leaderboard</div>
+      ${state.players
+        .map((p, i) => {
+          const isMe = p.id === _crRoom.playerId;
+          const col =
+            ["#f0b429", "#9b6dff", "#0fca8c"][i] || "rgba(255,255,255,0.4)";
+          return `<div style="display:flex;align-items:center;gap:12px;padding:11px 16px;${isMe ? "background:rgba(79,142,247,0.08);" : ""}border-bottom:1px solid rgba(255,255,255,0.04)">
+          <div style="font-size:1.1rem;width:24px;text-align:center">${["🥇", "🥈", "🥉"][i] || `${i + 1}.`}</div>
+          <div style="flex:1;font-weight:${isMe ? 900 : 600};color:${isMe ? "#fff" : "var(--text-secondary)"}">${p.name}${isMe ? " (you)" : ""}</div>
+          <div style="font-weight:900;color:${col}">${p.score} pts</div>
+        </div>`;
+        })
+        .join("")}
+    </div>
+    <!-- Question-by-question report -->
+    <div class="_crri" style="animation-delay:.2s">
+      <div style="font-size:0.68rem;font-weight:900;letter-spacing:0.1em;color:var(--text-muted);text-transform:uppercase;margin-bottom:12px">📋 Your Answer Report</div>
+      ${qResults
+        .map((r, i) => {
+          const bg =
+            r.status === "correct"
+              ? "rgba(15,202,140,0.07)"
+              : r.status === "wrong"
+                ? "rgba(240,86,74,0.07)"
+                : "rgba(240,180,41,0.07)";
+          const border =
+            r.status === "correct"
+              ? "rgba(15,202,140,0.3)"
+              : r.status === "wrong"
+                ? "rgba(240,86,74,0.3)"
+                : "rgba(240,180,41,0.3)";
+          const icon =
+            r.status === "correct" ? "✅" : r.status === "wrong" ? "❌" : "⏰";
+          const showAnswer = r.status !== "correct";
+          return `<div style="background:${bg};border:1.5px solid ${border};border-radius:14px;padding:14px 16px;margin-bottom:10px">
+          <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:${showAnswer ? 8 : 0}px">
+            <span style="font-size:1rem;flex-shrink:0;margin-top:1px">${icon}</span>
+            <div style="flex:1">
+              <div style="font-size:0.72rem;font-weight:800;color:var(--text-muted);margin-bottom:4px">Q${i + 1}</div>
+              <div style="font-size:0.88rem;font-weight:600;line-height:1.5;color:var(--text)">${escapeHtml(r.q.q)}</div>
+            </div>
+          </div>
+          ${
+            showAnswer
+              ? `
+            <div style="padding-left:30px">
+              ${r.chosen && r.chosen !== "TIMEOUT" ? `<div style="font-size:0.78rem;color:#f0564a;margin-bottom:4px">Your answer: <strong>${escapeHtml(r.chosen)}</strong></div>` : `<div style="font-size:0.78rem;color:#f0b429;margin-bottom:4px">You didn't answer in time</div>`}
+              <div style="font-size:0.78rem;color:#0fca8c;font-weight:700">✓ Correct: <strong>${escapeHtml(r.q.answer || "—")}</strong></div>
+            </div>`
+              : ""
+          }
+        </div>`;
+        })
+        .join("")}
+    </div>
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <button onclick="_crAnswered={};_crTimedOut={};_crCurrentQ=0;renderClassroomLobby()" class="btn btn-primary" style="flex:1;padding:13px">Play Again</button>
+      <button onclick="stopClassroomPoll();renderGames()" class="btn btn-secondary" style="flex:1;padding:13px">Back</button>
+    </div>
+  `;
+}
 
 function stopClassroomPoll() {
   if (_crPollTimer) {
@@ -3333,6 +3681,7 @@ window.doCreateRoom = async () => {
     });
     _crRoom = { code: data.code, playerId: data.playerId, isHost: true };
     _crAnswered = {};
+    _crCurrentQ = 0;
     renderWaitingRoom();
   } catch (e) {
     err.textContent = "Error: " + e.message;
@@ -3355,6 +3704,7 @@ window.doJoinRoom = async () => {
     const data = await apiPost("/classroom/join", { playerName: name, code });
     _crRoom = { code: data.code, playerId: data.playerId, isHost: false };
     _crAnswered = {};
+    _crCurrentQ = 0;
     renderWaitingRoom();
   } catch (e) {
     err.textContent = e.message.includes("404") ? "Room not found" : e.message;
@@ -3431,11 +3781,13 @@ window.doStartRoom = async () => {
     btn.textContent = "Generating questions...";
   }
   try {
+    // Send current player's level so server can personalise
+    const myLevel = getPerf()?.level || "developing";
     await apiPost("/classroom/start", {
       code: _crRoom.code,
       playerId: _crRoom.playerId,
+      playerLevels: { [_crRoom.playerId]: myLevel },
     });
-    // poll will pick up "active" and switch to quiz
   } catch (e) {
     if (btn) {
       btn.disabled = false;
@@ -3444,194 +3796,6 @@ window.doStartRoom = async () => {
     alert("Error: " + e.message);
   }
 };
-
-function renderQuiz(state) {
-  _crState = state;
-  const app = document.getElementById("app");
-  const total = state.questions.length;
-  const answered = Object.keys(_crAnswered).length;
-  app.innerHTML = `
-    <style>
-      @keyframes _crTimerPulse{0%,100%{opacity:.8}50%{opacity:1}}
-      ._croption{border-radius:12px;padding:13px 16px;cursor:pointer;border:1.5px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);transition:all .2s;font-size:0.9rem;font-weight:600;text-align:left;width:100%;font-family:inherit;color:var(--text);margin-bottom:8px}
-      ._croption:hover{border-color:rgba(79,142,247,0.5);background:rgba(79,142,247,0.1)}
-      ._croption.chosen{border-color:#4f8ef7;background:rgba(79,142,247,0.2)}
-      ._croption.correct{border-color:#0fca8c;background:rgba(15,202,140,0.15);color:#0fca8c}
-      ._croption.wrong{border-color:#f0564a;background:rgba(240,86,74,0.12);color:#f0564a}
-    </style>
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-      <div style="font-size:0.75rem;font-weight:800;color:var(--text-muted)">${answered}/${total} answered</div>
-      <div style="display:flex;gap:6px">
-        ${state.players
-          .slice(0, 4)
-          .map(
-            (p) =>
-              `<div title="${p.name}: ${p.score}pts" style="width:28px;height:28px;border-radius:50%;background:rgba(79,142,247,0.3);border:1.5px solid ${p.done ? "#0fca8c" : "rgba(79,142,247,0.4)"};display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:900">${p.name[0].toUpperCase()}</div>`,
-          )
-          .join("")}
-      </div>
-    </div>
-    <div style="height:4px;background:rgba(255,255,255,0.07);border-radius:100px;margin-bottom:20px;overflow:hidden">
-      <div style="height:100%;width:${(answered / total) * 100}%;background:linear-gradient(90deg,#4f8ef7,#9b6dff);border-radius:100px;transition:width .4s"></div>
-    </div>
-    <div id="cr-questions">
-      ${state.questions
-        .map((q, i) => {
-          const myAns = _crAnswered[i];
-          const isAnswered = myAns !== undefined;
-          return `<div style="background:rgba(255,255,255,0.03);border:1.5px solid ${isAnswered ? "rgba(79,142,247,0.25)" : "rgba(255,255,255,0.08)"};border-radius:16px;padding:18px;margin-bottom:14px" id="crq-${i}">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-            <span style="background:rgba(79,142,247,0.2);border:1px solid rgba(79,142,247,0.4);color:#4f8ef7;font-size:0.7rem;font-weight:900;padding:2px 10px;border-radius:20px">Q${i + 1}</span>
-            ${isAnswered ? `<span style="font-size:0.72rem;color:#0fca8c;font-weight:700">✓ Answered</span>` : ""}
-          </div>
-          <div style="font-size:0.93rem;font-weight:600;line-height:1.6;margin-bottom:14px">${escapeHtml(q.q)}</div>
-          ${q.options
-            .map((opt, oi) => {
-              const cls = !isAnswered ? "" : myAns === opt ? "chosen" : "";
-              return `<button class="_croption ${cls}" ${isAnswered ? "disabled" : ""} onclick="submitCrAnswer(${i},'${opt.replace(/'/g, "\\'")}',this)">${opt}</button>`;
-            })
-            .join("")}
-        </div>`;
-        })
-        .join("")}
-    </div>
-    ${
-      answered === total
-        ? `<div style="text-align:center;padding:18px;background:rgba(15,202,140,0.1);border:1.5px solid rgba(15,202,140,0.35);border-radius:14px;margin-top:4px">
-      <div style="font-size:1.2rem;font-weight:900;color:#0fca8c;margin-bottom:4px">All done! ✓</div>
-      <div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:14px">Waiting for others... or finish now</div>
-      <button onclick="forceFinishRoom()" class="btn btn-primary" style="background:linear-gradient(135deg,#f0b429,#f97316);border:none;padding:10px 28px;font-weight:800">See Results →</button>
-    </div>`
-        : ""
-    }
-  `;
-  // poll for finish
-  stopClassroomPoll();
-  _crPollTimer = setInterval(async () => {
-    try {
-      const data = await apiPost("/classroom/poll", {
-        code: _crRoom.code,
-        playerId: _crRoom.playerId,
-      });
-      if (data.status === "finished") {
-        stopClassroomPoll();
-        renderClassroomResult(data);
-      }
-      // also re-render if all done button should appear
-      const ans = Object.keys(_crAnswered).length;
-      const doneDiv = document.querySelector("[style*='See Results']");
-      if (ans === _crState?.questions?.length && !doneDiv) {
-        renderQuiz(data);
-      }
-    } catch (e) {}
-  }, 2500);
-}
-
-window.forceFinishRoom = async () => {
-  stopClassroomPoll();
-  try {
-    // force mark player as done then poll final state
-    const data = await apiPost("/classroom/poll", {
-      code: _crRoom.code,
-      playerId: _crRoom.playerId,
-    });
-    // manually flip status for display since server needs all players
-    data.status = "finished";
-    renderClassroomResult(data);
-  } catch (e) {
-    alert("Error: " + e.message);
-  }
-};
-
-window.submitCrAnswer = async (qIndex, chosen, btn) => {
-  if (_crAnswered[qIndex] !== undefined) return;
-  _crAnswered[qIndex] = chosen;
-  // disable all options for this question
-  const card = document.getElementById(`crq-${qIndex}`);
-  if (card)
-    card.querySelectorAll("._croption").forEach((b) => {
-      b.disabled = true;
-    });
-  btn.classList.add("chosen");
-  // update progress bar + counter
-  const answered = Object.keys(_crAnswered).length;
-  const total = _crState?.questions?.length || 10;
-  const counter = document.querySelector("[style*='answered']");
-  if (counter) counter.textContent = `${answered}/${total} answered`;
-  const prog = document.querySelector("[style*='transition:width .4s']");
-  if (prog) prog.style.width = (answered / total) * 100 + "%";
-  // mark question as answered in header
-  const qhead =
-    card?.querySelector("[id^='crq-'] [style*='margin-bottom:12px']") ||
-    card?.querySelector("div:first-child");
-  if (card && !card.querySelector(".cr-done-tag")) {
-    const tag = document.createElement("span");
-    tag.className = "cr-done-tag";
-    tag.style.cssText = "font-size:0.72rem;color:#0fca8c;font-weight:700";
-    tag.textContent = "✓ Answered";
-    card.querySelector("div")?.appendChild(tag);
-  }
-  // update card border
-  if (card) card.style.borderColor = "rgba(79,142,247,0.4)";
-  // if all done, show finish button
-  if (answered === total) {
-    const existingDone = document.getElementById("cr-alldone");
-    if (!existingDone) {
-      const doneDiv = document.createElement("div");
-      doneDiv.id = "cr-alldone";
-      doneDiv.style.cssText =
-        "text-align:center;padding:18px;background:rgba(15,202,140,0.1);border:1.5px solid rgba(15,202,140,0.35);border-radius:14px;margin-top:4px";
-      doneDiv.innerHTML = `<div style="font-size:1.2rem;font-weight:900;color:#0fca8c;margin-bottom:4px">All done! ✓</div><div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:14px">Waiting for others... or finish now</div><button onclick="forceFinishRoom()" class="btn btn-primary" style="background:linear-gradient(135deg,#f0b429,#f97316);border:none;padding:10px 28px;font-weight:800">See Results →</button>`;
-      document.getElementById("cr-questions")?.after(doneDiv);
-    }
-  }
-  try {
-    await apiPost("/classroom/answer", {
-      code: _crRoom.code,
-      playerId: _crRoom.playerId,
-      qIndex,
-      chosen,
-    });
-  } catch (e) {}
-};
-
-function renderClassroomResult(state) {
-  const app = document.getElementById("app");
-  const me = state.players.find((p) => p.id === _crRoom.playerId);
-  const myRank = state.players.findIndex((p) => p.id === _crRoom.playerId) + 1;
-  const rankEmoji =
-    myRank === 1 ? "🥇" : myRank === 2 ? "🥈" : myRank === 3 ? "🥉" : "🎯";
-  // award XP based on rank
-  const xpAward =
-    myRank === 1 ? 50 : myRank === 2 ? 35 : myRank === 3 ? 25 : 15;
-  awardXP(xpAward);
-  app.innerHTML = `
-    <div style="text-align:center;margin-bottom:24px">
-      <div style="font-size:3rem;margin-bottom:8px">${rankEmoji}</div>
-      <div style="font-size:1.6rem;font-weight:900;color:#fff;margin-bottom:4px">You ranked #${myRank}</div>
-      <div style="font-size:0.85rem;color:var(--text-muted)">Score: <strong style="color:#f0b429">${me?.score || 0} pts</strong> · +${xpAward} XP earned!</div>
-    </div>
-    <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.09);border-radius:18px;overflow:hidden;margin-bottom:18px">
-      <div style="padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.07);font-size:0.7rem;font-weight:900;letter-spacing:0.1em;color:var(--text-muted);text-transform:uppercase">🏆 Final Leaderboard</div>
-      ${state.players
-        .map((p, i) => {
-          const isMe = p.id === _crRoom.playerId;
-          const col =
-            ["#f0b429", "#9b6dff", "#0fca8c"][i] || "rgba(255,255,255,0.4)";
-          return `<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;${isMe ? "background:rgba(79,142,247,0.08);" : ""}border-bottom:1px solid rgba(255,255,255,0.04)">
-          <div style="font-size:1.2rem;width:28px;text-align:center">${["🥇", "🥈", "🥉"][i] || `${i + 1}.`}</div>
-          <div style="flex:1;font-weight:${isMe ? 900 : 600};color:${isMe ? "#fff" : "var(--text-secondary)"}">${p.name}${isMe ? " (you)" : ""}</div>
-          <div style="font-weight:900;color:${col}">${p.score} pts</div>
-        </div>`;
-        })
-        .join("")}
-    </div>
-    <div style="display:flex;gap:10px">
-      <button onclick="renderClassroomLobby()" class="btn btn-primary" style="flex:1;padding:13px">Play Again</button>
-      <button onclick="renderGames()" class="btn btn-secondary" style="flex:1;padding:13px">Back to Games</button>
-    </div>
-  `;
-}
 
 window.renderClassroomLobby = renderClassroomLobby;
 window.showCreateRoom = showCreateRoom;
@@ -5464,7 +5628,7 @@ function renderNotesTab() {
         "Mata ka Anchal": [
           "लेखक: शिवपूजन सहाय · संस्मरण",
           "बच्चे का पिता के साथ खेलना, राम-भजन सुनना, पिता का भक्त बनाने का प्रयास",
-          "साँप का डर लगने पर बच्चा माँ की गोद में जा छुपता है — मEB�ँ का आँचल सबसे सुरक्षित",
+          "साँप का डर लगने पर बच्चा माँ की गोद में जा छुपता है — माँ का आँचल सबसे सुरक्षित",
           "थीम: माँ का ममत्व, बचपन की निश्चिंतता, माँ-बच्चे का अटूट रिश्ता",
         ],
         "George Pancham ki Naak": [
