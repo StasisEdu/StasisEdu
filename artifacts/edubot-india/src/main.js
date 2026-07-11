@@ -3037,27 +3037,33 @@ window.changePracticeChapter = () => {
   renderPracticeSetup();
 };
 
+let _practicePicked = false;
+
 async function loadPracticeQuestions() {
-  // Show difficulty/count picker if not already set for this session
-  if (!S._practicePicked) {
+  if (!_practicePicked) {
     renderDifficultyPicker({
       title: "⚡ Daily Practice",
       color: "#9b6dff",
       backFn: "renderPracticeSetup",
       onConfirm: () => {
-        S._practicePicked = true;
+        _practicePicked = true;
         S._practiceDifficulty = _gameConfig.difficulty;
         S._practiceCount = _gameConfig.count;
-        doLoadPracticeQuestions();
+        // Reset today's practice so it reloads with new settings
+        S.todayPractice = [];
+        S.practiceDate = null;
+        saveState();
+        // Re-render practice page which will call loadPracticeQuestions again
+        renderPractice();
       },
     });
     return;
   }
+  _practicePicked = false; // reset for next visit
   doLoadPracticeQuestions();
 }
 
 async function doLoadPracticeQuestions() {
-  S._practicePicked = false; // reset for next time
   const cardsEl = document.getElementById("practiceCards");
   if (!cardsEl) return;
   const count = S._practiceCount || 3;

@@ -57,6 +57,34 @@ router.post("/solve", async (req, res) => {
     res.status(400).json({ error: "Missing fields" });
     return;
   }
+
+  // Gibberish / invalid input detection
+  const trimmedQ = question.trim().slice(0, 800);
+  const letters = (trimmedQ.match(/[a-zA-Z\u0900-\u097F]/g) || []).length;
+  const vowels = (
+    trimmedQ.match(/[aeiouAEIOU\u0905-\u090F\u0910\u0913-\u0914]/g) || []
+  ).length;
+  const vowelRatio = letters > 0 ? vowels / letters : 0;
+  const hasNoSpace = !trimmedQ.includes(" ");
+  const totalNonSpace = trimmedQ.replace(/\s/g, "").length;
+  const looksGibberish =
+    totalNonSpace > 4 &&
+    ((vowelRatio < 0.08 && letters > 5) ||
+      (hasNoSpace && totalNonSpace > 10 && vowelRatio < 0.18));
+  if (looksGibberish) {
+    res.json({
+      solution: "Hmm, that doesn't look like a valid question!",
+      steps: [
+        "It looks like you may have mistyped or entered random characters.",
+        `Please type a proper question related to ${subject}${chapter ? " — " + chapter : ""}.`,
+        'For example: "What is the law of conservation of energy?" or "Explain the water cycle."',
+      ],
+      memoryTrick:
+        "💡 Tip: Type a clear question or keyword and I'll explain it step by step!",
+    });
+    return;
+  }
+
   const systemPrompt = SOLVE_PROMPTS[level] ?? SOLVE_PROMPTS.developing;
   const chapterClause = chapter
     ? ` Focus specifically on CBSE Chapter: ${chapter}.`
@@ -69,16 +97,16 @@ router.post("/solve", async (req, res) => {
     level === "advanced"
       ? `, "challengeQuestion": "a deeper challenge question to push thinking further"`
       : "";
-  const trimmedQuestion = question.slice(0, 800);
-  const markMatch = trimmedQuestion.match(/\b(\d)\s*[-\u2013]?\s*marks?\b/i);
+  const markMatch = trimmedQ.match(/\b(\d)\s*[-\u2013]?\s*marks?\b/i);
   const marks = markMatch ? parseInt(markMatch[1]) : null;
   const stepsCount = marks ? Math.max(marks, 3) : 4;
   const depthClause = marks
     ? ` This is a ${marks}-mark CBSE question — write exactly ${stepsCount} detailed steps, each 2-3 sentences with full explanation as expected in a board exam answer.`
     : ` Write 4 clear steps, each 1-2 sentences.`;
+  const invalidClause = ` IMPORTANT: If the question is random gibberish, not in English/Hindi, or completely unrelated to ${subject}, respond with: {"solution":"Please ask a valid ${subject} question.","steps":["That doesn't seem to be a ${subject} question.","Try asking about a concept, formula, or topic from your chapter.","Example: What is photosynthesis? or Solve 2x+3=7."],"memoryTrick":""}`;
   try {
     const text = await ask(
-      `${systemPrompt}${chapterClause}${langClause}${depthClause}\nClass ${classNum} ${subject} question: ${trimmedQuestion}\nReturn ONLY valid JSON: {"solution": "one-line summary of the answer", "steps": ["detailed step 1", "detailed step 2", "..."], "memoryTrick": "a short fun trick to remember this concept"${challengeField}}`,
+      `${systemPrompt}${chapterClause}${langClause}${depthClause}${invalidClause}\nClass ${classNum} ${subject} question: ${trimmedQ}\nReturn ONLY valid JSON: {"solution": "one-line summary of the answer", "steps": ["detailed step 1", "detailed step 2", "..."], "memoryTrick": "a short fun trick to remember this concept"${challengeField}}`,
       1600,
     );
     const parsed = safeJson(text) as {
@@ -197,21 +225,21 @@ router.post("/practice", async (req, res) => {
   }
   const qCount = Math.min(parseInt(count as string) || 3, 10);
   const chapterCtx = chapter ? `Chapter: ${chapter}` : "";
+
+  // Difficulty chosen by user takes full priority
   const diffMap: Record<string, string> = {
-    easy: "easy, direct, basic recall and definitions",
-    hard: "hard, application-based, tricky distractors",
-    "very hard": "very hard, HOTS level, higher-order thinking and analysis",
+    easy: `ALL ${qCount} questions must be EASY — basic recall, direct definitions, single-step. Simple vocabulary. No tricks.`,
+    hard: `ALL ${qCount} questions must be HARD — application-based, multi-step reasoning, tricky distractors. Exam-level difficulty.`,
+    "very hard": `ALL ${qCount} questions must be VERY HARD — HOTS level, higher-order thinking, analysis, evaluation, complex scenarios. Board exam challenge level.`,
+    medium: `Generate ${qCount} questions with balanced difficulty — mix of easy and medium.`,
   };
-  const diffDesc = diffMap[difficulty] || diffMap.easy;
-  const levelMap: Record<string, string> = {
-    beginner: "beginner student (below 40%), keep it simple",
-    developing: "developing student (40-65%), mix of easy and medium",
-    proficient: "proficient student (65-85%), mix medium and hard",
-    advanced: "advanced student (above 85%), mostly hard with HOTS",
-  };
-  const levelDesc = levelMap[level] || levelMap.developing;
-  const prompt = `Generate exactly ${qCount} CBSE Class ${classNum} ${subject} ${chapterCtx} practice questions. Difficulty: ${diffDesc}. Student level: ${levelDesc}.
-Return ONLY valid JSON: {"questions":[{"question":"...","difficulty":"Easy|Medium|Hard"}]}`;
+  const diffInstruction = diffMap[difficulty] || diffMap.easy;
+
+  const prompt = `Generate exactly ${qCount} CBSE Class ${classNum} ${subject} ${chapterCtx} practice questions.
+DIFFICULTY RULE: ${diffInstruction}
+Return ONLY valid JSON (no markdown): {"questions":[{"question":"...","difficulty":"Easy|Medium|Hard"}]}
+All questions must be from the specified chapter only. No repeated topics.`;
+
   try {
     const text = await ask(prompt);
     const parsed = safeJson(text) as { questions?: unknown[] } | null;
@@ -223,7 +251,7 @@ Return ONLY valid JSON: {"questions":[{"question":"...","difficulty":"Easy|Mediu
           .fill(null)
           .map((_, i) => ({
             question: `Class ${classNum} ${subject}${chapter ? ` - ${chapter}` : ""} question ${i + 1}.`,
-            difficulty: "Medium",
+            difficulty: difficulty || "Easy",
           })),
       });
     }
@@ -305,14 +333,14 @@ router.post("/quiz", async (req, res) => {
     ? ` from CBSE Class ${classNum} ${subject} Chapter: ${chapter}`
     : ` for Class ${classNum} ${subject}`;
   const diffMap: Record<string, string> = {
-    easy: `Generate ${qCount} EASY MCQ questions. Simple language, basic recall and definitions.`,
-    hard: `Generate ${qCount} HARD MCQ questions. Application-based, tricky distractors, conceptual depth.`,
-    "very hard": `Generate ${qCount} VERY HARD MCQ questions. HOTS level, analysis and evaluation, complex scenarios.`,
+    easy: `ALL ${qCount} MCQs must be EASY — basic recall, definitions, simple language, straightforward options. No tricks.`,
+    hard: `ALL ${qCount} MCQs must be HARD — application-based, analytical, tricky distractors, exam difficulty.`,
+    "very hard": `ALL ${qCount} MCQs must be VERY HARD — HOTS level, higher-order thinking, evaluation and analysis, board exam challenge.`,
   };
   const diffHint = diffMap[difficulty] || diffMap.easy;
   try {
     const text = await ask(
-      `${diffHint}${chapterClause}. All questions must be completely different — no repeated topics. Return ONLY valid JSON: {"questions":[{"question":"...","options":["A. ...","B. ...","C. ...","D. ..."],"answer":"A"}]}`,
+      `DIFFICULTY RULE: ${diffHint}\nGenerate ${qCount} MCQs${chapterClause}. All questions must be completely different — no repeated topics.\nReturn ONLY valid JSON: {"questions":[{"question":"...","options":["A. ...","B. ...","C. ...","D. ..."],"answer":"A"}]}`,
     );
     const parsed = safeJson(text) as { questions?: unknown[] } | null;
     if (parsed?.questions && (parsed.questions as unknown[]).length > 0) {
