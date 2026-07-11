@@ -870,10 +870,8 @@ router.post("/classroom/poll", (req, res) => {
     me?.personalQuestions && me.personalQuestions.length > 0
       ? me.personalQuestions
       : room.questions;
-  const safeQuestions =
-    room.status === "finished"
-      ? myQs
-      : myQs.map(({ q, options }) => ({ q, options, answer: "" }));
+  // Always send full questions including answers — client already sees their own answers via _crAnswered
+  const safeQuestions = myQs;
   const leaderboard = Object.entries(room.players)
     .map(([id, p]) => ({ id, name: p.name, score: p.score, done: p.done }))
     .sort((a, b) => b.score - a.score);

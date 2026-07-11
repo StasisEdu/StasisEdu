@@ -3302,9 +3302,11 @@ function renderCrQuestion() {
       <div style="font-size:0.65rem;font-weight:900;letter-spacing:0.12em;color:#4f8ef7;text-transform:uppercase;margin-bottom:10px">Question ${qi + 1}</div>
       <div style="font-size:1.05rem;font-weight:700;line-height:1.65;color:#fff;margin-bottom:22px">${escapeHtml(q.q)}</div>
       <div id="cr-options">
-        ${q.options.map((opt) => `<button class="_cropt" onclick="submitCrAnswer(${qi},'${opt.replace(/'/g, "\\'").replace(/"/g, "&quot;")}',this)">${escapeHtml(opt)}</button>`).join("")}
+        ${q.options.map((opt) => `<button class="_cropt" onclick="selectCrOption(this,'${opt.replace(/'/g, "\\'").replace(/"/g, "&quot;")}')">${escapeHtml(opt)}</button>`).join("")}
       </div>
-      <div id="cr-feedback" style="margin-top:14px"></div>
+      <div id="cr-feedback" style="margin-top:14px">
+        <button id="cr-next-btn" onclick="confirmCrAnswer(${qi})" class="btn btn-primary" style="width:100%;padding:13px;font-size:0.95rem;background:linear-gradient(135deg,#4f8ef7,#9b6dff);border:none;opacity:0.4;pointer-events:none">Select an answer to continue</button>
+      </div>
     </div>
   `;
 
@@ -3373,12 +3375,37 @@ window.forceFinishRoom = async () => {
   }
 };
 
-window.submitCrAnswer = async (qIndex, chosen, btn) => {
+let _crSelectedOption = null; // currently highlighted option text
+
+window.selectCrOption = (btn, opt) => {
+  // unhighlight all, highlight clicked
+  document
+    .querySelectorAll("._cropt")
+    .forEach((b) => b.classList.remove("chosen"));
+  btn.classList.add("chosen");
+  _crSelectedOption = opt;
+  // enable next button
+  const nextBtn = document.getElementById("cr-next-btn");
+  if (nextBtn) {
+    nextBtn.style.opacity = "1";
+    nextBtn.style.pointerEvents = "auto";
+    nextBtn.textContent = "Confirm & Next →";
+  }
+};
+
+window.confirmCrAnswer = (qIndex) => {
+  if (!_crSelectedOption) return;
+  submitCrAnswer(qIndex, _crSelectedOption);
+};
+
+window.submitCrAnswer = async (qIndex, chosen) => {
   if (_crAnswered[qIndex] !== undefined) return;
   stopCrTimer();
   _crAnswered[qIndex] = chosen;
-  document.querySelectorAll("._cropt").forEach((b) => (b.disabled = true));
-  btn.classList.add("chosen");
+  _crSelectedOption = null;
+  document.querySelectorAll("._cropt").forEach((b) => {
+    b.disabled = true;
+  });
   const total = _crState.questions.length;
   const answered = Object.keys(_crAnswered).length;
   const prog = document.getElementById("cr-progbar");
