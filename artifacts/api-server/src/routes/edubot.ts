@@ -631,4 +631,232 @@ router.post("/chatbot", async (req, res) => {
   }
 });
 
+// ============================================================
+// CLASSROOM — in-memory multiplayer quiz rooms
+// ============================================================
+interface RoomPlayer {
+  name: string;
+  score: number;
+  answers: Record<number, string>; // qIndex -> chosen option
+  joinedAt: number;
+  done: boolean;
+}
+interface ClassroomRoom {
+  code: string;
+  host: string;
+  subject: string;
+  chapter: string;
+  classNum: string;
+  status: "waiting" | "active" | "finished";
+  questions: { q: string; options: string[]; answer: string }[];
+  players: Record<string, RoomPlayer>; // playerId -> player
+  createdAt: number;
+  startedAt?: number;
+}
+const ROOMS: Record<string, ClassroomRoom> = {};
+
+// Prune old rooms every 10 min
+setInterval(
+  () => {
+    const now = Date.now();
+    for (const code of Object.keys(ROOMS)) {
+      if (now - ROOMS[code].createdAt > 60 * 60 * 1000) delete ROOMS[code];
+    }
+  },
+  10 * 60 * 1000,
+);
+
+function makeCode(): string {
+  return Math.random().toString(36).slice(2, 7).toUpperCase();
+}
+
+// POST /api/classroom/create
+router.post("/classroom/create", async (req, res) => {
+  const { hostName, subject, chapter, classNum } = req.body as Record<
+    string,
+    string
+  >;
+  if (!hostName || !subject || !chapter || !classNum) {
+    res.status(400).json({ error: "Missing fields" });
+    return;
+  }
+  let code = makeCode();
+  while (ROOMS[code]) code = makeCode();
+  const playerId = "p_" + Date.now() + Math.random().toString(36).slice(2, 5);
+  ROOMS[code] = {
+    code,
+    host: playerId,
+    subject,
+    chapter,
+    classNum,
+    status: "waiting",
+    questions: [],
+    players: {
+      [playerId]: {
+        name: hostName,
+        score: 0,
+        answers: {},
+        joinedAt: Date.now(),
+        done: false,
+      },
+    },
+    createdAt: Date.now(),
+  };
+  res.json({ code, playerId });
+});
+
+// POST /api/classroom/join
+router.post("/classroom/join", (req, res) => {
+  const { code, playerName } = req.body as Record<string, string>;
+  const room = ROOMS[code?.toUpperCase()];
+  if (!room) {
+    res.status(404).json({ error: "Room not found" });
+    return;
+  }
+  if (room.status !== "waiting") {
+    res.status(400).json({ error: "Game already started" });
+    return;
+  }
+  if (Object.keys(room.players).length >= 8) {
+    res.status(400).json({ error: "Room full" });
+    return;
+  }
+  const playerId = "p_" + Date.now() + Math.random().toString(36).slice(2, 5);
+  room.players[playerId] = {
+    name: playerName,
+    score: 0,
+    answers: {},
+    joinedAt: Date.now(),
+    done: false,
+  };
+  res.json({
+    code: room.code,
+    playerId,
+    subject: room.subject,
+    chapter: room.chapter,
+    classNum: room.classNum,
+  });
+});
+
+// POST /api/classroom/start — host generates questions via Groq and starts
+router.post("/classroom/start", async (req, res) => {
+  const { code, playerId } = req.body as Record<string, string>;
+  const room = ROOMS[code];
+  if (!room) {
+    res.status(404).json({ error: "Room not found" });
+    return;
+  }
+  if (room.host !== playerId) {
+    res.status(403).json({ error: "Only host can start" });
+    return;
+  }
+  if (room.status !== "waiting") {
+    res.status(400).json({ error: "Already started" });
+    return;
+  }
+  try {
+    const prompt = `Generate exactly 10 multiple choice questions for CBSE Class ${room.classNum} ${room.subject}, chapter: "${room.chapter}".
+Return ONLY a JSON array with this exact shape (no markdown):
+[{"q":"question text","options":["A","B","C","D"],"answer":"exact text of correct option"}]
+Make questions exam-quality, varied difficulty, all 4 options plausible.`;
+    const raw = await ask(prompt, 2000);
+    const parsed = safeJson(raw) as
+      | { q: string; options: string[]; answer: string }[]
+      | null;
+    if (!Array.isArray(parsed) || parsed.length < 5) {
+      res
+        .status(500)
+        .json({ error: "Failed to generate questions, try again" });
+      return;
+    }
+    room.questions = parsed.slice(0, 10);
+    room.status = "active";
+    room.startedAt = Date.now();
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: "AI error generating questions" });
+  }
+});
+
+// POST /api/classroom/poll — get current room state
+router.post("/classroom/poll", (req, res) => {
+  const { code, playerId } = req.body as Record<string, string>;
+  const room = ROOMS[code];
+  if (!room) {
+    res.status(404).json({ error: "Room not found" });
+    return;
+  }
+  const me = room.players[playerId];
+  // Strip answers from questions when sending to client (only send answer after room finishes)
+  const safeQuestions =
+    room.status === "finished"
+      ? room.questions
+      : room.questions.map(({ q, options }) => ({ q, options, answer: "" }));
+  const leaderboard = Object.entries(room.players)
+    .map(([id, p]) => ({ id, name: p.name, score: p.score, done: p.done }))
+    .sort((a, b) => b.score - a.score);
+  res.json({
+    status: room.status,
+    questions: safeQuestions,
+    players: leaderboard,
+    myAnswers: me?.answers ?? {},
+    isHost: room.host === playerId,
+    totalPlayers: Object.keys(room.players).length,
+    subject: room.subject,
+    chapter: room.chapter,
+  });
+});
+
+// POST /api/classroom/answer — submit an answer
+router.post("/classroom/answer", (req, res) => {
+  const { code, playerId, qIndex, chosen } = req.body as {
+    code: string;
+    playerId: string;
+    qIndex: number;
+    chosen: string;
+  };
+  const room = ROOMS[code];
+  if (!room || room.status !== "active") {
+    res.status(400).json({ error: "Invalid" });
+    return;
+  }
+  const player = room.players[playerId];
+  if (!player) {
+    res.status(404).json({ error: "Player not found" });
+    return;
+  }
+  if (player.answers[qIndex] !== undefined) {
+    res.json({ ok: true, already: true });
+    return;
+  } // no re-answering
+  player.answers[qIndex] = chosen;
+  const correct = room.questions[qIndex]?.answer === chosen;
+  if (correct) player.score += 10;
+  // Check if player finished all questions
+  if (Object.keys(player.answers).length >= room.questions.length)
+    player.done = true;
+  // Check if ALL players done → finish room
+  const allDone = Object.values(room.players).every((p) => p.done);
+  if (allDone) {
+    room.status = "finished";
+    // Now reveal answers in questions
+  }
+  res.json({ ok: true, correct, score: player.score });
+});
+
+// POST /api/classroom/finish-reveal — called after room finishes to get answers
+router.post("/classroom/finish-reveal", (req, res) => {
+  const { code } = req.body as { code: string };
+  const room = ROOMS[code];
+  if (!room) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+  if (room.status !== "finished") {
+    res.status(400).json({ error: "Not finished" });
+    return;
+  }
+  res.json({ questions: room.questions });
+});
+
 export default router;

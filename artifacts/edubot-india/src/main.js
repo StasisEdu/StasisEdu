@@ -2550,36 +2550,42 @@ function renderPractice() {
     return;
   }
 
-  const pct = Math.round((done / 3) * 100);
-  const ringColor = done === 3 ? "var(--green)" : "#4f8ef7";
+  const _pct = Math.round((done / 3) * 100);
+  const _doneColor =
+    done === 3 ? "#0fca8c" : done === 2 ? "#f0b429" : "#4f8ef7";
   app.innerHTML = `
-    <div style="background:linear-gradient(135deg,rgba(79,142,247,0.12) 0%,rgba(167,139,250,0.08) 100%);border:1px solid rgba(79,142,247,0.2);border-radius:18px;padding:18px 18px 14px;margin-bottom:14px;position:relative;overflow:hidden">
-      <div style="position:absolute;top:-30px;right:-30px;width:120px;height:120px;border-radius:50%;background:radial-gradient(circle,rgba(79,142,247,0.15),transparent);pointer-events:none"></div>
-      <div style="display:flex;align-items:center;justify-content:space-between">
-        <div>
-          <div style="font-size:0.68rem;font-weight:800;letter-spacing:0.12em;color:#4f8ef7;text-transform:uppercase;margin-bottom:4px">⚡ Daily Practice</div>
-          <div style="font-size:1.15rem;font-weight:800;color:var(--text)">${new Date().toLocaleDateString("en-IN", { weekday: "long", month: "short", day: "numeric" })}</div>
-          <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-            ${subjectTag(S.subjectPreference)}
-            ${chapterTag(S.practiceChapter)}
+    <style>
+      @keyframes _pulse{0%,100%{opacity:.7}50%{opacity:1}}
+      @keyframes _fillBar{from{width:0}to{width:${_pct}%}}
+      ._pcard{border-radius:16px;padding:18px;margin-bottom:14px;position:relative;overflow:hidden;transition:box-shadow .3s}
+      ._pcard._done_ok{background:rgba(15,202,140,0.07);border:1.5px solid rgba(15,202,140,0.35)}
+      ._pcard._done_fail{background:rgba(240,86,74,0.07);border:1.5px solid rgba(240,86,74,0.3)}
+      ._pcard._pending{background:rgba(79,142,247,0.06);border:1.5px solid rgba(79,142,247,0.22)}
+      ._pcard._pending:focus-within{box-shadow:0 0 0 2px rgba(79,142,247,0.4)}
+      ._qnum{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;font-size:0.78rem;font-weight:900;margin-right:8px}
+    </style>
+    <div style="border-radius:20px;padding:0;margin-bottom:16px;overflow:hidden;border:1.5px solid rgba(79,142,247,0.3);box-shadow:0 0 40px rgba(79,142,247,0.12)">
+      <div style="background:linear-gradient(135deg,#1a2a6c,#2d1b69,#1a1a3e);padding:20px 20px 16px;position:relative;overflow:hidden">
+        <div style="position:absolute;top:-60px;right:-60px;width:200px;height:200px;border-radius:50%;background:rgba(79,142,247,0.15);filter:blur(40px)"></div>
+        <div style="position:absolute;bottom:-40px;left:-40px;width:150px;height:150px;border-radius:50%;background:rgba(155,109,255,0.12);filter:blur(30px)"></div>
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;position:relative">
+          <div>
+            <div style="font-size:0.65rem;font-weight:900;letter-spacing:0.16em;color:rgba(147,197,253,0.8);text-transform:uppercase;margin-bottom:6px">⚡ Daily Practice</div>
+            <div style="font-size:1.3rem;font-weight:900;color:#fff;margin-bottom:10px">${new Date().toLocaleDateString("en-IN", { weekday: "long", month: "short", day: "numeric" })}</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">${subjectTag(S.subjectPreference)}${chapterTag(S.practiceChapter)}</div>
+          </div>
+          <div style="text-align:center;background:rgba(255,255,255,0.08);border:1.5px solid rgba(255,255,255,0.15);border-radius:16px;padding:12px 16px;min-width:68px;backdrop-filter:blur(10px)">
+            <div style="font-size:2rem;font-weight:900;color:${_doneColor};line-height:1;text-shadow:0 0 20px ${_doneColor}">${done}</div>
+            <div style="font-size:0.6rem;color:rgba(255,255,255,0.5);margin-top:2px">of 3 done</div>
           </div>
         </div>
-        <div style="position:relative;width:68px;height:68px;flex-shrink:0">
-          <svg width="68" height="68" style="transform:rotate(-90deg)">
-            <circle cx="34" cy="34" r="28" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="6"/>
-            <circle cx="34" cy="34" r="28" fill="none" stroke="${ringColor}" stroke-width="6" stroke-linecap="round"
-              stroke-dasharray="${2 * Math.PI * 28}" stroke-dashoffset="${2 * Math.PI * 28 * (1 - pct / 100)}"
-              style="transition:stroke-dashoffset 0.6s ease"/>
-          </svg>
-          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">
-            <div style="font-size:1.2rem;font-weight:900;color:${ringColor}">${done}</div>
-            <div style="font-size:0.58rem;color:var(--text-muted);margin-top:-1px">of 3</div>
-          </div>
+        <div style="margin-top:14px;background:rgba(255,255,255,0.08);border-radius:100px;height:6px;overflow:hidden">
+          <div style="height:100%;border-radius:100px;background:linear-gradient(90deg,${_doneColor},${_doneColor}aa);animation:_fillBar .8s ease forwards;width:${_pct}%"></div>
         </div>
-      </div>
-      <div style="margin-top:12px;display:flex;align-items:center;justify-content:space-between">
-        <div style="font-size:0.78rem;color:var(--text-muted)">${t("questions_for_level")} <strong style="color:var(--text)">${perfDef.emoji} ${perfDef.name}</strong></div>
-        <button class="btn btn-secondary btn-sm" onclick="changePracticeChapter()" style="font-size:0.72rem;padding:4px 10px">${t("change_chapter")}</button>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px">
+          <div style="font-size:0.75rem;color:rgba(255,255,255,0.55)">${perfDef.emoji} <strong style="color:rgba(255,255,255,0.85)">${perfDef.name}</strong> level</div>
+          <button class="btn btn-secondary btn-sm" onclick="changePracticeChapter()" style="font-size:0.7rem;padding:4px 10px;background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.15);color:rgba(255,255,255,0.7)">Change Chapter</button>
+        </div>
       </div>
     </div>
     <div id="practiceCards"></div>
@@ -2708,45 +2714,40 @@ async function loadPracticeQuestions() {
 function renderPracticeCards(questions) {
   const cardsEl = document.getElementById("practiceCards");
   if (!cardsEl) return;
+  const _cardAccents = ["#4f8ef7", "#9b6dff", "#0fca8c"];
   cardsEl.innerHTML = questions
     .map((q, i) => {
-      const accentColors = ["#4f8ef7", "#a78bfa", "#34d399"];
-      const accent = accentColors[i % accentColors.length];
-      const statusBg = q.done
+      const ac = _cardAccents[i % _cardAccents.length];
+      const cls = q.done ? (q.correct ? "_done_ok" : "_done_fail") : "_pending";
+      const icon = q.done
         ? q.correct
-          ? "rgba(52,211,153,0.08)"
-          : "rgba(239,68,68,0.08)"
-        : "rgba(255,255,255,0.03)";
-      const statusBorder = q.done
-        ? q.correct
-          ? "rgba(52,211,153,0.25)"
-          : "rgba(239,68,68,0.25)"
-        : `${accent}22`;
+          ? "✅"
+          : "❌"
+        : `<span style="background:${ac};color:#fff;border-radius:50%;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:900">${i + 1}</span>`;
       return `
-    <div style="background:${statusBg};border:1.5px solid ${statusBorder};border-radius:16px;padding:16px;margin-bottom:12px;position:relative;overflow:hidden;transition:all .3s" id="pcard-${i}">
-      <div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:${q.done ? (q.correct ? "var(--green)" : "#ef4444") : accent};border-radius:3px 0 0 3px"></div>
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding-left:8px;flex-wrap:wrap;gap:4px">
-        <div style="display:flex;align-items:center;gap:8px">
-          <span style="background:${accent}22;border:1px solid ${accent}44;color:${accent};font-size:0.7rem;font-weight:800;padding:2px 8px;border-radius:20px">Q${i + 1}</span>
-          <span style="font-size:0.72rem;color:var(--text-muted);font-weight:600">${q.difficulty || "Medium"}</span>
+    <div class="_pcard ${cls}" id="pcard-${i}">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:${q.done ? (q.correct ? "#0fca8c" : "#f0564a") : ac};border-radius:16px 0 0 16px"></div>
+      <div style="padding-left:12px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+          ${icon}
+          <span style="font-size:0.72rem;font-weight:700;color:var(--text-muted);background:rgba(255,255,255,0.05);padding:2px 8px;border-radius:20px">${q.difficulty || "Medium"}</span>
           ${chapterTag(S.practiceChapter)}
+          ${q.done ? `<span style="margin-left:auto;font-size:0.78rem;font-weight:800;color:${q.correct ? "#0fca8c" : "#f0564a"}">${q.correct ? "Correct ✓" : "Wrong ✗"}</span>` : ""}
         </div>
-        ${q.done ? `<span style="font-size:0.78rem;font-weight:700;color:${q.correct ? "var(--green)" : "#ef4444"}">${q.correct ? "✅ Correct" : "❌ Wrong"}</span>` : ""}
+        <div style="font-size:0.93rem;line-height:1.6;color:var(--text);font-weight:500;margin-bottom:${q.done ? "12px" : "14px"}">${escapeHtml(q.question)}</div>
+        ${
+          !q.done
+            ? `
+          <textarea class="form-textarea" id="pans-${i}" placeholder="${t("type_answer")}" style="min-height:80px;background:rgba(0,0,0,0.3);border-color:${ac}44;border-radius:12px"></textarea>
+          <button class="btn btn-primary btn-sm mt-2" onclick="submitPractice(${i})" style="background:${ac};border:none;box-shadow:0 4px 14px ${ac}55">${t("submit_answer")}</button>
+        `
+            : `
+          <div style="background:${q.correct ? "rgba(15,202,140,0.08)" : "rgba(240,86,74,0.08)"};border-left:3px solid ${q.correct ? "#0fca8c" : "#f0564a"};padding:10px 14px;border-radius:0 10px 10px 0;font-size:0.83rem;color:var(--text-secondary);line-height:1.6">${escapeHtml(q.feedback || "")}</div>
+        `
+        }
+        <div id="pres-${i}"></div>
       </div>
-      <div style="font-size:0.92rem;line-height:1.55;color:var(--text);padding-left:8px;margin-bottom:12px;font-weight:500">${escapeHtml(q.question)}</div>
-      ${
-        !q.done
-          ? `
-        <textarea class="form-textarea" id="pans-${i}" placeholder="${t("type_answer")}" style="min-height:80px;border-color:${accent}33"></textarea>
-        <button class="btn btn-primary btn-sm mt-2" onclick="submitPractice(${i})" style="background:${accent};border-color:${accent}">${t("submit_answer")}</button>
-      `
-          : `
-        <div style="background:${q.correct ? "rgba(52,211,153,0.08)" : "rgba(239,68,68,0.08)"};border:1px solid ${q.correct ? "rgba(52,211,153,0.2)" : "rgba(239,68,68,0.2)"};border-radius:10px;padding:12px;font-size:0.84rem;color:var(--text-secondary);line-height:1.55;padding-left:8px">${escapeHtml(q.feedback || "")}</div>
-      `
-      }
-      <div id="pres-${i}"></div>
-    </div>
-  `;
+    </div>`;
     })
     .join("");
 }
@@ -2959,143 +2960,150 @@ function renderStats() {
       ? S.weeklyAnalysisCache.data
       : null;
 
+  const _subjectColors = {
+    Maths: "#4f8ef7",
+    Physics: "#9b6dff",
+    Biology: "#0fca8c",
+    Chemistry: "#f97316",
+    History: "#f0b429",
+    Geography: "#06b6d4",
+    Civics: "#ec4899",
+    Economics: "#8b5cf6",
+    English: "#10b981",
+    Hindi: "#ef4444",
+  };
   app.innerHTML = `
-    <div style="background:linear-gradient(135deg,rgba(79,142,247,0.15) 0%,rgba(167,139,250,0.1) 100%);border:1px solid rgba(79,142,247,0.25);border-radius:20px;padding:20px;margin-bottom:14px;text-align:center;position:relative;overflow:hidden">
-      <div style="position:absolute;top:-40px;left:50%;transform:translateX(-50%);width:180px;height:180px;border-radius:50%;background:radial-gradient(circle,rgba(79,142,247,0.12),transparent);pointer-events:none"></div>
-      <div style="font-size:3.2rem;margin-bottom:6px">${avatarEmojis[lvlIdx]}</div>
-      <div style="font-size:1.25rem;font-weight:900;color:var(--text);margin-bottom:2px">${getName() || "Student"}</div>
-      <div style="font-size:0.75rem;font-weight:700;letter-spacing:0.08em;color:#4f8ef7;text-transform:uppercase;margin-bottom:14px">${LEVELS[lvlIdx].name}</div>
-      <div style="max-width:220px;margin:0 auto">
-        <div style="display:flex;justify-content:space-between;font-size:0.72rem;color:var(--text-muted);margin-bottom:5px">
-          <span>${S.xp} XP</span>
-          <span>${info.next ? LEVELS[lvlIdx + 1].name : "MAX"}</span>
+    <style>
+      @keyframes _xpGrow{from{width:0}to{width:${info.pct}%}}
+      ._stile{border-radius:16px;padding:16px;text-align:center;position:relative;overflow:hidden}
+      ._hday{width:13px;height:13px;border-radius:3px;transition:transform .15s}
+      ._hday:hover{transform:scale(1.4)}
+    </style>
+    <!-- HERO PROFILE -->
+    <div style="border-radius:20px;overflow:hidden;margin-bottom:14px;border:1.5px solid rgba(155,109,255,0.35);box-shadow:0 0 50px rgba(155,109,255,0.15)">
+      <div style="background:linear-gradient(160deg,#0f0c29,#302b63,#24243e);padding:24px 20px;text-align:center;position:relative;overflow:hidden">
+        <div style="position:absolute;top:-60px;left:50%;transform:translateX(-50%);width:250px;height:250px;border-radius:50%;background:rgba(155,109,255,0.1);filter:blur(50px)"></div>
+        <div style="font-size:3.5rem;margin-bottom:8px;filter:drop-shadow(0 0 20px rgba(155,109,255,0.6))">${avatarEmojis[lvlIdx]}</div>
+        <div style="font-size:1.35rem;font-weight:900;color:#fff;margin-bottom:2px">${getName() || "Student"}</div>
+        <div style="display:inline-block;background:rgba(155,109,255,0.2);border:1px solid rgba(155,109,255,0.5);color:#c4b5fd;font-size:0.7rem;font-weight:800;letter-spacing:0.1em;padding:3px 12px;border-radius:20px;margin-bottom:16px">${LEVELS[lvlIdx].name}</div>
+        <div style="max-width:240px;margin:0 auto">
+          <div style="display:flex;justify-content:space-between;font-size:0.72rem;color:rgba(255,255,255,0.5);margin-bottom:6px"><span>${S.xp} XP</span><span>${info.next ? LEVELS[lvlIdx + 1].name : "MAX"}</span></div>
+          <div style="height:8px;background:rgba(255,255,255,0.1);border-radius:100px;overflow:hidden">
+            <div style="height:100%;border-radius:100px;background:linear-gradient(90deg,#9b6dff,#4f8ef7);animation:_xpGrow .9s ease forwards;width:${info.pct}%"></div>
+          </div>
+          <div style="font-size:0.7rem;color:rgba(255,255,255,0.4);margin-top:5px">${info.next ? `${LEVELS[lvlIdx + 1].min - S.xp} XP to next level` : "Maximum level!"}</div>
         </div>
-        <div style="height:8px;background:rgba(255,255,255,0.08);border-radius:8px;overflow:hidden">
-          <div style="height:100%;width:${info.pct}%;background:linear-gradient(90deg,#4f8ef7,#a78bfa);border-radius:8px;transition:width 0.8s ease"></div>
-        </div>
-        <div style="font-size:0.72rem;color:var(--text-muted);margin-top:5px">${info.next ? `${LEVELS[lvlIdx + 1].min - S.xp} XP to next level` : "Maximum level!"}</div>
+      </div>
+      <div style="background:rgba(255,255,255,0.03);border-top:1px solid rgba(255,255,255,0.07);padding:12px 18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div><span style="font-size:0.85rem;font-weight:700">${perfDef.emoji} ${perfDef.name}</span> <span style="font-size:0.75rem;color:var(--text-muted)">(${perf.percentage}%) — ${perfDef.message}</span></div>
+        <button class="btn btn-secondary btn-sm" onclick="updateMyLevel()" style="font-size:0.7rem">${t("update_score")}</button>
       </div>
     </div>
-    <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:14px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
-      <div>
-        <div style="font-size:0.68rem;font-weight:800;letter-spacing:0.1em;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px">${t("your_level")}</div>
-        <div style="font-size:1rem;font-weight:700">${perfDef.emoji} ${perfDef.name} <span style="font-size:0.78rem;color:var(--text-muted);font-weight:400">(${perf.percentage}%)</span></div>
-        <div style="font-size:0.77rem;color:var(--text-muted);font-style:italic;margin-top:2px">${perfDef.message}</div>
-      </div>
-      <button class="btn btn-secondary btn-sm" onclick="updateMyLevel()" style="font-size:0.72rem">${t("update_score")}</button>
-    </div>
+    <!-- STAT TILES -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
-      ${[
-        {
-          val: S.totalSolved,
-          label: t("questions_solved"),
-          color: "#4f8ef7",
-          icon: "📝",
-        },
-        {
-          val: `${S.streak}🔥`,
-          label: t("current_streak"),
-          color: "#f97316",
-          icon: "",
-        },
-        {
-          val: S.bestStreak,
-          label: t("best_streak"),
-          color: "#a78bfa",
-          icon: "⭐",
-        },
-        { val: S.xp, label: t("total_xp"), color: "#34d399", icon: "✨" },
-      ]
-        .map(
-          (
-            c,
-          ) => `<div style="background:linear-gradient(135deg,${c.color}12,${c.color}06);border:1px solid ${c.color}30;border-radius:14px;padding:16px 14px;text-align:center">
-        <div style="font-size:1.6rem;font-weight:900;color:${c.color}">${c.val}</div>
-        <div style="font-size:0.72rem;color:var(--text-muted);margin-top:4px;font-weight:600">${c.label}</div>
-      </div>`,
-        )
-        .join("")}
+      <div class="_stile" style="background:linear-gradient(135deg,rgba(79,142,247,0.18),rgba(79,142,247,0.06));border:1.5px solid rgba(79,142,247,0.35)">
+        <div style="position:absolute;top:-20px;right:-20px;width:80px;height:80px;border-radius:50%;background:rgba(79,142,247,0.15);filter:blur(20px)"></div>
+        <div style="font-size:2.2rem;font-weight:900;color:#4f8ef7;text-shadow:0 0 20px rgba(79,142,247,0.5)">${S.totalSolved}</div>
+        <div style="font-size:0.7rem;color:var(--text-muted);margin-top:4px;font-weight:600">${t("questions_solved")}</div>
+      </div>
+      <div class="_stile" style="background:linear-gradient(135deg,rgba(240,100,40,0.18),rgba(240,100,40,0.06));border:1.5px solid rgba(240,100,40,0.35)">
+        <div style="position:absolute;top:-20px;right:-20px;width:80px;height:80px;border-radius:50%;background:rgba(240,100,40,0.15);filter:blur(20px)"></div>
+        <div style="font-size:2.2rem;font-weight:900;color:#f97316;text-shadow:0 0 20px rgba(249,115,22,0.5)">${S.streak}🔥</div>
+        <div style="font-size:0.7rem;color:var(--text-muted);margin-top:4px;font-weight:600">${t("current_streak")}</div>
+      </div>
+      <div class="_stile" style="background:linear-gradient(135deg,rgba(155,109,255,0.18),rgba(155,109,255,0.06));border:1.5px solid rgba(155,109,255,0.35)">
+        <div style="position:absolute;top:-20px;right:-20px;width:80px;height:80px;border-radius:50%;background:rgba(155,109,255,0.15);filter:blur(20px)"></div>
+        <div style="font-size:2.2rem;font-weight:900;color:#9b6dff;text-shadow:0 0 20px rgba(155,109,255,0.5)">${S.bestStreak}</div>
+        <div style="font-size:0.7rem;color:var(--text-muted);margin-top:4px;font-weight:600">${t("best_streak")}</div>
+      </div>
+      <div class="_stile" style="background:linear-gradient(135deg,rgba(15,202,140,0.18),rgba(15,202,140,0.06));border:1.5px solid rgba(15,202,140,0.35)">
+        <div style="position:absolute;top:-20px;right:-20px;width:80px;height:80px;border-radius:50%;background:rgba(15,202,140,0.15);filter:blur(20px)"></div>
+        <div style="font-size:2.2rem;font-weight:900;color:#0fca8c;text-shadow:0 0 20px rgba(15,202,140,0.5)">${S.xp}</div>
+        <div style="font-size:0.7rem;color:var(--text-muted);margin-top:4px;font-weight:600">${t("total_xp")}</div>
+      </div>
     </div>
+    <!-- SUBJECT BARS -->
     <div class="glass" style="padding:18px;margin-bottom:14px">
-      <div style="font-size:0.72rem;font-weight:800;letter-spacing:0.08em;color:var(--text-muted);text-transform:uppercase;margin-bottom:14px">${t("subject_breakdown")}</div>
-      <div class="bar-chart">
+      <div style="font-size:0.68rem;font-weight:900;letter-spacing:0.1em;color:var(--text-muted);text-transform:uppercase;margin-bottom:14px">📚 ${t("subject_breakdown")}</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
         ${subjects
           .map((s) => {
-            const count = S.subjectCounts[s] || 0;
-            const pct2 = Math.round((count / maxCount) * 100);
-            const subjectColors = {
-              Maths: "#4f8ef7",
-              Physics: "#a78bfa",
-              Biology: "#34d399",
-              Chemistry: "#f97316",
-              History: "#f59e0b",
-              Geography: "#06b6d4",
-              Civics: "#ec4899",
-              Economics: "#8b5cf6",
-              English: "#10b981",
-              Hindi: "#ef4444",
-            };
-            const col = subjectColors[s] || "#4f8ef7";
-            return `<div class="bar-row"><div class="bar-subject">${s}</div><div class="bar-outer"><div class="bar-inner" style="width:${pct2}%;background:linear-gradient(90deg,${col},${col}88)"></div></div><div class="bar-count">${count}</div></div>`;
+            const cnt = S.subjectCounts[s] || 0;
+            const w = Math.round((cnt / maxCount) * 100);
+            const col = _subjectColors[s] || "#4f8ef7";
+            return `<div style="display:flex;align-items:center;gap:10px">
+            <div style="width:72px;font-size:0.73rem;color:var(--text-muted);text-align:right;flex-shrink:0">${s}</div>
+            <div style="flex:1;height:10px;background:rgba(255,255,255,0.06);border-radius:100px;overflow:hidden">
+              <div style="height:100%;width:${w}%;background:${col};border-radius:100px;box-shadow:0 0 8px ${col}66;transition:width 1s ease"></div>
+            </div>
+            <div style="width:22px;font-size:0.72rem;color:${cnt ? col : "var(--text-muted)"};font-weight:700;text-align:right">${cnt}</div>
+          </div>`;
           })
           .join("")}
       </div>
     </div>
+    <!-- HEATMAP -->
     <div class="glass" style="padding:18px;margin-bottom:14px">
-      <div style="font-size:0.72rem;font-weight:800;letter-spacing:0.08em;color:var(--text-muted);text-transform:uppercase;margin-bottom:12px">${t("activity_30")}</div>
-      <div class="heatmap">${days30.map((d) => `<div class="heatmap-day heat-${d.heat}" title="${d.d}"></div>`).join("")}</div>
+      <div style="font-size:0.68rem;font-weight:900;letter-spacing:0.1em;color:var(--text-muted);text-transform:uppercase;margin-bottom:12px">🗓 ${t("activity_30")}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px">${days30
+        .map((d) => {
+          const cols = [
+            "rgba(255,255,255,0.05)",
+            "rgba(79,142,247,0.3)",
+            "rgba(79,142,247,0.6)",
+            "#4f8ef7",
+          ];
+          return `<div class="_hday" style="background:${cols[d.heat]};box-shadow:${d.heat === 3 ? "0 0 6px rgba(79,142,247,0.5)" : "none"}" title="${d.d}"></div>`;
+        })
+        .join("")}</div>
     </div>
+    <!-- WEEKLY XP BARS -->
     <div class="glass" style="padding:18px;margin-bottom:14px">
-      <div style="font-size:0.72rem;font-weight:800;letter-spacing:0.08em;color:var(--text-muted);text-transform:uppercase;margin-bottom:12px">${t("weekly_xp")}</div>
+      <div style="font-size:0.68rem;font-weight:900;letter-spacing:0.1em;color:var(--text-muted);text-transform:uppercase;margin-bottom:14px">📈 ${t("weekly_xp")}</div>
       <div class="weekly-chart">
-        ${S.weeklyXP.map((xp, i) => `<div class="weekly-bar-wrap"><div class="weekly-bar-outer"><div class="weekly-bar" style="height:${Math.round((xp / maxW) * 100)}%;background:linear-gradient(180deg,#4f8ef7,#a78bfa)"></div></div><div class="weekly-day">${days[i]}</div></div>`).join("")}
+        ${S.weeklyXP.map((xp, i) => `<div class="weekly-bar-wrap"><div class="weekly-bar-outer"><div class="weekly-bar" style="height:${Math.round((xp / maxW) * 100)}%;background:linear-gradient(to top,#9b6dff,#4f8ef7);box-shadow:${xp > 0 ? "0 0 8px rgba(79,142,247,0.4)" : "none"}"></div></div><div class="weekly-day">${days[i]}</div></div>`).join("")}
       </div>
     </div>
+    <!-- WEEKLY ANALYSIS -->
     <div class="glass" style="padding:18px;margin-bottom:14px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-        <div style="font-size:0.72rem;font-weight:800;letter-spacing:0.08em;color:var(--text-muted);text-transform:uppercase">📊 This Week's Analysis</div>
-        <span style="font-size:0.7rem;color:var(--text-muted)">${new Date(weekKey).toLocaleDateString("en-IN", { month: "short", day: "numeric" })} – Today</span>
+        <div style="font-size:0.68rem;font-weight:900;letter-spacing:0.1em;color:var(--text-muted);text-transform:uppercase">📊 This Week's Analysis</div>
+        <span style="font-size:0.68rem;color:var(--text-muted)">${new Date(weekKey).toLocaleDateString("en-IN", { month: "short", day: "numeric" })} – Today</span>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
         ${[
-          { val: wk.totalQuestions, label: "Questions", color: "#4f8ef7" },
+          { v: wk.totalQuestions, l: "Questions", c: "#4f8ef7" },
           {
-            val: `${wk.activeDays}/${wk.daysSoFar}`,
-            label: "Active Days",
-            color: "#34d399",
+            v: `${wk.activeDays}/${wk.daysSoFar}`,
+            l: "Active Days",
+            c: "#0fca8c",
           },
-          { val: wk.topSubject || "—", label: "Top Subject", color: "#a78bfa" },
-          { val: wk.totalXP, label: "XP This Week", color: "#f97316" },
+          { v: wk.topSubject || "—", l: "Top Subject", c: "#9b6dff" },
+          { v: wk.totalXP, l: "XP Earned", c: "#f0b429" },
         ]
           .map(
-            (
-              c,
-            ) => `<div style="background:${c.color}10;border:1px solid ${c.color}25;border-radius:12px;padding:12px;text-align:center">
-          <div style="font-size:1.2rem;font-weight:900;color:${c.color}">${c.val}</div>
-          <div style="font-size:0.7rem;color:var(--text-muted);margin-top:3px">${c.label}</div>
-        </div>`,
+            (x) =>
+              `<div style="background:${x.c}10;border:1px solid ${x.c}30;border-radius:12px;padding:12px;text-align:center"><div style="font-size:1.25rem;font-weight:900;color:${x.c}">${x.v}</div><div style="font-size:0.68rem;color:var(--text-muted);margin-top:3px">${x.l}</div></div>`,
           )
           .join("")}
       </div>
-      <div class="weekly-chart mb-3">
-        ${wk.dailyXP.map((d) => `<div class="weekly-bar-wrap"><div class="weekly-bar-outer"><div class="weekly-bar" style="height:${Math.round((d.xp / wkMaxXP) * 100)}%;background:linear-gradient(180deg,#a78bfa,#4f8ef7)"></div></div><div class="weekly-day">${d.label}</div></div>`).join("")}
-      </div>
+      <div class="weekly-chart mb-3">${wk.dailyXP.map((d) => `<div class="weekly-bar-wrap"><div class="weekly-bar-outer"><div class="weekly-bar" style="height:${Math.round((d.xp / wkMaxXP) * 100)}%;background:linear-gradient(to top,#f0b429,#f97316)"></div></div><div class="weekly-day">${d.label}</div></div>`).join("")}</div>
       ${
         wkSubjects.length > 0
-          ? `<div class="bar-chart mb-3">
-              ${wkSubjects.map((s) => `<div class="bar-row"><div class="bar-subject">${s}</div><div class="bar-outer"><div class="bar-inner" style="width:${Math.round((wk.subjectTotals[s] / wkMaxCount) * 100)}%;background:linear-gradient(90deg,#a78bfa,#4f8ef7)"></div></div><div class="bar-count">${wk.subjectTotals[s]}</div></div>`).join("")}
-            </div>`
-          : `<div style="font-size:0.8rem;color:var(--text-muted);text-align:center;padding:8px 0;margin-bottom:10px">No questions logged yet this week — go solve or practice something!</div>`
+          ? `<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">${wkSubjects
+              .map((s) => {
+                const col = _subjectColors[s] || "#4f8ef7";
+                return `<div style="display:flex;align-items:center;gap:10px"><div style="width:72px;font-size:0.72rem;color:var(--text-muted);text-align:right">${s}</div><div style="flex:1;height:8px;background:rgba(255,255,255,0.05);border-radius:100px;overflow:hidden"><div style="height:100%;width:${Math.round((wk.subjectTotals[s] / wkMaxCount) * 100)}%;background:${col};border-radius:100px"></div></div><div style="font-size:0.7rem;font-weight:700;color:${col};width:18px;text-align:right">${wk.subjectTotals[s]}</div></div>`;
+              })
+              .join("")}</div>`
+          : `<div style="font-size:0.8rem;color:var(--text-muted);text-align:center;padding:10px 0">No activity yet this week.</div>`
       }
-      <div id="aiInsightsArea" style="border-top:1px solid rgba(255,255,255,0.07);padding-top:14px;margin-top:4px">
-        ${cachedAnalysis ? renderAIInsightsHTML(cachedAnalysis) : renderAIInsightsPrompt()}
-      </div>
+      <div id="aiInsightsArea" style="border-top:1px solid rgba(255,255,255,0.07);padding-top:14px;margin-top:4px">${cachedAnalysis ? renderAIInsightsHTML(cachedAnalysis) : renderAIInsightsPrompt()}</div>
     </div>
+    <!-- BADGES -->
     <div class="glass" style="padding:18px;margin-bottom:14px">
-      <div style="font-size:0.72rem;font-weight:800;letter-spacing:0.08em;color:var(--text-muted);text-transform:uppercase;margin-bottom:14px">🏅 Badges</div>
-      <div class="badges-grid">
-        ${BADGE_DEFS.map((b) => `<div class="badge-item ${S.badges[b.id] ? "earned" : "locked"}" title="${b.desc}"><div class="badge-emoji">${b.emoji}</div><div class="badge-name">${b.name}</div></div>`).join("")}
-      </div>
+      <div style="font-size:0.68rem;font-weight:900;letter-spacing:0.1em;color:var(--text-muted);text-transform:uppercase;margin-bottom:14px">🏅 Badges</div>
+      <div class="badges-grid">${BADGE_DEFS.map((b) => `<div class="badge-item ${S.badges[b.id] ? "earned" : "locked"}" title="${b.desc}"><div class="badge-emoji">${b.emoji}</div><div class="badge-name">${b.name}</div></div>`).join("")}</div>
     </div>
   `;
 }
@@ -3169,6 +3177,417 @@ window.generateWeeklyAnalysis = async () => {
     area.innerHTML = `<div style="padding:10px 0;color:var(--red);font-size:0.85rem">Could not generate insights: ${e.message}</div><button class="btn btn-secondary btn-sm mt-1" onclick="generateWeeklyAnalysis()">Try Again</button>`;
   }
 };
+
+// ============================================================
+// CLASSROOM — multiplayer quiz room
+// ============================================================
+let _crRoom = null; // { code, playerId, isHost }
+let _crPollTimer = null;
+let _crState = null; // last polled state
+let _crAnswered = {}; // qIndex -> chosen (local cache)
+
+function stopClassroomPoll() {
+  if (_crPollTimer) {
+    clearInterval(_crPollTimer);
+    _crPollTimer = null;
+  }
+}
+
+async function apiGet(path) {
+  const r = await fetch("/api" + path);
+  if (!r.ok) throw new Error(`API ${r.status}`);
+  return r.json();
+}
+
+function renderClassroomLobby() {
+  const app = document.getElementById("app");
+  app.innerHTML = `
+    <div style="margin-bottom:20px">
+      <button onclick="renderGames()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.85rem;padding:0;display:flex;align-items:center;gap:6px;font-family:inherit">‹ Back to Games</button>
+    </div>
+    <div style="text-align:center;margin-bottom:28px">
+      <div style="font-size:2.5rem;margin-bottom:8px;filter:drop-shadow(0 0 20px rgba(240,180,41,0.5))">🏫</div>
+      <div style="font-size:1.5rem;font-weight:900;background:linear-gradient(135deg,#f0b429,#f97316);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Classroom</div>
+      <div style="font-size:0.82rem;color:var(--text-muted);margin-top:4px">Quiz your friends live — highest score wins XP</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <button onclick="showCreateRoom()" style="background:linear-gradient(135deg,rgba(240,180,41,0.2),rgba(240,180,41,0.08));border:1.5px solid rgba(240,180,41,0.4);border-radius:18px;padding:22px;cursor:pointer;text-align:left;font-family:inherit;transition:all .2s" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+        <div style="font-size:1.5rem;margin-bottom:8px">🚀</div>
+        <div style="font-size:1rem;font-weight:900;color:#f0b429;margin-bottom:4px">Create a Room</div>
+        <div style="font-size:0.8rem;color:var(--text-muted)">Generate a room code and invite friends</div>
+      </button>
+      <button onclick="showJoinRoom()" style="background:linear-gradient(135deg,rgba(79,142,247,0.2),rgba(79,142,247,0.06));border:1.5px solid rgba(79,142,247,0.4);border-radius:18px;padding:22px;cursor:pointer;text-align:left;font-family:inherit;transition:all .2s" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+        <div style="font-size:1.5rem;margin-bottom:8px">🔗</div>
+        <div style="font-size:1rem;font-weight:900;color:#4f8ef7;margin-bottom:4px">Join a Room</div>
+        <div style="font-size:0.8rem;color:var(--text-muted)">Enter a room code from your friend</div>
+      </button>
+    </div>
+  `;
+}
+
+function showCreateRoom() {
+  const app = document.getElementById("app");
+  const subjects = [
+    "Maths",
+    "Physics",
+    "Chemistry",
+    "Biology",
+    "History",
+    "Geography",
+    "Civics",
+    "Economics",
+    "English",
+    "Hindi",
+  ];
+  const cls = S.classPreference || "10";
+  const subj = S.subjectPreference || "Maths";
+  const chapters = getChapters(cls, subj);
+  app.innerHTML = `
+    <div style="margin-bottom:20px">
+      <button onclick="renderClassroomLobby()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.85rem;padding:0;font-family:inherit">‹ Back</button>
+    </div>
+    <div style="font-size:1.2rem;font-weight:900;margin-bottom:20px">🚀 Create Room</div>
+    <div style="display:flex;flex-direction:column;gap:14px;margin-bottom:20px">
+      <div>
+        <label class="form-label">Your Name</label>
+        <input id="cr-name" class="form-input" placeholder="Enter your name" value="${getName() || ""}" style="margin-top:4px">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div>
+          <label class="form-label">Class</label>
+          <select id="cr-class" class="form-select" style="margin-top:4px" onchange="updateCrChapters()">
+            ${["6", "7", "8", "9", "10"].map((c) => `<option value="${c}" ${cls === c ? "selected" : ""}>${c}</option>`).join("")}
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Subject</label>
+          <select id="cr-subject" class="form-select" style="margin-top:4px" onchange="updateCrChapters()">
+            ${subjects.map((s) => `<option value="${s}" ${subj === s ? "selected" : ""}>${s}</option>`).join("")}
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="form-label">Chapter</label>
+        <select id="cr-chapter" class="form-select" style="margin-top:4px">
+          ${chapters.map((c) => `<option value="${c}">${c}</option>`).join("")}
+        </select>
+      </div>
+    </div>
+    <button onclick="doCreateRoom()" class="btn btn-primary" style="width:100%;background:linear-gradient(135deg,#f0b429,#f97316);border:none;font-size:1rem;padding:14px;box-shadow:0 4px 20px rgba(240,180,41,0.4)">Create Room →</button>
+    <div id="cr-err" style="color:var(--red);font-size:0.82rem;margin-top:10px;text-align:center"></div>
+  `;
+  window.updateCrChapters = () => {
+    const sel = document.getElementById("cr-chapter");
+    const chs = getChapters(
+      document.getElementById("cr-class").value,
+      document.getElementById("cr-subject").value,
+    );
+    sel.innerHTML = chs
+      .map((c) => `<option value="${c}">${c}</option>`)
+      .join("");
+  };
+}
+
+function showJoinRoom() {
+  const app = document.getElementById("app");
+  app.innerHTML = `
+    <div style="margin-bottom:20px">
+      <button onclick="renderClassroomLobby()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.85rem;padding:0;font-family:inherit">‹ Back</button>
+    </div>
+    <div style="font-size:1.2rem;font-weight:900;margin-bottom:20px">🔗 Join Room</div>
+    <div style="display:flex;flex-direction:column;gap:14px;margin-bottom:20px">
+      <div>
+        <label class="form-label">Your Name</label>
+        <input id="jr-name" class="form-input" placeholder="Enter your name" value="${getName() || ""}" style="margin-top:4px">
+      </div>
+      <div>
+        <label class="form-label">Room Code</label>
+        <input id="jr-code" class="form-input" placeholder="e.g. AB3XY" maxlength="5" style="margin-top:4px;text-transform:uppercase;font-size:1.3rem;font-weight:900;letter-spacing:0.15em;text-align:center">
+      </div>
+    </div>
+    <button onclick="doJoinRoom()" class="btn btn-primary" style="width:100%;font-size:1rem;padding:14px">Join Room →</button>
+    <div id="jr-err" style="color:var(--red);font-size:0.82rem;margin-top:10px;text-align:center"></div>
+  `;
+}
+
+window.doCreateRoom = async () => {
+  const name = document.getElementById("cr-name")?.value?.trim();
+  const classNum = document.getElementById("cr-class")?.value;
+  const subject = document.getElementById("cr-subject")?.value;
+  const chapter = document.getElementById("cr-chapter")?.value;
+  const err = document.getElementById("cr-err");
+  if (!name) {
+    err.textContent = "Enter your name";
+    return;
+  }
+  if (!chapter) {
+    err.textContent = "Select a chapter";
+    return;
+  }
+  try {
+    const data = await apiPost("/classroom/create", {
+      hostName: name,
+      subject,
+      chapter,
+      classNum,
+    });
+    _crRoom = { code: data.code, playerId: data.playerId, isHost: true };
+    _crAnswered = {};
+    renderWaitingRoom();
+  } catch (e) {
+    err.textContent = "Error: " + e.message;
+  }
+};
+
+window.doJoinRoom = async () => {
+  const name = document.getElementById("jr-name")?.value?.trim();
+  const code = document.getElementById("jr-code")?.value?.trim().toUpperCase();
+  const err = document.getElementById("jr-err");
+  if (!name) {
+    err.textContent = "Enter your name";
+    return;
+  }
+  if (!code || code.length < 4) {
+    err.textContent = "Enter a valid room code";
+    return;
+  }
+  try {
+    const data = await apiPost("/classroom/join", { playerName: name, code });
+    _crRoom = { code: data.code, playerId: data.playerId, isHost: false };
+    _crAnswered = {};
+    renderWaitingRoom();
+  } catch (e) {
+    err.textContent = e.message.includes("404") ? "Room not found" : e.message;
+  }
+};
+
+function renderWaitingRoom() {
+  const app = document.getElementById("app");
+  app.innerHTML = `
+    <div style="text-align:center;margin-bottom:24px">
+      <div style="font-size:0.72rem;font-weight:800;letter-spacing:0.12em;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px">Room Code</div>
+      <div style="font-size:3rem;font-weight:900;letter-spacing:0.2em;background:linear-gradient(135deg,#f0b429,#f97316);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 0 20px rgba(240,180,41,0.4))">${_crRoom.code}</div>
+      <div style="font-size:0.8rem;color:var(--text-muted);margin-top:4px">Share this code with friends</div>
+    </div>
+    <div id="wr-players" style="margin-bottom:20px"></div>
+    ${_crRoom.isHost ? `<button id="wr-start-btn" onclick="doStartRoom()" class="btn btn-primary" style="width:100%;padding:14px;font-size:1rem;background:linear-gradient(135deg,#f0b429,#f97316);border:none;box-shadow:0 4px 20px rgba(240,180,41,0.4)" disabled>Waiting for players...</button>` : `<div style="text-align:center;color:var(--text-muted);font-size:0.85rem">Waiting for host to start...</div>`}
+    <button onclick="stopClassroomPoll();renderGames();" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.8rem;margin-top:14px;display:block;margin-left:auto;margin-right:auto;font-family:inherit">Leave Room</button>
+  `;
+  stopClassroomPoll();
+  _crPollTimer = setInterval(pollWaiting, 2000);
+  pollWaiting();
+}
+
+async function pollWaiting() {
+  try {
+    const data = await apiPost("/classroom/poll", {
+      code: _crRoom.code,
+      playerId: _crRoom.playerId,
+    });
+    if (data.status === "active") {
+      stopClassroomPoll();
+      renderQuiz(data);
+      return;
+    }
+    const pl = document.getElementById("wr-players");
+    if (!pl) {
+      stopClassroomPoll();
+      return;
+    }
+    pl.innerHTML = `
+      <div style="font-size:0.7rem;font-weight:800;letter-spacing:0.08em;color:var(--text-muted);text-transform:uppercase;margin-bottom:10px">Players (${data.players.length})</div>
+      ${data.players
+        .map(
+          (
+            p,
+            i,
+          ) => `<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;margin-bottom:8px">
+        <div style="width:28px;height:28px;border-radius:50%;background:${["#4f8ef7", "#9b6dff", "#0fca8c", "#f0b429", "#f97316", "#ec4899"][i % 6]};display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:900;color:#fff">${p.name[0].toUpperCase()}</div>
+        <span style="font-weight:700;flex:1">${p.name}</span>
+        ${i === 0 ? `<span style="font-size:0.65rem;background:rgba(240,180,41,0.2);border:1px solid rgba(240,180,41,0.4);color:#f0b429;padding:2px 8px;border-radius:20px;font-weight:800">HOST</span>` : ""}
+      </div>`,
+        )
+        .join("")}
+    `;
+    const btn = document.getElementById("wr-start-btn");
+    if (btn) {
+      if (data.players.length >= 2) {
+        btn.disabled = false;
+        btn.textContent = `Start Quiz (${data.players.length} players) →`;
+      } else {
+        btn.disabled = true;
+        btn.textContent = "Waiting for at least 2 players...";
+      }
+    }
+  } catch (e) {
+    /* ignore poll errors */
+  }
+}
+
+window.doStartRoom = async () => {
+  const btn = document.getElementById("wr-start-btn");
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "Generating questions...";
+  }
+  try {
+    await apiPost("/classroom/start", {
+      code: _crRoom.code,
+      playerId: _crRoom.playerId,
+    });
+    // poll will pick up "active" and switch to quiz
+  } catch (e) {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = "Try Again";
+    }
+    alert("Error: " + e.message);
+  }
+};
+
+function renderQuiz(state) {
+  _crState = state;
+  const app = document.getElementById("app");
+  const total = state.questions.length;
+  const answered = Object.keys(_crAnswered).length;
+  app.innerHTML = `
+    <style>
+      @keyframes _crTimerPulse{0%,100%{opacity:.8}50%{opacity:1}}
+      ._croption{border-radius:12px;padding:13px 16px;cursor:pointer;border:1.5px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);transition:all .2s;font-size:0.9rem;font-weight:600;text-align:left;width:100%;font-family:inherit;color:var(--text);margin-bottom:8px}
+      ._croption:hover{border-color:rgba(79,142,247,0.5);background:rgba(79,142,247,0.1)}
+      ._croption.chosen{border-color:#4f8ef7;background:rgba(79,142,247,0.2)}
+      ._croption.correct{border-color:#0fca8c;background:rgba(15,202,140,0.15);color:#0fca8c}
+      ._croption.wrong{border-color:#f0564a;background:rgba(240,86,74,0.12);color:#f0564a}
+    </style>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div style="font-size:0.75rem;font-weight:800;color:var(--text-muted)">${answered}/${total} answered</div>
+      <div style="display:flex;gap:6px">
+        ${state.players
+          .slice(0, 4)
+          .map(
+            (p) =>
+              `<div title="${p.name}: ${p.score}pts" style="width:28px;height:28px;border-radius:50%;background:rgba(79,142,247,0.3);border:1.5px solid ${p.done ? "#0fca8c" : "rgba(79,142,247,0.4)"};display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:900">${p.name[0].toUpperCase()}</div>`,
+          )
+          .join("")}
+      </div>
+    </div>
+    <div style="height:4px;background:rgba(255,255,255,0.07);border-radius:100px;margin-bottom:20px;overflow:hidden">
+      <div style="height:100%;width:${(answered / total) * 100}%;background:linear-gradient(90deg,#4f8ef7,#9b6dff);border-radius:100px;transition:width .4s"></div>
+    </div>
+    <div id="cr-questions">
+      ${state.questions
+        .map((q, i) => {
+          const myAns = _crAnswered[i];
+          const isAnswered = myAns !== undefined;
+          return `<div style="background:rgba(255,255,255,0.03);border:1.5px solid ${isAnswered ? "rgba(79,142,247,0.25)" : "rgba(255,255,255,0.08)"};border-radius:16px;padding:18px;margin-bottom:14px" id="crq-${i}">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+            <span style="background:rgba(79,142,247,0.2);border:1px solid rgba(79,142,247,0.4);color:#4f8ef7;font-size:0.7rem;font-weight:900;padding:2px 10px;border-radius:20px">Q${i + 1}</span>
+            ${isAnswered ? `<span style="font-size:0.72rem;color:#0fca8c;font-weight:700">✓ Answered</span>` : ""}
+          </div>
+          <div style="font-size:0.93rem;font-weight:600;line-height:1.6;margin-bottom:14px">${escapeHtml(q.q)}</div>
+          ${q.options
+            .map((opt, oi) => {
+              const cls = !isAnswered ? "" : myAns === opt ? "chosen" : "";
+              return `<button class="_croption ${cls}" ${isAnswered ? "disabled" : ""} onclick="submitCrAnswer(${i},'${opt.replace(/'/g, "\\'")}',this)">${opt}</button>`;
+            })
+            .join("")}
+        </div>`;
+        })
+        .join("")}
+    </div>
+    ${answered === total ? `<div style="text-align:center;padding:16px;background:rgba(15,202,140,0.1);border:1px solid rgba(15,202,140,0.3);border-radius:14px;margin-top:4px"><div style="font-size:1.2rem;font-weight:900;color:#0fca8c">All done! ✓</div><div style="font-size:0.82rem;color:var(--text-muted);margin-top:4px">Waiting for others to finish...</div></div>` : ""}
+  `;
+  // poll for finish
+  stopClassroomPoll();
+  _crPollTimer = setInterval(async () => {
+    try {
+      const data = await apiPost("/classroom/poll", {
+        code: _crRoom.code,
+        playerId: _crRoom.playerId,
+      });
+      if (data.status === "finished") {
+        stopClassroomPoll();
+        renderClassroomResult(data);
+      }
+    } catch (e) {}
+  }, 2500);
+}
+
+window.submitCrAnswer = async (qIndex, chosen, btn) => {
+  if (_crAnswered[qIndex] !== undefined) return;
+  _crAnswered[qIndex] = chosen;
+  // disable all options for this question
+  const card = document.getElementById(`crq-${qIndex}`);
+  if (card)
+    card.querySelectorAll("._croption").forEach((b) => (b.disabled = true));
+  btn.classList.add("chosen");
+  try {
+    await apiPost("/classroom/answer", {
+      code: _crRoom.code,
+      playerId: _crRoom.playerId,
+      qIndex,
+      chosen,
+    });
+  } catch (e) {}
+  // re-render quiz with updated answered count
+  const answered = Object.keys(_crAnswered).length;
+  const prog = document.querySelector("[style*='transition:width']");
+  if (prog)
+    prog.style.width = (answered / _crState.questions.length) * 100 + "%";
+  // mark answered
+  const qhead = card?.querySelector("[style*='margin-bottom:12px']");
+  if (qhead && answered) {
+    const tag = card?.querySelector(".chosen");
+    if (!card?.querySelector("[style*='0fca8c']")) {
+      qhead.insertAdjacentHTML(
+        "beforeend",
+        `<span style="font-size:0.72rem;color:#0fca8c;font-weight:700">✓ Answered</span>`,
+      );
+    }
+  }
+};
+
+function renderClassroomResult(state) {
+  const app = document.getElementById("app");
+  const me = state.players.find((p) => p.id === _crRoom.playerId);
+  const myRank = state.players.findIndex((p) => p.id === _crRoom.playerId) + 1;
+  const rankEmoji =
+    myRank === 1 ? "🥇" : myRank === 2 ? "🥈" : myRank === 3 ? "🥉" : "🎯";
+  // award XP based on rank
+  const xpAward =
+    myRank === 1 ? 50 : myRank === 2 ? 35 : myRank === 3 ? 25 : 15;
+  awardXP(xpAward);
+  app.innerHTML = `
+    <div style="text-align:center;margin-bottom:24px">
+      <div style="font-size:3rem;margin-bottom:8px">${rankEmoji}</div>
+      <div style="font-size:1.6rem;font-weight:900;color:#fff;margin-bottom:4px">You ranked #${myRank}</div>
+      <div style="font-size:0.85rem;color:var(--text-muted)">Score: <strong style="color:#f0b429">${me?.score || 0} pts</strong> · +${xpAward} XP earned!</div>
+    </div>
+    <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.09);border-radius:18px;overflow:hidden;margin-bottom:18px">
+      <div style="padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.07);font-size:0.7rem;font-weight:900;letter-spacing:0.1em;color:var(--text-muted);text-transform:uppercase">🏆 Final Leaderboard</div>
+      ${state.players
+        .map((p, i) => {
+          const isMe = p.id === _crRoom.playerId;
+          const col =
+            ["#f0b429", "#9b6dff", "#0fca8c"][i] || "rgba(255,255,255,0.4)";
+          return `<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;${isMe ? "background:rgba(79,142,247,0.08);" : ""}border-bottom:1px solid rgba(255,255,255,0.04)">
+          <div style="font-size:1.2rem;width:28px;text-align:center">${["🥇", "🥈", "🥉"][i] || `${i + 1}.`}</div>
+          <div style="flex:1;font-weight:${isMe ? 900 : 600};color:${isMe ? "#fff" : "var(--text-secondary)"}">${p.name}${isMe ? " (you)" : ""}</div>
+          <div style="font-weight:900;color:${col}">${p.score} pts</div>
+        </div>`;
+        })
+        .join("")}
+    </div>
+    <div style="display:flex;gap:10px">
+      <button onclick="renderClassroomLobby()" class="btn btn-primary" style="flex:1;padding:13px">Play Again</button>
+      <button onclick="renderGames()" class="btn btn-secondary" style="flex:1;padding:13px">Back to Games</button>
+    </div>
+  `;
+}
+
+window.renderClassroomLobby = renderClassroomLobby;
+window.showCreateRoom = showCreateRoom;
+window.showJoinRoom = showJoinRoom;
 
 // ============================================================
 // LEADERBOARD PAGE
@@ -3253,11 +3672,15 @@ function renderGames() {
   const initChapters = getChapters(initClass, initSubject);
 
   app.innerHTML = `
-    <div style="margin-bottom:16px">
-      <div style="font-size:0.68rem;font-weight:800;letter-spacing:0.12em;color:#a78bfa;text-transform:uppercase;margin-bottom:4px">🎮 ${t("games_title")}</div>
-      <div style="font-size:0.85rem;color:var(--text-muted)">${t("games_sub")}</div>
+    <style>
+      @keyframes _glow{0%,100%{box-shadow:0 0 20px rgba(79,142,247,0.3)}50%{box-shadow:0 0 35px rgba(79,142,247,0.55)}}
+      ._gcfg{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.09);border-radius:18px;padding:16px;margin-bottom:18px}
+    </style>
+    <div style="margin-bottom:18px">
+      <div style="font-size:1.5rem;font-weight:900;background:linear-gradient(135deg,#4f8ef7,#9b6dff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:4px">${t("games_title")}</div>
+      <div style="font-size:0.82rem;color:var(--text-muted)">${t("games_sub")}</div>
     </div>
-    <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:16px;margin-bottom:18px">
+    <div class="_gcfg">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
         <div>
           <label class="form-label" style="margin-bottom:4px">${t("class_label")}</label>
@@ -3279,56 +3702,67 @@ function renderGames() {
         ${initChapters.map((ch) => `<option value="${ch}" ${S.chapterPreference === ch ? "selected" : ""}>${ch}</option>`).join("")}
       </select>
     </div>
-    <div style="display:flex;flex-direction:column;gap:12px">
-      ${[
-        {
-          type: "quiz",
-          icon: "🧠",
-          color: "#4f8ef7",
-          glow: "rgba(79,142,247,0.3)",
-          title: t("quiz_title"),
-          desc: t("quiz_desc"),
-          xp: t("quiz_xp"),
-          badge: "MCQ Battle",
-        },
-        {
-          type: "scramble",
-          icon: "🔤",
-          color: "#a78bfa",
-          glow: "rgba(167,139,250,0.3)",
-          title: t("scramble_title"),
-          desc: t("scramble_desc"),
-          xp: t("scramble_xp"),
-          badge: "Word Hunt",
-        },
-        {
-          type: "math",
-          icon: "🧮",
-          color: "#34d399",
-          glow: "rgba(52,211,153,0.3)",
-          title: t("math_title"),
-          desc: t("math_desc"),
-          xp: t("math_xp"),
-          badge: "Speed Math",
-        },
-      ]
-        .map(
-          (g) => `
-        <div onclick="startGame('${g.type}')" style="background:linear-gradient(135deg,${g.color}10,${g.color}05);border:1.5px solid ${g.color}30;border-radius:16px;padding:16px 18px;cursor:pointer;display:flex;align-items:center;gap:14px;position:relative;overflow:hidden;transition:all .25s" onmouseover="this.style.borderColor='${g.color}70';this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px ${g.glow}'" onmouseout="this.style.borderColor='${g.color}30';this.style.transform='';this.style.boxShadow=''">
-          <div style="width:52px;height:52px;background:${g.color}18;border:1.5px solid ${g.color}40;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;flex-shrink:0">${g.icon}</div>
-          <div style="flex:1;min-width:0">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
-              <div style="font-size:0.95rem;font-weight:800;color:var(--text)">${g.title}</div>
-              <span style="background:${g.color}18;border:1px solid ${g.color}33;color:${g.color};font-size:0.62rem;font-weight:800;padding:1px 7px;border-radius:20px;letter-spacing:0.05em;white-space:nowrap">${g.badge}</span>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div onclick="startGame('quiz')" style="cursor:pointer;border-radius:20px;overflow:hidden;border:1.5px solid rgba(79,142,247,0.4);transition:all .25s" onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 12px 40px rgba(79,142,247,0.3)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+        <div style="background:linear-gradient(135deg,rgba(79,142,247,0.25),rgba(79,142,247,0.08));padding:20px;display:flex;align-items:center;gap:16px;position:relative;overflow:hidden">
+          <div style="position:absolute;top:-30px;right:-30px;width:120px;height:120px;border-radius:50%;background:rgba(79,142,247,0.15);filter:blur(30px)"></div>
+          <div style="width:60px;height:60px;border-radius:16px;background:rgba(79,142,247,0.2);border:2px solid rgba(79,142,247,0.5);display:flex;align-items:center;justify-content:center;font-size:2rem;flex-shrink:0;box-shadow:0 0 20px rgba(79,142,247,0.3)">🧠</div>
+          <div style="flex:1">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+              <span style="font-size:1.05rem;font-weight:900;color:#fff">${t("quiz_title")}</span>
+              <span style="background:rgba(79,142,247,0.25);border:1px solid rgba(79,142,247,0.5);color:#93c5fd;font-size:0.62rem;font-weight:800;padding:2px 8px;border-radius:20px">MCQ</span>
             </div>
-            <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:4px">${g.desc}</div>
-            <div style="font-size:0.72rem;font-weight:700;color:${g.color}">${g.xp}</div>
+            <div style="font-size:0.78rem;color:rgba(255,255,255,0.55);margin-bottom:6px">${t("quiz_desc")}</div>
+            <div style="font-size:0.75rem;font-weight:800;color:#4f8ef7">${t("quiz_xp")}</div>
           </div>
-          <div style="color:${g.color};font-size:1.3rem;font-weight:300;flex-shrink:0">›</div>
+          <div style="font-size:1.5rem;color:rgba(79,142,247,0.7)">›</div>
         </div>
-      `,
-        )
-        .join("")}
+      </div>
+      <div onclick="startGame('scramble')" style="cursor:pointer;border-radius:20px;overflow:hidden;border:1.5px solid rgba(155,109,255,0.4);transition:all .25s" onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 12px 40px rgba(155,109,255,0.3)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+        <div style="background:linear-gradient(135deg,rgba(155,109,255,0.25),rgba(155,109,255,0.08));padding:20px;display:flex;align-items:center;gap:16px;position:relative;overflow:hidden">
+          <div style="position:absolute;top:-30px;right:-30px;width:120px;height:120px;border-radius:50%;background:rgba(155,109,255,0.15);filter:blur(30px)"></div>
+          <div style="width:60px;height:60px;border-radius:16px;background:rgba(155,109,255,0.2);border:2px solid rgba(155,109,255,0.5);display:flex;align-items:center;justify-content:center;font-size:2rem;flex-shrink:0;box-shadow:0 0 20px rgba(155,109,255,0.3)">🔤</div>
+          <div style="flex:1">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+              <span style="font-size:1.05rem;font-weight:900;color:#fff">${t("scramble_title")}</span>
+              <span style="background:rgba(155,109,255,0.25);border:1px solid rgba(155,109,255,0.5);color:#c4b5fd;font-size:0.62rem;font-weight:800;padding:2px 8px;border-radius:20px">WORD</span>
+            </div>
+            <div style="font-size:0.78rem;color:rgba(255,255,255,0.55);margin-bottom:6px">${t("scramble_desc")}</div>
+            <div style="font-size:0.75rem;font-weight:800;color:#9b6dff">${t("scramble_xp")}</div>
+          </div>
+          <div style="font-size:1.5rem;color:rgba(155,109,255,0.7)">›</div>
+        </div>
+      </div>
+      <div onclick="renderClassroomLobby()" style="cursor:pointer;border-radius:20px;overflow:hidden;border:1.5px solid rgba(240,180,41,0.4);transition:all .25s" onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 12px 40px rgba(240,180,41,0.3)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+        <div style="background:linear-gradient(135deg,rgba(240,180,41,0.22),rgba(240,180,41,0.06));padding:20px;display:flex;align-items:center;gap:16px;position:relative;overflow:hidden">
+          <div style="position:absolute;top:-30px;right:-30px;width:120px;height:120px;border-radius:50%;background:rgba(240,180,41,0.15);filter:blur(30px)"></div>
+          <div style="width:60px;height:60px;border-radius:16px;background:rgba(240,180,41,0.2);border:2px solid rgba(240,180,41,0.5);display:flex;align-items:center;justify-content:center;font-size:2rem;flex-shrink:0;box-shadow:0 0 20px rgba(240,180,41,0.3)">🏫</div>
+          <div style="flex:1">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+              <span style="font-size:1.05rem;font-weight:900;color:#fff">Classroom</span>
+              <span style="background:rgba(240,180,41,0.25);border:1px solid rgba(240,180,41,0.5);color:#fcd34d;font-size:0.62rem;font-weight:800;padding:2px 8px;border-radius:20px">LIVE</span>
+            </div>
+            <div style="font-size:0.78rem;color:rgba(255,255,255,0.55);margin-bottom:6px">Create or join a room — quiz your friends live</div>
+            <div style="font-size:0.75rem;font-weight:800;color:#f0b429">+XP for top rank 🏆</div>
+          </div>
+          <div style="font-size:1.5rem;color:rgba(240,180,41,0.7)">›</div>
+        </div>
+      </div>
+      <div onclick="startGame('math')" style="cursor:pointer;border-radius:20px;overflow:hidden;border:1.5px solid rgba(15,202,140,0.4);transition:all .25s" onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 12px 40px rgba(15,202,140,0.3)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+        <div style="background:linear-gradient(135deg,rgba(15,202,140,0.22),rgba(15,202,140,0.06));padding:20px;display:flex;align-items:center;gap:16px;position:relative;overflow:hidden">
+          <div style="position:absolute;top:-30px;right:-30px;width:120px;height:120px;border-radius:50%;background:rgba(15,202,140,0.15);filter:blur(30px)"></div>
+          <div style="width:60px;height:60px;border-radius:16px;background:rgba(15,202,140,0.2);border:2px solid rgba(15,202,140,0.5);display:flex;align-items:center;justify-content:center;font-size:2rem;flex-shrink:0;box-shadow:0 0 20px rgba(15,202,140,0.3)">🧮</div>
+          <div style="flex:1">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+              <span style="font-size:1.05rem;font-weight:900;color:#fff">${t("math_title")}</span>
+              <span style="background:rgba(15,202,140,0.2);border:1px solid rgba(15,202,140,0.5);color:#6ee7b7;font-size:0.62rem;font-weight:800;padding:2px 8px;border-radius:20px">SPEED</span>
+            </div>
+            <div style="font-size:0.78rem;color:rgba(255,255,255,0.55);margin-bottom:6px">${t("math_desc")}</div>
+            <div style="font-size:0.75rem;font-weight:800;color:#0fca8c">${t("math_xp")}</div>
+          </div>
+          <div style="font-size:1.5rem;color:rgba(15,202,140,0.7)">›</div>
+        </div>
+      </div>
     </div>
   `;
 
@@ -3927,8 +4361,13 @@ function renderPapersTab() {
   const papers = INAPP_PAPERS;
   const TAG_COLOR = {
     "Sample Paper": "#4f8ef7",
-    PYQ: "#a78bfa",
-    "Marking Scheme": "#34d399",
+    PYQ: "#9b6dff",
+    "Marking Scheme": "#0fca8c",
+  };
+  const TAG_BG = {
+    "Sample Paper": "rgba(79,142,247,0.12)",
+    PYQ: "rgba(155,109,255,0.12)",
+    "Marking Scheme": "rgba(15,202,140,0.1)",
   };
   const SUBJECTS = [
     "All",
@@ -3939,10 +4378,10 @@ function renderPapersTab() {
     "Hindi",
   ];
 
-  const filterPills = `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid rgba(255,255,255,0.07)">
+  const filterPills = `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px">
     ${SUBJECTS.map((s, i) => {
       const active = i === 0;
-      return `<button class="subject-filter-pill${active ? " active" : ""}" data-subject="${s}" onclick="filterPapers('${s}')" style="padding:6px 14px;border-radius:20px;border:1.5px solid ${active ? "#4f8ef7" : "rgba(255,255,255,0.1)"};background:${active ? "rgba(79,142,247,0.15)" : "rgba(255,255,255,0.04)"};color:${active ? "#4f8ef7" : "var(--text-muted)"};font-size:0.76rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s;letter-spacing:0.02em">${s}</button>`;
+      return `<button class="subject-filter-pill${active ? " active" : ""}" data-subject="${s}" onclick="filterPapers('${s}')" style="padding:7px 15px;border-radius:22px;border:1.5px solid ${active ? "#4f8ef7" : "rgba(255,255,255,0.1)"};background:${active ? "rgba(79,142,247,0.18)" : "rgba(255,255,255,0.04)"};color:${active ? "#4f8ef7" : "var(--text-muted)"};font-size:0.76rem;font-weight:800;cursor:pointer;font-family:inherit;transition:all .2s;letter-spacing:0.02em;box-shadow:${active ? "0 0 12px rgba(79,142,247,0.25)" : "none"}">${s}</button>`;
     }).join("")}
   </div>`;
 
@@ -3955,28 +4394,31 @@ function renderPapersTab() {
   let cardsHtml = filterPills;
   Object.entries(grouped).forEach(([tag, items]) => {
     const color = TAG_COLOR[tag] || "#4f8ef7";
-    cardsHtml += `<div class="papers-group" style="margin-bottom:24px">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-        <div style="width:3px;height:16px;background:${color};border-radius:3px"></div>
-        <div style="font-size:0.7rem;font-weight:900;letter-spacing:0.1em;color:${color};text-transform:uppercase">${tag}s</div>
-        <div style="flex:1;height:1px;background:${color}18"></div>
-        <span style="font-size:0.68rem;color:var(--text-muted)">${items.length}</span>
+    const bg = TAG_BG[tag] || "rgba(79,142,247,0.08)";
+    cardsHtml += `<div class="papers-group" style="margin-bottom:26px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <div style="height:22px;width:3px;background:${color};border-radius:3px;box-shadow:0 0 8px ${color}88"></div>
+        <span style="font-size:0.7rem;font-weight:900;letter-spacing:0.12em;color:${color};text-transform:uppercase">${tag}s</span>
+        <span style="background:${color}18;color:${color};border:1px solid ${color}33;font-size:0.65rem;font-weight:800;padding:1px 8px;border-radius:20px">${items.length}</span>
       </div>
       ${items
         .map(
           (p) => `
         <div data-subject="${p.subject}" class="paper-card" onclick="showPaper('${p.id}')" style="margin-bottom:10px;cursor:pointer">
-          <div style="background:linear-gradient(135deg,${color}08,${color}04);border:1.5px solid ${color}20;border-radius:14px;padding:14px 16px;transition:all .25s" onmouseover="this.style.borderColor='${color}55';this.style.transform='translateY(-2px)';this.style.background='linear-gradient(135deg,${color}12,${color}06)'" onmouseout="this.style.borderColor='${color}20';this.style.transform='';this.style.background='linear-gradient(135deg,${color}08,${color}04)'">
-            <div style="display:flex;align-items:center;gap:12px;justify-content:space-between">
+          <div style="background:${bg};border:1.5px solid ${color}25;border-radius:16px;padding:16px;transition:all .25s;position:relative;overflow:hidden"
+            onmouseover="this.style.borderColor='${color}66';this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 30px ${color}22'"
+            onmouseout="this.style.borderColor='${color}25';this.style.transform='';this.style.boxShadow=''">
+            <div style="position:absolute;top:-20px;right:-20px;width:80px;height:80px;border-radius:50%;background:${color}10;filter:blur(20px)"></div>
+            <div style="display:flex;align-items:flex-start;gap:12px;justify-content:space-between">
               <div style="flex:1;min-width:0">
-                <div style="font-weight:800;color:var(--text);font-size:0.9rem;margin-bottom:5px;line-height:1.3">${p.label}</div>
-                <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-                  <span style="font-size:0.7rem;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);padding:2px 8px;border-radius:20px;color:var(--text-muted)">${p.year}</span>
-                  <span style="font-size:0.7rem;background:${color}12;border:1px solid ${color}25;padding:2px 8px;border-radius:20px;color:${color}">${p.subject}</span>
-                  <span style="font-size:0.7rem;color:var(--text-muted)">${p.maxMarks} marks · ${p.time}</span>
+                <div style="font-weight:800;color:var(--text);font-size:0.9rem;margin-bottom:8px;line-height:1.35">${p.label}</div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap">
+                  <span style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);color:var(--text-muted);font-size:0.68rem;font-weight:700;padding:2px 9px;border-radius:20px">${p.year}</span>
+                  <span style="background:${color}15;border:1px solid ${color}30;color:${color};font-size:0.68rem;font-weight:700;padding:2px 9px;border-radius:20px">${p.subject}</span>
+                  <span style="color:var(--text-muted);font-size:0.68rem">${p.maxMarks} marks · ${p.time}</span>
                 </div>
               </div>
-              <div style="flex-shrink:0;background:${color}15;border:1.5px solid ${color}40;border-radius:10px;padding:7px 14px;font-size:0.76rem;font-weight:800;color:${color};white-space:nowrap">View →</div>
+              <div style="flex-shrink:0;background:${color};color:#fff;border-radius:12px;padding:8px 16px;font-size:0.78rem;font-weight:900;box-shadow:0 4px 14px ${color}55;white-space:nowrap">View →</div>
             </div>
           </div>
         </div>`,
@@ -3992,9 +4434,10 @@ function renderPapersTab() {
       const active = btn.dataset.subject === subject;
       btn.style.borderColor = active ? "#4f8ef7" : "rgba(255,255,255,0.1)";
       btn.style.background = active
-        ? "rgba(79,142,247,0.15)"
+        ? "rgba(79,142,247,0.18)"
         : "rgba(255,255,255,0.04)";
       btn.style.color = active ? "#4f8ef7" : "var(--text-muted)";
+      btn.style.boxShadow = active ? "0 0 12px rgba(79,142,247,0.25)" : "none";
     });
     document.querySelectorAll(".paper-card").forEach((card) => {
       const show = subject === "All" || card.dataset.subject === subject;
@@ -4954,7 +5397,7 @@ function renderNotesTab() {
         ],
         "Sarveshwar Dayal Saxena": [
           "पाठ 'मानवीय करुणा की दिव्य चमक' — फादर बुल्के पर संस्मरण",
-          "फादर बुल्के: बेल्जियम के ईसाई पादरी जो हिंदी से प्रेम करते थ:��",
+          "फादर बुल्के: बेल्जियम के ईसाई पादरी जो हिंदी से प्रेम करते थे",
           "रामकथा पर शोध किया · अंग्रेज़ी-हिंदी शब्दकोश बनाया",
           "थीम: मानवीयता, करुणा, सांस्कृतिक एकता",
         ],
@@ -4993,7 +5436,7 @@ function renderNotesTab() {
         "Ehi Thaiya Jhulani Herani Ho Rama": [
           "लेखक: शिवप्रसाद मिश्र 'रुद्र' · काशी की संस्कृति पर",
           "दुलारी और टुन्नू की कहानी — काशी के लोकगीत, विदेशी कपड़ों का बहिष्कार",
-          "टुन्नू की देशभक्ति — विदेशी कपड़े छोड़ता है, ब्रिटिश अधिकारी द्वारा मारा जाता है",
+          "टुनeb�नू की देशभक्ति — विदेशी कपड़े छोड़ता है, ब्रिटिश अधिकारी द्वारा मारा जाता है",
           "दुलारी टुन्नू के मरने के बाद उसका खद्दर का कपड़ा ओढ़कर जुलूस में शामिल होती है",
           "थीम: देशभक्ति, स्वदेशी आंदोलन, त्याग",
         ],
@@ -5710,7 +6153,7 @@ showNameSplash(init);
   const style = document.createElement("style");
   style.textContent = `
     #nova-fab {
-      position:fixed;bottom:24px;right:24px;z-index:9999;
+      position:fixed;bottom:88px;right:24px;z-index:9999;
       width:54px;height:54px;border-radius:50%;
       background:linear-gradient(135deg,#4f8ef7 0%,#a855f7 100%);
       box-shadow:0 4px 20px rgba(79,142,247,0.55);
@@ -5726,7 +6169,7 @@ showNameSplash(init);
     }
     @keyframes nova-pulse{0%,100%{transform:scale(1);opacity:.6}50%{transform:scale(1.2);opacity:0}}
     #nova-panel{
-      position:fixed;z-index:9998;bottom:90px;right:24px;
+      position:fixed;z-index:9998;bottom:154px;right:24px;
       width:360px;height:500px;
       background:rgba(10,12,20,0.97);
       backdrop-filter:blur(20px);
