@@ -978,4 +978,349 @@ router.post("/classroom/finish-reveal", (req, res) => {
   res.json({ questions: room.questions });
 });
 
+// ============================================================
+// REVISION SCHEDULE
+// ============================================================
+router.post("/revision-schedule", async (req, res) => {
+  const {
+    classNum,
+    subjects,
+    examDate,
+    dailyHours,
+    daysLeft,
+    weakContext,
+    subjectCounts,
+  } = req.body as {
+    classNum: string;
+    subjects: string[];
+    examDate: string;
+    dailyHours: number;
+    daysLeft: number;
+    weakContext: string;
+    subjectCounts: Record<string, number>;
+  };
+  // Generate dates for next 14 days (or until exam)
+  const days = Math.min(daysLeft, 14);
+  const dateList = Array.from({ length: days }, (_, i) => {
+    const d = new Date(Date.now() + i * 86400000);
+    return d.toISOString().split("T")[0];
+  });
+  // Weight subjects by how little they've been practiced
+  const subjectWeights = subjects.map((s) => ({
+    subject: s,
+    weight: Math.max(1, 10 - Math.floor((subjectCounts[s] || 0) / 5)),
+  }));
+  const totalWeight = subjectWeights.reduce((a, b) => a + b.weight, 0);
+  const prompt = `You are a CBSE Class ${classNum} exam planner. The student has ${daysLeft} days until their exam on ${examDate}.
+They study ${dailyHours} hours/day. Subjects: ${subjects.join(", ")}.
+Subject practice history (weak subjects have lower counts): ${weakContext}
+
+Create a 14-day revision schedule. Prioritise weaker subjects more. Include revision, practice, and mock test days.
+Return ONLY valid JSON:
+{
+  "days": [
+    {
+      "date": "YYYY-MM-DD",
+      "tasks": [
+        {"subject":"Maths","task":"Revise Quadratic Equations + solve 5 PYQs","duration":"2 hrs","emoji":"📐"},
+        {"subject":"Physics","task":"Practice Electricity numericals","duration":"1.5 hrs","emoji":"⚡"}
+      ]
+    }
+  ],
+  "tips": ["3-4 specific study tips based on their weak areas and days remaining"]
+}
+Generate exactly ${days} day entries. Use these dates in order: ${dateList.join(", ")}.
+Vary tasks — include revision, practice questions, mock tests, and rest/light revision days.`;
+
+  try {
+    const text = await ask(prompt, 2000);
+    const parsed = safeJson(text) as {
+      days?: unknown[];
+      tips?: string[];
+    } | null;
+    if (parsed?.days) {
+      res.json({
+        days: parsed.days,
+        tips: parsed.tips || [],
+        subjects,
+        examDate,
+        dailyHours,
+      });
+    } else {
+      // Fallback: simple alternating schedule
+      const fallbackDays = dateList.map((date, i) => ({
+        date,
+        tasks: subjects.slice(0, dailyHours >= 4 ? 2 : 1).map((s, si) => ({
+          subject: s,
+          task:
+            i % 7 === 6
+              ? "Light revision + rest"
+              : "Revise key concepts + practice questions",
+          duration: `${Math.floor(dailyHours / Math.min(subjects.length, dailyHours >= 4 ? 2 : 1))} hrs`,
+          emoji: ["📐", "⚡", "🧪", "🌿", "📜", "🗺️", "⚖️", "💰", "📝", "🇮🇳"][
+            subjects.indexOf(s) % 10
+          ],
+        })),
+      }));
+      res.json({
+        days: fallbackDays,
+        tips: [
+          "Focus on weak chapters first",
+          "Solve at least 2 PYQs per chapter",
+          "Take a full mock test every 5 days",
+        ],
+        subjects,
+        examDate,
+        dailyHours,
+      });
+    }
+  } catch (e) {
+    req.log.error({ err: e }, "revision-schedule error");
+    res.status(500).json({ error: "AI error" });
+  }
+});
+
+// ============================================================
+// MOCK TEST
+// ============================================================
+router.post("/mock-test/generate", async (req, res) => {
+  const { classNum, subject, chapter, duration } = req.body as Record<
+    string,
+    string
+  >;
+  const mins = parseInt(duration as string) || 40;
+  const aCount = mins >= 60 ? 10 : mins >= 40 ? 8 : 5;
+  const bCount = mins >= 60 ? 5 : mins >= 40 ? 4 : 3;
+  const cCount = mins >= 60 ? 3 : mins >= 40 ? 2 : 1;
+  const chCtx = chapter ? `Chapter: ${chapter}` : "";
+  const prompt = `Generate a CBSE Class ${classNum} ${subject} ${chCtx} mock test.
+Return ONLY valid JSON (no markdown):
+{
+  "sectionA": [{"q":"MCQ question","options":["A. opt1","B. opt2","C. opt3","D. opt4"],"answer":0}], (${aCount} questions, answer = 0-3 index)
+  "sectionB": [{"q":"short answer question (2 marks, 25-30 words)"}], (${bCount} questions)
+  "sectionC": [{"q":"long answer question (5 marks, 60-80 words)"}] (${cCount} questions)
+}
+Make all questions exam-quality, varied difficulty, strictly from the CBSE ${subject} curriculum.`;
+  try {
+    const text = await ask(prompt, 2000);
+    const parsed = safeJson(text) as {
+      sectionA?: unknown[];
+      sectionB?: unknown[];
+      sectionC?: unknown[];
+    } | null;
+    if (!parsed || !parsed.sectionA) {
+      res.status(500).json({ error: "Failed to generate test" });
+      return;
+    }
+    res.json({
+      questions: [
+        ...(parsed.sectionA || []),
+        ...(parsed.sectionB || []),
+        ...(parsed.sectionC || []),
+      ],
+      sectionA: parsed.sectionA || [],
+      sectionB: parsed.sectionB || [],
+      sectionC: parsed.sectionC || [],
+    });
+  } catch (e) {
+    req.log.error({ err: e }, "mock-test generate error");
+    res.status(500).json({ error: "AI error" });
+  }
+});
+
+router.post("/mock-test/grade", async (req, res) => {
+  const { classNum, subject, chapter, sectionA, sectionB, sectionC, answers } =
+    req.body as {
+      classNum: string;
+      subject: string;
+      chapter: string;
+      sectionA: { q: string; options: string[]; answer: number }[];
+      sectionB: { q: string }[];
+      sectionC: { q: string }[];
+      answers: Record<string, unknown>;
+    };
+  // Grade Section A (MCQ) — instant
+  let secAScore = 0;
+  const detailed: {
+    question: string;
+    correct: boolean;
+    correctAnswer: string;
+    comment: string;
+  }[] = [];
+  (sectionA || []).forEach((q, i) => {
+    const userAns = answers[`A_${i}`];
+    const correct = userAns === q.answer;
+    if (correct) secAScore++;
+    detailed.push({
+      question: q.q,
+      correct,
+      correctAnswer: (q.options || [])[q.answer] || "",
+      comment: "",
+    });
+  });
+  const maxA = (sectionA || []).length;
+
+  // Grade B and C via AI
+  const bAnswers = (sectionB || []).map((q, i) => ({
+    q: q.q,
+    ans: answers[`B_${i}`] || "(no answer)",
+  }));
+  const cAnswers = (sectionC || []).map((q, i) => ({
+    q: q.q,
+    ans: answers[`C_${i}`] || "(no answer)",
+  }));
+  const maxB = (sectionB || []).length * 2;
+  const maxC = (sectionC || []).length * 5;
+
+  try {
+    const gradePrompt = `You are a CBSE ${subject} examiner for Class ${classNum}${chapter ? ` (${chapter})` : ""}.
+Grade these student answers. Return ONLY valid JSON:
+{
+  "secBScore": number (out of ${maxB}),
+  "secCScore": number (out of ${maxC}),
+  "feedback": "2-3 sentence overall feedback mentioning specific strengths and gaps",
+  "weakAreas": ["topic 1 needs work","topic 2 needs work"],
+  "bDetailed": [{"correct":true/false,"comment":"brief comment","score":0-2}],
+  "cDetailed": [{"correct":true/false,"comment":"brief comment","score":0-5}]
+}
+
+Section B answers (2 marks each):
+${bAnswers.map((b, i) => `Q${i + 1}: ${b.q}\nAnswer: ${b.ans}`).join("\n\n")}
+
+Section C answers (5 marks each):
+${cAnswers.map((c, i) => `Q${i + 1}: ${c.q}\nAnswer: ${c.ans}`).join("\n\n")}`;
+
+    const gradeText = await ask(gradePrompt, 1200);
+    const graded = safeJson(gradeText) as {
+      secBScore?: number;
+      secCScore?: number;
+      feedback?: string;
+      weakAreas?: string[];
+      bDetailed?: { correct: boolean; comment: string; score: number }[];
+      cDetailed?: { correct: boolean; comment: string; score: number }[];
+    } | null;
+
+    const secBScore = graded?.secBScore ?? 0;
+    const secCScore = graded?.secCScore ?? 0;
+    (graded?.bDetailed || []).forEach((d, i) => {
+      if ((sectionB || [])[i])
+        detailed.push({
+          question: (sectionB[i] || { q: "" }).q,
+          correct: d.correct,
+          correctAnswer: "",
+          comment: d.comment || "",
+        });
+    });
+    (graded?.cDetailed || []).forEach((d, i) => {
+      if ((sectionC || [])[i])
+        detailed.push({
+          question: (sectionC[i] || { q: "" }).q,
+          correct: d.correct,
+          correctAnswer: "",
+          comment: d.comment || "",
+        });
+    });
+
+    res.json({
+      secA: secAScore,
+      maxA,
+      secB: secBScore,
+      maxB,
+      secC: secCScore,
+      maxC,
+      totalScore: secAScore + secBScore + secCScore,
+      maxScore: maxA + maxB + maxC,
+      feedback: graded?.feedback || "",
+      weakAreas: graded?.weakAreas || [],
+      detailed,
+    });
+  } catch (e) {
+    req.log.error({ err: e }, "mock-test grade error");
+    res.json({
+      secA: secAScore,
+      maxA,
+      secB: 0,
+      maxB,
+      secC: 0,
+      maxC,
+      totalScore: secAScore,
+      maxScore: maxA + maxB + maxC,
+      feedback: "Could not auto-grade short/long answers.",
+      weakAreas: [],
+      detailed,
+    });
+  }
+});
+
+// ============================================================
+// MIND MAP
+// ============================================================
+router.post("/mind-map", async (req, res) => {
+  const { classNum, subject, chapter } = req.body as Record<string, string>;
+  if (!chapter || !subject) {
+    res.status(400).json({ error: "Missing fields" });
+    return;
+  }
+  const prompt = `Create a detailed mind map for CBSE Class ${classNum} ${subject} — Chapter: "${chapter}".
+Return ONLY valid JSON (no markdown):
+{
+  "label": "Chapter name",
+  "children": [
+    {
+      "label": "Main Topic 1",
+      "desc": "one-line description",
+      "children": [{"label":"Subtopic A"},{"label":"Subtopic B"},{"label":"Subtopic C"}]
+    }
+  ]
+}
+Include 5-7 main branches, each with 2-4 subtopics. Cover definitions, key concepts, formulas/dates, examples, importance. Keep labels under 4 words.`;
+  try {
+    const text = await ask(prompt, 1500);
+    const parsed = safeJson(text) as {
+      label?: string;
+      children?: unknown[];
+    } | null;
+    if (parsed?.children) {
+      res.json({ tree: parsed });
+    } else {
+      res.status(500).json({ error: "Failed to generate mind map" });
+    }
+  } catch (e) {
+    req.log.error({ err: e }, "mind-map error");
+    res.status(500).json({ error: "AI error" });
+  }
+});
+
+// ============================================================
+// FLASHCARDS
+// ============================================================
+router.post("/flashcards", async (req, res) => {
+  const { classNum, subject, chapter, count } = req.body as Record<
+    string,
+    string
+  >;
+  if (!chapter || !subject) {
+    res.status(400).json({ error: "Missing fields" });
+    return;
+  }
+  const n = Math.min(parseInt(count as string) || 10, 25);
+  const prompt = `Generate ${n} CBSE Class ${classNum} ${subject} flashcards for chapter "${chapter}".
+Mix of: key definitions, formulas/dates, important concepts, cause-effect, short facts.
+Return ONLY valid JSON (no markdown):
+{"cards":[{"front":"Question or term","back":"Answer or definition","hint":"optional memory tip"}]}
+Make each card concise — front under 15 words, back under 30 words.`;
+  try {
+    const text = await ask(prompt, 1800);
+    const parsed = safeJson(text) as { cards?: unknown[] } | null;
+    if (parsed?.cards) {
+      res.json(parsed);
+    } else {
+      res.status(500).json({ error: "Failed to generate flashcards" });
+    }
+  } catch (e) {
+    req.log.error({ err: e }, "flashcards error");
+    res.status(500).json({ error: "AI error" });
+  }
+});
+
 export default router;

@@ -2079,6 +2079,24 @@ function navigate(page, extra) {
       case "resources":
         renderResources();
         break;
+      case "mock-test":
+        renderMockTestSetup();
+        break;
+      case "mind-map":
+        renderMindMapSetup();
+        break;
+      case "flashcards":
+        renderFlashcardsSetup();
+        break;
+      case "voice-doubt":
+        renderVoiceDoubt();
+        break;
+      case "revision":
+        renderRevisionSchedule();
+        break;
+      case "trends":
+        renderTrendsAnalyser();
+        break;
       case "search":
         renderWebSearch();
         break;
@@ -2254,6 +2272,48 @@ function renderLanding() {
       desc: "Photo → instant AI solution",
       page: "home",
       accent: "#4f8ef7",
+    },
+    {
+      emoji: "🎙️",
+      title: "Voice Doubt",
+      desc: "Speak your question, AI answers",
+      page: "voice-doubt",
+      accent: "#ec4899",
+    },
+    {
+      emoji: "📅",
+      title: "Revision Plan",
+      desc: "AI study schedule to exam day",
+      page: "revision",
+      accent: "#06b6d4",
+    },
+    {
+      emoji: "📊",
+      title: "PYQ Trends",
+      desc: "Which topics appear most in boards",
+      page: "trends",
+      accent: "#f97316",
+    },
+    {
+      emoji: "📝",
+      title: "Mock Test",
+      desc: "Full CBSE test · AI graded",
+      page: "mock-test",
+      accent: "#f0b429",
+    },
+    {
+      emoji: "🧠",
+      title: "Mind Map",
+      desc: "Visual topic breakdown",
+      page: "mind-map",
+      accent: "#9b6dff",
+    },
+    {
+      emoji: "🃏",
+      title: "Flashcards",
+      desc: "Spaced repetition learning",
+      page: "flashcards",
+      accent: "#0fca8c",
     },
     {
       emoji: "📊",
@@ -4353,6 +4413,1484 @@ window.showCreateRoom = showCreateRoom;
 window.showJoinRoom = showJoinRoom;
 
 // ============================================================
+// VOICE DOUBT SOLVER
+// ============================================================
+function renderVoiceDoubt() {
+  const app = document.getElementById("app");
+  const subjects = [
+    "Maths",
+    "Physics",
+    "Chemistry",
+    "Biology",
+    "History",
+    "Geography",
+    "Civics",
+    "Economics",
+    "English",
+    "Hindi",
+  ];
+  const subj = S.subjectPreference || "Maths";
+  const cls = S.classPreference || "10";
+  const chapters = getChapters(cls, subj);
+  app.innerHTML = `
+    <style>
+      @keyframes _vdPulse{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(236,72,153,0.4)}50%{transform:scale(1.06);box-shadow:0 0 0 16px rgba(236,72,153,0)}}
+      @keyframes _vdWave{0%,100%{height:6px}50%{height:22px}}
+      ._vdbar{width:4px;border-radius:4px;background:#ec4899;display:inline-block;margin:0 2px;animation:_vdWave .8s ease-in-out infinite}
+    </style>
+    <button onclick="navigate('home')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.85rem;padding:0;font-family:inherit;margin-bottom:18px;display:block">‹ Back</button>
+    <div style="font-size:1.4rem;font-weight:900;background:linear-gradient(135deg,#ec4899,#9b6dff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:4px">🎙️ Voice Doubt Solver</div>
+    <div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:22px">Speak your question — AI explains it, then reads the answer back</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+      <div><label class="form-label">Class</label>
+        <select id="vd-class" class="form-select" style="margin-top:4px" onchange="updateVdChapters()">
+          ${["6", "7", "8", "9", "10"].map((c) => `<option value="${c}" ${cls === c ? "selected" : ""}>${c}</option>`).join("")}
+        </select></div>
+      <div><label class="form-label">Subject</label>
+        <select id="vd-subject" class="form-select" style="margin-top:4px" onchange="updateVdChapters()">
+          ${subjects.map((s) => `<option value="${s}" ${subj === s ? "selected" : ""}>${s}</option>`).join("")}
+        </select></div>
+    </div>
+    <div style="margin-bottom:20px"><label class="form-label">Chapter (optional)</label>
+      <select id="vd-chapter" class="form-select" style="margin-top:4px">
+        <option value="">Any chapter</option>
+        ${chapters.map((c) => `<option value="${c}">${c}</option>`).join("")}
+      </select></div>
+    <!-- Mic button -->
+    <div style="text-align:center;margin-bottom:20px">
+      <button id="vd-mic-btn" onclick="toggleVoiceRecording()" style="width:90px;height:90px;border-radius:50%;border:none;background:linear-gradient(135deg,#ec4899,#9b6dff);cursor:pointer;font-size:2.2rem;box-shadow:0 4px 24px rgba(236,72,153,0.5);transition:all .2s;display:inline-flex;align-items:center;justify-content:center" id="vd-mic">🎙️</button>
+      <div id="vd-status" style="font-size:0.82rem;color:var(--text-muted);margin-top:12px">Tap to speak your question</div>
+      <div id="vd-waves" style="height:28px;display:flex;align-items:center;justify-content:center;gap:2px;margin-top:8px;visibility:hidden">
+        ${Array(7)
+          .fill(0)
+          .map(
+            (_, i) =>
+              `<span class="_vdbar" style="animation-delay:${i * 0.1}s"></span>`,
+          )
+          .join("")}
+      </div>
+    </div>
+    <!-- Transcript -->
+    <div id="vd-transcript" style="background:rgba(236,72,153,0.06);border:1px solid rgba(236,72,153,0.2);border-radius:12px;padding:12px 14px;margin-bottom:12px;min-height:48px;font-size:0.88rem;color:var(--text-secondary);display:none">
+      <div style="font-size:0.65rem;font-weight:900;letter-spacing:0.08em;color:#ec4899;text-transform:uppercase;margin-bottom:6px">You said:</div>
+      <div id="vd-transcript-text"></div>
+    </div>
+    <!-- Or type fallback -->
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+      <div style="flex:1;height:1px;background:rgba(255,255,255,0.08)"></div>
+      <span style="font-size:0.72rem;color:var(--text-muted)">or type</span>
+      <div style="flex:1;height:1px;background:rgba(255,255,255,0.08)"></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:20px">
+      <input id="vd-text-input" class="form-input" placeholder="Type your question here..." style="flex:1">
+      <button onclick="submitVoiceDoubt(document.getElementById('vd-text-input').value)" class="btn btn-primary" style="background:linear-gradient(135deg,#ec4899,#9b6dff);border:none;padding:10px 16px;flex-shrink:0">Ask →</button>
+    </div>
+    <!-- Answer area -->
+    <div id="vd-answer" style="display:none"></div>
+  `;
+  window.updateVdChapters = () => {
+    const sel = document.getElementById("vd-chapter");
+    const chs = getChapters(
+      document.getElementById("vd-class").value,
+      document.getElementById("vd-subject").value,
+    );
+    sel.innerHTML =
+      `<option value="">Any chapter</option>` +
+      chs.map((c) => `<option value="${c}">${c}</option>`).join("");
+  };
+  window._vdRecognition = null;
+  window._vdListening = false;
+}
+
+window.toggleVoiceRecording = () => {
+  if (
+    !("webkitSpeechRecognition" in window) &&
+    !("SpeechRecognition" in window)
+  ) {
+    const statusEl = document.getElementById("vd-status");
+    if (statusEl)
+      statusEl.textContent =
+        "Voice not supported in this browser — please type your question below";
+    return;
+  }
+  if (window._vdListening) {
+    if (window._vdRecognition) window._vdRecognition.stop();
+    return;
+  }
+  const SpeechRecognition =
+    window.SpeechRecognition || window.webkitSpeechRecognition;
+  const recognition = new SpeechRecognition();
+  recognition.continuous = false;
+  recognition.interimResults = true;
+  recognition.lang = "en-IN";
+  window._vdRecognition = recognition;
+  window._vdListening = true;
+  const btn = document.getElementById("vd-mic-btn");
+  const status = document.getElementById("vd-status");
+  const waves = document.getElementById("vd-waves");
+  const transcript = document.getElementById("vd-transcript");
+  const transcriptText = document.getElementById("vd-transcript-text");
+  if (btn) {
+    btn.style.animation = "_vdPulse 1.2s ease-in-out infinite";
+    btn.textContent = "⏹️";
+  }
+  if (status) status.textContent = "Listening... speak now";
+  if (waves) waves.style.visibility = "visible";
+  recognition.onresult = (e) => {
+    const text = Array.from(e.results)
+      .map((r) => r[0].transcript)
+      .join("");
+    if (transcript) transcript.style.display = "block";
+    if (transcriptText) transcriptText.textContent = text;
+    if (e.results[0].isFinal) {
+      window._vdListening = false;
+      if (btn) {
+        btn.style.animation = "";
+        btn.textContent = "🎙️";
+      }
+      if (status) status.textContent = "Got it! Fetching answer...";
+      if (waves) waves.style.visibility = "hidden";
+      submitVoiceDoubt(text);
+    }
+  };
+  recognition.onerror = () => {
+    window._vdListening = false;
+    if (btn) {
+      btn.style.animation = "";
+      btn.textContent = "🎙️";
+    }
+    if (status)
+      status.textContent =
+        "Couldn't hear clearly — please try again or type below";
+    if (waves) waves.style.visibility = "hidden";
+  };
+  recognition.onend = () => {
+    window._vdListening = false;
+    if (btn) {
+      btn.style.animation = "";
+      btn.textContent = "🎙️";
+    }
+    if (waves) waves.style.visibility = "hidden";
+  };
+  recognition.start();
+};
+
+window.submitVoiceDoubt = async (question) => {
+  if (!question || !question.trim()) return;
+  const answerEl = document.getElementById("vd-answer");
+  const status = document.getElementById("vd-status");
+  const classNum =
+    document.getElementById("vd-class")?.value || S.classPreference;
+  const subject =
+    document.getElementById("vd-subject")?.value || S.subjectPreference;
+  const chapter = document.getElementById("vd-chapter")?.value || "";
+  if (answerEl) {
+    answerEl.style.display = "block";
+    answerEl.innerHTML = `<div style="text-align:center;padding:20px">${typingLoader()}<div style="font-size:0.82rem;color:var(--text-muted);margin-top:8px">Thinking...</div></div>`;
+  }
+  if (status) status.textContent = "Tap to ask another question";
+  try {
+    const data = await apiPost("/solve", {
+      question,
+      subject,
+      classNum,
+      chapter,
+      level: getPerf().level,
+    });
+    const fullText = [data.solution, ...(data.steps || [])].join(". ");
+    // Speak the answer
+    if ("speechSynthesis" in window) {
+      const utt = new SpeechSynthesisUtterance(fullText);
+      utt.lang = "en-IN";
+      utt.rate = 0.92;
+      utt.pitch = 1;
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utt);
+    }
+    if (answerEl)
+      answerEl.innerHTML = `
+      <div style="background:rgba(236,72,153,0.06);border:1.5px solid rgba(236,72,153,0.2);border-radius:14px;padding:16px;margin-top:4px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <div style="font-size:0.68rem;font-weight:900;letter-spacing:0.08em;color:#ec4899;text-transform:uppercase">🤖 AI Answer</div>
+          <button onclick="speakText('${fullText.replace(/'/g, "\\'")}')}" style="background:rgba(236,72,153,0.15);border:1px solid rgba(236,72,153,0.3);color:#ec4899;border-radius:20px;padding:3px 10px;font-size:0.72rem;font-weight:700;cursor:pointer;font-family:inherit">🔊 Replay</button>
+        </div>
+        <div style="font-size:0.9rem;font-weight:700;color:#fff;margin-bottom:10px">${escapeHtml(data.solution || "")}</div>
+        ${(data.steps || []).map((s) => `<div style="font-size:0.84rem;color:var(--text-secondary);padding:5px 0;border-top:1px solid rgba(255,255,255,0.05);display:flex;gap:8px"><span style="color:#ec4899;flex-shrink:0">→</span>${escapeHtml(s)}</div>`).join("")}
+        ${data.memoryTrick ? `<div style="margin-top:10px;background:rgba(155,109,255,0.1);border:1px solid rgba(155,109,255,0.2);border-radius:8px;padding:8px 12px;font-size:0.78rem;color:#c4b5fd">💡 ${escapeHtml(data.memoryTrick)}</div>` : ""}
+      </div>`;
+  } catch (e) {
+    if (answerEl)
+      answerEl.innerHTML = `<div style="color:var(--red);font-size:0.85rem">Error: ${e.message}</div>`;
+  }
+};
+window.speakText = (text) => {
+  if ("speechSynthesis" in window) {
+    const utt = new SpeechSynthesisUtterance(text);
+    utt.lang = "en-IN";
+    utt.rate = 0.92;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utt);
+  }
+};
+
+// ============================================================
+// SMART REVISION SCHEDULE
+// ============================================================
+function renderRevisionSchedule() {
+  const app = document.getElementById("app");
+  const saved = S.revisionSchedule;
+  if (saved && saved.examDate && new Date(saved.examDate) > new Date()) {
+    renderRevisionScheduleView(saved);
+    return;
+  }
+  const subjects = [
+    "Maths",
+    "Physics",
+    "Chemistry",
+    "Biology",
+    "History",
+    "Geography",
+    "Civics",
+    "Economics",
+    "English",
+    "Hindi",
+  ];
+  // Default exam date = 60 days from now
+  const defaultDate = new Date(Date.now() + 60 * 86400000)
+    .toISOString()
+    .split("T")[0];
+  app.innerHTML = `
+    <button onclick="navigate('home')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.85rem;padding:0;font-family:inherit;margin-bottom:18px;display:block">‹ Back</button>
+    <div style="font-size:1.4rem;font-weight:900;background:linear-gradient(135deg,#06b6d4,#4f8ef7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:4px">📅 Smart Revision Schedule</div>
+    <div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:24px">AI builds a personalised day-by-day study plan based on your weak areas</div>
+    <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:24px">
+      <div><label class="form-label">Your Exam Date</label>
+        <input type="date" id="rs-date" class="form-input" style="margin-top:4px" value="${defaultDate}" min="${new Date().toISOString().split("T")[0]}"></div>
+      <div><label class="form-label">Class</label>
+        <select id="rs-class" class="form-select" style="margin-top:4px">
+          ${["6", "7", "8", "9", "10"].map((c) => `<option value="${c}" ${(S.classPreference || "10") === c ? "selected" : ""}>${c}</option>`).join("")}
+        </select></div>
+      <div>
+        <label class="form-label" style="margin-bottom:8px">Subjects to Revise</label>
+        <div id="rs-subjects" style="display:flex;flex-wrap:wrap;gap:8px">
+          ${subjects.map((s) => `<button data-subj="${s}" onclick="toggleRsSubject(this)" style="padding:6px 14px;border-radius:20px;border:1.5px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.04);color:var(--text-muted);font-size:0.78rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s">${s}</button>`).join("")}
+        </div>
+      </div>
+      <div>
+        <label class="form-label" style="margin-bottom:8px">Daily Study Time</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+          ${[
+            { v: 2, l: "2 hrs" },
+            { v: 4, l: "4 hrs" },
+            { v: 6, l: "6 hrs" },
+          ]
+            .map(
+              (t, i) =>
+                `<button onclick="rsPickTime(${t.v},this)" style="border-radius:12px;padding:11px;cursor:pointer;border:1.5px solid ${i === 1 ? "#06b6d4" : "rgba(255,255,255,0.1)"};background:${i === 1 ? "rgba(6,182,212,0.12)" : "rgba(255,255,255,0.04)"};color:${i === 1 ? "#06b6d4" : "var(--text)"};font-size:0.85rem;font-weight:800;font-family:inherit;transition:all .2s" id="rs-time-${t.v}">${t.l}</button>`,
+            )
+            .join("")}
+        </div>
+      </div>
+    </div>
+    <button onclick="generateRevisionSchedule()" class="btn btn-primary" style="width:100%;padding:14px;font-size:1rem;font-weight:900;background:linear-gradient(135deg,#06b6d4,#4f8ef7);border:none;box-shadow:0 4px 20px rgba(6,182,212,0.4)">Generate My Plan →</button>
+    <div id="rs-err" style="color:var(--red);font-size:0.82rem;margin-top:10px;text-align:center"></div>
+  `;
+  window._rsTime = 4;
+  window._rsSubjects = new Set();
+  window.toggleRsSubject = (btn) => {
+    const s = btn.dataset.subj;
+    if (window._rsSubjects.has(s)) {
+      window._rsSubjects.delete(s);
+      btn.style.borderColor = "rgba(255,255,255,0.12)";
+      btn.style.background = "rgba(255,255,255,0.04)";
+      btn.style.color = "var(--text-muted)";
+    } else {
+      window._rsSubjects.add(s);
+      btn.style.borderColor = "#06b6d4";
+      btn.style.background = "rgba(6,182,212,0.12)";
+      btn.style.color = "#06b6d4";
+    }
+  };
+  window.rsPickTime = (v, btn) => {
+    window._rsTime = v;
+    [2, 4, 6].forEach((t) => {
+      const b = document.getElementById("rs-time-" + t);
+      if (!b) return;
+      b.style.borderColor = "rgba(255,255,255,0.1)";
+      b.style.background = "rgba(255,255,255,0.04)";
+      b.style.color = "var(--text)";
+    });
+    btn.style.borderColor = "#06b6d4";
+    btn.style.background = "rgba(6,182,212,0.12)";
+    btn.style.color = "#06b6d4";
+  };
+}
+
+window.generateRevisionSchedule = async () => {
+  const examDate = document.getElementById("rs-date")?.value;
+  const classNum = document.getElementById("rs-class")?.value;
+  const subjects = [...(window._rsSubjects || new Set())];
+  const dailyHours = window._rsTime || 4;
+  const err = document.getElementById("rs-err");
+  if (!examDate) {
+    if (err) err.textContent = "Please select your exam date";
+    return;
+  }
+  if (subjects.length === 0) {
+    if (err) err.textContent = "Please select at least one subject";
+    return;
+  }
+  const daysLeft = Math.max(
+    1,
+    Math.round((new Date(examDate) - Date.now()) / 86400000),
+  );
+  const app = document.getElementById("app");
+  app.innerHTML = `<div style="text-align:center;padding:60px 20px">${typingLoader()}<div style="font-size:0.85rem;color:var(--text-muted);margin-top:12px">Building your ${daysLeft}-day revision plan...</div></div>`;
+  // Build weak areas context from question history
+  const subjectCounts = S.subjectCounts || {};
+  const weakContext = subjects
+    .map((s) => `${s}: ${subjectCounts[s] || 0} questions done`)
+    .join(", ");
+  try {
+    const data = await apiPost("/revision-schedule", {
+      classNum,
+      subjects,
+      examDate,
+      dailyHours,
+      daysLeft,
+      weakContext,
+      subjectCounts: S.subjectCounts || {},
+    });
+    S.revisionSchedule = {
+      ...data,
+      examDate,
+      classNum,
+      subjects,
+      dailyHours,
+      createdAt: Date.now(),
+    };
+    saveState();
+    renderRevisionScheduleView(S.revisionSchedule);
+  } catch (e) {
+    app.innerHTML = `<div style="padding:20px;color:var(--red)">Error: ${e.message}<br><br><button class="btn btn-secondary btn-sm" onclick="renderRevisionSchedule()">Back</button></div>`;
+  }
+};
+
+function renderRevisionScheduleView(schedule) {
+  const app = document.getElementById("app");
+  const today = new Date().toISOString().split("T")[0];
+  const daysLeft = Math.max(
+    0,
+    Math.round((new Date(schedule.examDate) - Date.now()) / 86400000),
+  );
+  const todayPlan = (schedule.days || []).find((d) => d.date === today);
+  const weekDays = (schedule.days || []).slice(0, 14);
+  app.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+      <button onclick="navigate('home')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.85rem;padding:0;font-family:inherit">‹ Back</button>
+      <button onclick="S.revisionSchedule=null;saveState();renderRevisionSchedule()" style="background:none;border:1px solid rgba(255,255,255,0.1);color:var(--text-muted);border-radius:8px;padding:4px 10px;font-size:0.72rem;cursor:pointer;font-family:inherit">Reset Plan</button>
+    </div>
+    <!-- Countdown -->
+    <div style="background:linear-gradient(135deg,rgba(6,182,212,0.15),rgba(79,142,247,0.08));border:1.5px solid rgba(6,182,212,0.3);border-radius:20px;padding:20px;text-align:center;margin-bottom:14px;position:relative;overflow:hidden">
+      <div style="position:absolute;top:-40px;left:50%;transform:translateX(-50%);width:180px;height:180px;border-radius:50%;background:rgba(6,182,212,0.08);filter:blur(40px)"></div>
+      <div style="font-size:3rem;font-weight:900;color:#06b6d4;text-shadow:0 0 24px rgba(6,182,212,0.5)">${daysLeft}</div>
+      <div style="font-size:0.85rem;color:rgba(255,255,255,0.6);margin-bottom:10px">days to exam · ${new Date(schedule.examDate).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</div>
+      <div style="display:flex;justify-content:center;gap:16px;font-size:0.8rem;color:rgba(255,255,255,0.5)">
+        <span>📚 ${(schedule.subjects || []).join(" · ")}</span>
+      </div>
+    </div>
+    <!-- Today's plan -->
+    ${
+      todayPlan
+        ? `<div style="background:rgba(6,182,212,0.08);border:1.5px solid rgba(6,182,212,0.3);border-radius:16px;padding:16px;margin-bottom:14px">
+      <div style="font-size:0.68rem;font-weight:900;letter-spacing:0.1em;color:#06b6d4;text-transform:uppercase;margin-bottom:10px">📌 Today's Tasks</div>
+      ${(todayPlan.tasks || [])
+        .map(
+          (
+            task,
+          ) => `<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05)">
+        <span style="font-size:0.9rem;flex-shrink:0">${task.emoji || "📖"}</span>
+        <div>
+          <div style="font-size:0.85rem;font-weight:700;color:var(--text)">${escapeHtml(task.subject)}</div>
+          <div style="font-size:0.78rem;color:var(--text-muted)">${escapeHtml(task.task)} · ${task.duration}</div>
+        </div>
+      </div>`,
+        )
+        .join("")}
+    </div>`
+        : `<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:14px;text-align:center;color:var(--text-muted);font-size:0.85rem;margin-bottom:14px">No tasks scheduled for today — enjoy the break! 🎉</div>`
+    }
+    <!-- Week view -->
+    <div style="font-size:0.68rem;font-weight:900;letter-spacing:0.1em;color:var(--text-muted);text-transform:uppercase;margin-bottom:10px">📆 14-Day Overview</div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">
+      ${weekDays
+        .map((d) => {
+          const isToday = d.date === today;
+          const isPast = d.date < today;
+          return `<div style="background:${isToday ? "rgba(6,182,212,0.1)" : isPast ? "rgba(255,255,255,0.02)" : "rgba(255,255,255,0.03)"};border:1.5px solid ${isToday ? "rgba(6,182,212,0.4)" : "rgba(255,255,255,0.07)"};border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:12px">
+          <div style="width:44px;text-align:center;flex-shrink:0">
+            <div style="font-size:0.65rem;color:${isToday ? "#06b6d4" : "var(--text-muted)"};font-weight:800">${new Date(d.date).toLocaleDateString("en-IN", { weekday: "short" }).toUpperCase()}</div>
+            <div style="font-size:1rem;font-weight:900;color:${isToday ? "#06b6d4" : isPast ? "var(--text-muted)" : "var(--text)"}">${new Date(d.date).getDate()}</div>
+          </div>
+          <div style="flex:1;min-width:0">
+            ${(d.tasks || []).map((t) => `<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,0.06);border-radius:20px;padding:2px 8px;font-size:0.72rem;font-weight:700;color:var(--text-secondary);margin:2px">${t.emoji || "📖"} ${t.subject}</span>`).join("")}
+          </div>
+          ${isToday ? `<span style="background:#06b6d4;color:#000;font-size:0.62rem;font-weight:900;padding:2px 8px;border-radius:20px;flex-shrink:0">TODAY</span>` : ""}
+        </div>`;
+        })
+        .join("")}
+    </div>
+    <!-- Tips -->
+    ${
+      schedule.tips && schedule.tips.length
+        ? `<div style="background:rgba(155,109,255,0.06);border:1px solid rgba(155,109,255,0.2);border-radius:14px;padding:14px 16px">
+      <div style="font-size:0.68rem;font-weight:900;letter-spacing:0.08em;color:#9b6dff;text-transform:uppercase;margin-bottom:8px">💡 AI Study Tips</div>
+      ${schedule.tips.map((tip) => `<div style="font-size:0.83rem;color:var(--text-secondary);padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.04);display:flex;gap:8px"><span style="color:#9b6dff;flex-shrink:0">•</span>${escapeHtml(tip)}</div>`).join("")}
+    </div>`
+        : ""
+    }
+  `;
+}
+window.renderRevisionSchedule = renderRevisionSchedule;
+
+// ============================================================
+// PYQ TRENDS ANALYSER
+// ============================================================
+const PYQ_TRENDS = {
+  Maths: {
+    "Real Numbers": [5, 4, 5, 3, 5],
+    Polynomials: [3, 4, 3, 4, 3],
+    "Linear Equations": [4, 5, 4, 5, 4],
+    "Quadratic Equations": [5, 5, 5, 5, 5],
+    "Arithmetic Progressions": [4, 4, 5, 4, 4],
+    Triangles: [5, 5, 4, 5, 5],
+    "Coordinate Geometry": [3, 4, 3, 3, 4],
+    "Introduction to Trigonometry": [5, 5, 5, 5, 5],
+    "Applications of Trigonometry": [4, 5, 4, 5, 5],
+    Circles: [5, 4, 5, 4, 5],
+    Constructions: [3, 3, 2, 3, 2],
+    "Areas Related to Circles": [4, 4, 4, 4, 4],
+    "Surface Areas and Volumes": [5, 5, 5, 5, 5],
+    Statistics: [5, 4, 5, 5, 4],
+    Probability: [4, 4, 4, 4, 4],
+  },
+  Physics: {
+    "Light Reflection and Refraction": [5, 5, 5, 5, 5],
+    "Human Eye and Colourful World": [4, 4, 5, 4, 4],
+    Electricity: [5, 5, 5, 5, 5],
+    "Magnetic Effects of Electric Current": [4, 5, 4, 5, 4],
+    "Sources of Energy": [3, 3, 3, 2, 3],
+  },
+  Chemistry: {
+    "Chemical Reactions and Equations": [5, 5, 5, 5, 5],
+    "Acids Bases and Salts": [5, 5, 5, 5, 5],
+    "Metals and Non-metals": [5, 5, 5, 4, 5],
+    "Carbon and its Compounds": [4, 4, 5, 4, 5],
+    "Periodic Classification of Elements": [3, 3, 3, 4, 3],
+  },
+  Biology: {
+    "Life Processes": [5, 5, 5, 5, 5],
+    "Control and Coordination": [4, 5, 4, 4, 5],
+    "How do Organisms Reproduce": [4, 4, 4, 4, 4],
+    "Heredity and Evolution": [4, 4, 5, 4, 4],
+    "Our Environment": [3, 3, 3, 3, 3],
+    "Sustainable Management of Natural Resources": [2, 3, 2, 3, 2],
+  },
+  History: {
+    "The Rise of Nationalism in Europe": [5, 5, 5, 5, 5],
+    "Nationalism in India": [5, 5, 5, 5, 5],
+    "The Making of a Global World": [4, 4, 4, 3, 4],
+    "The Age of Industrialisation": [3, 4, 3, 4, 3],
+    "Print Culture and the Modern World": [3, 3, 4, 3, 3],
+  },
+  Geography: {
+    "Resources and Development": [5, 5, 5, 5, 5],
+    "Forest and Wildlife Resources": [3, 4, 3, 3, 4],
+    "Water Resources": [4, 4, 4, 4, 4],
+    Agriculture: [4, 5, 4, 4, 5],
+    "Minerals and Energy Resources": [4, 4, 4, 4, 4],
+    "Manufacturing Industries": [4, 4, 4, 4, 4],
+    "Lifelines of National Economy": [3, 3, 3, 4, 3],
+  },
+  Civics: {
+    "Power Sharing": [5, 5, 5, 5, 5],
+    Federalism: [5, 5, 4, 5, 5],
+    "Democracy and Diversity": [3, 3, 3, 3, 3],
+    "Gender Religion and Caste": [3, 3, 3, 3, 4],
+    "Popular Struggles and Movements": [3, 3, 4, 3, 3],
+    "Political Parties": [4, 4, 4, 4, 4],
+    "Outcomes of Democracy": [4, 4, 4, 4, 4],
+    "Challenges to Democracy": [3, 3, 3, 3, 3],
+  },
+  Economics: {
+    Development: [4, 4, 4, 4, 4],
+    "Sectors of the Indian Economy": [5, 5, 5, 4, 5],
+    "Money and Credit": [5, 5, 5, 5, 5],
+    "Globalisation and the Indian Economy": [4, 4, 4, 4, 4],
+    "Consumer Rights": [4, 4, 4, 4, 4],
+  },
+};
+
+function renderTrendsAnalyser() {
+  const app = document.getElementById("app");
+  const subjects = Object.keys(PYQ_TRENDS);
+  const subj = subjects.includes(S.subjectPreference)
+    ? S.subjectPreference
+    : subjects[0];
+  app.innerHTML = `
+    <button onclick="navigate('home')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.85rem;padding:0;font-family:inherit;margin-bottom:18px;display:block">‹ Back</button>
+    <div style="font-size:1.4rem;font-weight:900;background:linear-gradient(135deg,#f97316,#f0b429);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:4px">📊 PYQ Trend Analyser</div>
+    <div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:18px">Which chapters appeared most in last 5 years of CBSE boards — study smart</div>
+    <!-- Subject tabs -->
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px" id="trends-tabs">
+      ${subjects.map((s) => `<button data-subj="${s}" onclick="showTrends('${s}',this)" style="padding:6px 12px;border-radius:20px;border:1.5px solid ${s === subj ? "#f97316" : "rgba(255,255,255,0.1)"};background:${s === subj ? "rgba(249,115,22,0.15)" : "rgba(255,255,255,0.04)"};color:${s === subj ? "#f97316" : "var(--text-muted)"};font-size:0.75rem;font-weight:800;cursor:pointer;font-family:inherit;transition:all .2s">${s}</button>`).join("")}
+    </div>
+    <div id="trends-content"></div>
+  `;
+  window.showTrends = (subject, btn) => {
+    document.querySelectorAll("[data-subj]").forEach((b) => {
+      b.style.borderColor = "rgba(255,255,255,0.1)";
+      b.style.background = "rgba(255,255,255,0.04)";
+      b.style.color = "var(--text-muted)";
+    });
+    if (btn) {
+      btn.style.borderColor = "#f97316";
+      btn.style.background = "rgba(249,115,22,0.15)";
+      btn.style.color = "#f97316";
+    }
+    const data = PYQ_TRENDS[subject] || {};
+    const years = ["2020", "2021", "2022", "2023", "2024"];
+    const chapters = Object.entries(data).sort((a, b) => {
+      const aAvg = a[1].reduce((x, y) => x + y, 0) / a[1].length;
+      const bAvg = b[1].reduce((x, y) => x + y, 0) / b[1].length;
+      return bAvg - aAvg;
+    });
+    const content = document.getElementById("trends-content");
+    if (!content) return;
+    content.innerHTML = `
+      <div style="background:rgba(249,115,22,0.06);border:1px solid rgba(249,115,22,0.2);border-radius:12px;padding:12px 14px;margin-bottom:16px;font-size:0.82rem;color:var(--text-muted)">
+        🔥 <strong style="color:#f97316">Heat score 1-5:</strong> How frequently each chapter appeared in CBSE board exams 2020–2024
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${chapters
+          .map(([ch, scores]) => {
+            const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+            const heat =
+              avg >= 4.5
+                ? "🔥🔥"
+                : avg >= 3.5
+                  ? "🔥"
+                  : avg >= 2.5
+                    ? "⚡"
+                    : "❄️";
+            const priority =
+              avg >= 4.5
+                ? "Must Study"
+                : avg >= 3.5
+                  ? "High Priority"
+                  : avg >= 2.5
+                    ? "Medium"
+                    : "Low";
+            const pColor =
+              avg >= 4.5
+                ? "#f0564a"
+                : avg >= 3.5
+                  ? "#f0b429"
+                  : avg >= 2.5
+                    ? "#4f8ef7"
+                    : "rgba(255,255,255,0.3)";
+            const barW = Math.round((avg / 5) * 100);
+            return `<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:12px 14px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <div style="font-size:0.85rem;font-weight:800;color:var(--text);flex:1;min-width:0;margin-right:8px">${heat} ${ch}</div>
+              <span style="background:${pColor}18;border:1px solid ${pColor}33;color:${pColor};font-size:0.65rem;font-weight:900;padding:2px 8px;border-radius:20px;white-space:nowrap;flex-shrink:0">${priority}</span>
+            </div>
+            <div style="height:6px;background:rgba(255,255,255,0.06);border-radius:100px;overflow:hidden;margin-bottom:8px">
+              <div style="height:100%;width:${barW}%;background:linear-gradient(90deg,${pColor},${pColor}88);border-radius:100px"></div>
+            </div>
+            <div style="display:flex;gap:6px">
+              ${scores
+                .map(
+                  (
+                    s,
+                    i,
+                  ) => `<div style="flex:1;text-align:center;background:rgba(255,255,255,0.04);border-radius:6px;padding:4px 2px">
+                <div style="font-size:0.7rem;color:var(--text-muted)">${years[i]}</div>
+                <div style="font-size:0.8rem;font-weight:900;color:${s >= 4 ? "#f0b429" : s >= 3 ? "#4f8ef7" : "rgba(255,255,255,0.3)"}">${"★".repeat(s)}${"☆".repeat(5 - s)}</div>
+              </div>`,
+                )
+                .join("")}
+            </div>
+          </div>`;
+          })
+          .join("")}
+      </div>
+    `;
+  };
+  showTrends(subj, document.querySelector(`[data-subj="${subj}"]`));
+}
+
+// ============================================================
+// MOCK TEST
+// ============================================================
+function renderMockTestSetup() {
+  const app = document.getElementById("app");
+  const subjects = [
+    "Maths",
+    "Physics",
+    "Chemistry",
+    "Biology",
+    "History",
+    "Geography",
+    "Civics",
+    "Economics",
+    "English",
+    "Hindi",
+  ];
+  const cls = S.classPreference || "10";
+  const subj = S.subjectPreference || "Maths";
+  const chapters = getChapters(cls, subj);
+  app.innerHTML = `
+    <style>@keyframes _mtIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}</style>
+    <div style="animation:_mtIn .35s ease">
+      <button onclick="navigate('home')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.85rem;padding:0;font-family:inherit;margin-bottom:18px;display:block">‹ Back</button>
+      <div style="font-size:1.4rem;font-weight:900;background:linear-gradient(135deg,#f0b429,#f97316);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:4px">📝 Mock Test</div>
+      <div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:24px">Full CBSE-style — AI grades everything including long answers</div>
+      <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:24px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div><label class="form-label">Class</label>
+            <select id="mt-class" class="form-select" style="margin-top:4px" onchange="updateMtChapters()">
+              ${["6", "7", "8", "9", "10"].map((c) => `<option value="${c}" ${cls === c ? "selected" : ""}>${c}</option>`).join("")}
+            </select></div>
+          <div><label class="form-label">Subject</label>
+            <select id="mt-subject" class="form-select" style="margin-top:4px" onchange="updateMtChapters()">
+              ${subjects.map((s) => `<option value="${s}" ${subj === s ? "selected" : ""}>${s}</option>`).join("")}
+            </select></div>
+        </div>
+        <div><label class="form-label">Chapter (optional)</label>
+          <select id="mt-chapter" class="form-select" style="margin-top:4px">
+            <option value="">All Chapters</option>
+            ${chapters.map((c) => `<option value="${c}">${c}</option>`).join("")}
+          </select></div>
+        <div>
+          <label class="form-label" style="margin-bottom:8px">Test Duration</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px" id="mt-duration">
+            ${[
+              { v: 20, l: "20 min", e: "⚡" },
+              { v: 40, l: "40 min", e: "🔥" },
+              { v: 60, l: "60 min", e: "💀" },
+            ]
+              .map(
+                (d, i) => `
+            <button class="_dpo${i === 1 ? " _sel" : ""}" onclick="mtPickDuration(${d.v},this)" style="border-radius:14px;padding:14px 10px;cursor:pointer;border:2px solid ${i === 1 ? "#f0b429" : "rgba(255,255,255,0.1)"};background:${i === 1 ? "rgba(240,180,41,0.12)" : "rgba(255,255,255,0.04)"};text-align:center;font-family:inherit;transition:all .2s;box-shadow:${i === 1 ? "0 0 16px rgba(240,180,41,0.3)" : "none"}">
+              <div style="font-size:1.3rem">${d.e}</div>
+              <div style="font-size:0.85rem;font-weight:800;color:${i === 1 ? "#f0b429" : "var(--text)"};margin-top:4px">${d.l}</div>
+            </button>`,
+              )
+              .join("")}
+          </div>
+        </div>
+      </div>
+      <div style="background:rgba(240,180,41,0.08);border:1px solid rgba(240,180,41,0.2);border-radius:12px;padding:12px 16px;margin-bottom:20px;font-size:0.82rem;color:var(--text-muted)">
+        📋 <strong style="color:var(--text)">Format:</strong> Section A (MCQ) · Section B (Short Answer) · Section C (Long Answer) — All AI graded with section-wise score breakdown
+      </div>
+      <button onclick="startMockTest()" class="btn btn-primary" style="width:100%;padding:14px;font-size:1rem;font-weight:900;background:linear-gradient(135deg,#f0b429,#f97316);border:none;box-shadow:0 4px 20px rgba(240,180,41,0.4)">Start Mock Test →</button>
+    </div>
+  `;
+  window._mtDuration = 40;
+  window.mtPickDuration = (v, btn) => {
+    window._mtDuration = v;
+    document.querySelectorAll("[onclick^='mtPickDuration']").forEach((b) => {
+      b.style.borderColor = "rgba(255,255,255,0.1)";
+      b.style.background = "rgba(255,255,255,0.04)";
+      b.style.boxShadow = "none";
+      b.querySelector("div:last-child").style.color = "var(--text)";
+    });
+    btn.style.borderColor = "#f0b429";
+    btn.style.background = "rgba(240,180,41,0.12)";
+    btn.style.boxShadow = "0 0 16px rgba(240,180,41,0.3)";
+    btn.querySelector("div:last-child").style.color = "#f0b429";
+  };
+  window.updateMtChapters = () => {
+    const sel = document.getElementById("mt-chapter");
+    const chs = getChapters(
+      document.getElementById("mt-class").value,
+      document.getElementById("mt-subject").value,
+    );
+    sel.innerHTML =
+      `<option value="">All Chapters</option>` +
+      chs.map((c) => `<option value="${c}">${c}</option>`).join("");
+  };
+}
+
+let _mtState = null;
+
+window.startMockTest = async () => {
+  const classNum = document.getElementById("mt-class").value;
+  const subject = document.getElementById("mt-subject").value;
+  const chapter = document.getElementById("mt-chapter").value;
+  const duration = window._mtDuration || 40;
+  const app = document.getElementById("app");
+  app.innerHTML = `<div style="text-align:center;padding:60px 20px">${typingLoader()}<div style="font-size:0.85rem;color:var(--text-muted);margin-top:12px">Generating CBSE-style mock test...</div></div>`;
+  try {
+    const data = await apiPost("/mock-test/generate", {
+      classNum,
+      subject,
+      chapter,
+      duration,
+    });
+    _mtState = {
+      questions: data.questions,
+      classNum,
+      subject,
+      chapter,
+      duration,
+      startTime: Date.now(),
+      answers: {},
+      sectionA: data.sectionA,
+      sectionB: data.sectionB,
+      sectionC: data.sectionC,
+    };
+    renderMockTestPage();
+  } catch (e) {
+    app.innerHTML = `<div style="padding:20px;color:var(--red)">Error: ${e.message}<br><br><button class="btn btn-secondary btn-sm" onclick="renderMockTestSetup()">Back</button></div>`;
+  }
+};
+
+function renderMockTestPage() {
+  const app = document.getElementById("app");
+  const { questions, duration, sectionA, sectionB, sectionC } = _mtState;
+  const totalSecs = duration * 60;
+
+  app.innerHTML = `
+    <style>
+      @keyframes _mtSlide{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+      ._mtq{background:rgba(255,255,255,0.03);border:1.5px solid rgba(255,255,255,0.08);border-radius:14px;padding:16px;margin-bottom:12px;animation:_mtSlide .3s ease}
+      ._mtopt{border-radius:10px;padding:10px 14px;cursor:pointer;border:1.5px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);transition:all .2s;font-size:0.88rem;font-weight:600;text-align:left;width:100%;font-family:inherit;color:var(--text);margin-bottom:6px;display:block}
+      ._mtopt.sel{border-color:#f0b429;background:rgba(240,180,41,0.12)}
+      textarea.mt-ta{width:100%;background:rgba(0,0,0,0.3);border:1.5px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px;color:var(--text);font-family:inherit;font-size:0.88rem;resize:vertical;min-height:80px;box-sizing:border-box}
+      textarea.mt-ta:focus{border-color:#f0b429;outline:none}
+    </style>
+    <!-- Timer bar -->
+    <div style="position:sticky;top:0;z-index:10;background:var(--bg);padding:10px 0 12px;margin-bottom:4px;border-bottom:1px solid rgba(255,255,255,0.06)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="font-size:0.78rem;font-weight:800;color:var(--text-muted)">📝 Mock Test · ${_mtState.subject}</div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:1rem">⏱</span>
+          <span id="mt-timer" style="font-size:1.1rem;font-weight:900;color:#f0b429;min-width:48px;text-align:right">${duration}:00</span>
+        </div>
+      </div>
+      <div style="height:4px;background:rgba(255,255,255,0.07);border-radius:100px;overflow:hidden">
+        <div id="mt-timerbar" style="height:100%;width:100%;background:linear-gradient(90deg,#f0b429,#f97316);border-radius:100px;transition:width 1s linear"></div>
+      </div>
+    </div>
+    <div id="mt-questions">
+      ${renderMockSectionHTML("A", sectionA, "MCQ — 1 mark each", "#4f8ef7")}
+      ${renderMockSectionHTML("B", sectionB, "Short Answer — 2 marks each (25-30 words)", "#9b6dff")}
+      ${renderMockSectionHTML("C", sectionC, "Long Answer — 5 marks each (60-80 words)", "#0fca8c")}
+    </div>
+    <button onclick="submitMockTest()" class="btn btn-primary" style="width:100%;padding:14px;font-size:1rem;font-weight:900;background:linear-gradient(135deg,#f0b429,#f97316);border:none;box-shadow:0 4px 20px rgba(240,180,41,0.4);margin-top:8px">Submit Test →</button>
+  `;
+
+  // Start countdown
+  let secsLeft = totalSecs;
+  const timerEl = document.getElementById("mt-timer");
+  const barEl = document.getElementById("mt-timerbar");
+  _mtState._timerInterval = setInterval(() => {
+    secsLeft--;
+    const m = Math.floor(secsLeft / 60),
+      s = secsLeft % 60;
+    if (timerEl) {
+      timerEl.textContent = `${m}:${s.toString().padStart(2, "0")}`;
+      timerEl.style.color =
+        secsLeft < 120 ? "#f0564a" : secsLeft < 300 ? "#f0b429" : "#f0b429";
+    }
+    if (barEl) barEl.style.width = (secsLeft / totalSecs) * 100 + "%";
+    if (secsLeft <= 0) {
+      clearInterval(_mtState._timerInterval);
+      submitMockTest();
+    }
+  }, 1000);
+}
+
+function renderMockSectionHTML(sec, questions, info, color) {
+  if (!questions || questions.length === 0) return "";
+  return `
+    <div style="margin-bottom:20px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding:10px 14px;background:${color}10;border:1px solid ${color}25;border-radius:12px">
+        <div style="width:28px;height:28px;border-radius:8px;background:${color};display:flex;align-items:center;justify-content:center;font-size:0.78rem;font-weight:900;color:#fff;flex-shrink:0">§${sec}</div>
+        <div><div style="font-size:0.82rem;font-weight:900;color:${color}">Section ${sec}</div><div style="font-size:0.72rem;color:var(--text-muted)">${info}</div></div>
+      </div>
+      ${questions
+        .map((q, i) => {
+          const qid = `${sec}_${i}`;
+          if (sec === "A")
+            return `
+          <div class="_mtq" id="mtq-${qid}">
+            <div style="font-size:0.68rem;font-weight:900;color:${color};text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Q${i + 1} · 1 Mark</div>
+            <div style="font-size:0.92rem;font-weight:600;line-height:1.6;margin-bottom:12px">${escapeHtml(q.q || q.question || "")}</div>
+            ${(q.options || []).map((opt, oi) => `<button class="_mtopt" onclick="mtSelectOpt('${qid}',${oi},this)">${opt}</button>`).join("")}
+          </div>`;
+          return `
+          <div class="_mtq" id="mtq-${qid}">
+            <div style="font-size:0.68rem;font-weight:900;color:${color};text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Q${i + 1} · ${sec === "B" ? "2" : "5"} Mark${sec === "C" ? "s" : ""}</div>
+            <div style="font-size:0.92rem;font-weight:600;line-height:1.6;margin-bottom:10px">${escapeHtml(q.q || q.question || "")}</div>
+            <textarea class="mt-ta" id="mta-${qid}" placeholder="Write your answer here..." oninput="_mtState.answers['${qid}']=this.value"></textarea>
+          </div>`;
+        })
+        .join("")}
+    </div>`;
+}
+
+window.mtSelectOpt = (qid, idx, btn) => {
+  const card = document.getElementById("mtq-" + qid);
+  if (card)
+    card.querySelectorAll("._mtopt").forEach((b) => {
+      b.classList.remove("sel");
+      b.style.borderColor = "rgba(255,255,255,0.1)";
+      b.style.background = "rgba(255,255,255,0.04)";
+    });
+  btn.classList.add("sel");
+  _mtState.answers[qid] = idx;
+};
+
+window.submitMockTest = async () => {
+  if (_mtState._timerInterval) clearInterval(_mtState._timerInterval);
+  const app = document.getElementById("app");
+  app.innerHTML = `<div style="text-align:center;padding:60px 20px">${typingLoader()}<div style="font-size:0.85rem;color:var(--text-muted);margin-top:12px">AI is grading your test...</div></div>`;
+  try {
+    const payload = {
+      classNum: _mtState.classNum,
+      subject: _mtState.subject,
+      chapter: _mtState.chapter,
+      sectionA: _mtState.sectionA,
+      sectionB: _mtState.sectionB,
+      sectionC: _mtState.sectionC,
+      answers: _mtState.answers,
+      timeTaken: Math.round((Date.now() - _mtState.startTime) / 1000),
+    };
+    const result = await apiPost("/mock-test/grade", payload);
+    renderMockTestResult(result);
+  } catch (e) {
+    app.innerHTML = `<div style="padding:20px;color:var(--red)">Grading error: ${e.message}<br><br><button class="btn btn-secondary btn-sm" onclick="renderMockTestSetup()">Back</button></div>`;
+  }
+};
+
+function renderMockTestResult(r) {
+  const app = document.getElementById("app");
+  const total = r.totalScore || 0;
+  const maxTotal = r.maxScore || 30;
+  const pct = Math.round((total / maxTotal) * 100);
+  const grade =
+    pct >= 90
+      ? "A+"
+      : pct >= 75
+        ? "A"
+        : pct >= 60
+          ? "B"
+          : pct >= 40
+            ? "C"
+            : "D";
+  const gradeColor = pct >= 75 ? "#0fca8c" : pct >= 50 ? "#f0b429" : "#f0564a";
+  addXP(Math.round(pct / 5), "Mock Test");
+  app.innerHTML = `
+    <style>@keyframes _mrIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}</style>
+    <div style="animation:_mrIn .4s ease">
+      <!-- Score hero -->
+      <div style="background:linear-gradient(135deg,#1a1a3e,#2d1b69);border:1.5px solid rgba(240,180,41,0.3);border-radius:20px;padding:24px;text-align:center;margin-bottom:14px;position:relative;overflow:hidden">
+        <div style="position:absolute;top:-40px;left:50%;transform:translateX(-50%);width:200px;height:200px;border-radius:50%;background:rgba(240,180,41,0.08);filter:blur(40px)"></div>
+        <div style="font-size:3rem;font-weight:900;color:${gradeColor};text-shadow:0 0 30px ${gradeColor}88;margin-bottom:4px">${grade}</div>
+        <div style="font-size:1.5rem;font-weight:900;color:#fff;margin-bottom:4px">${total}/${maxTotal}</div>
+        <div style="font-size:0.82rem;color:rgba(255,255,255,0.5);margin-bottom:16px">${pct}% · +${Math.round(pct / 5)} XP earned</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+          ${[
+            {
+              l: "Section A",
+              v: `${r.secA || 0}/${r.maxA || 0}`,
+              c: "#4f8ef7",
+            },
+            {
+              l: "Section B",
+              v: `${r.secB || 0}/${r.maxB || 0}`,
+              c: "#9b6dff",
+            },
+            {
+              l: "Section C",
+              v: `${r.secC || 0}/${r.maxC || 0}`,
+              c: "#0fca8c",
+            },
+          ]
+            .map(
+              (s) => `
+          <div style="background:${s.c}12;border:1px solid ${s.c}25;border-radius:10px;padding:10px">
+            <div style="font-size:1.1rem;font-weight:900;color:${s.c}">${s.v}</div>
+            <div style="font-size:0.65rem;color:rgba(255,255,255,0.5);margin-top:2px">${s.l}</div>
+          </div>`,
+            )
+            .join("")}
+        </div>
+      </div>
+      <!-- Feedback -->
+      ${
+        r.feedback
+          ? `<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:14px 16px;margin-bottom:14px">
+        <div style="font-size:0.68rem;font-weight:900;letter-spacing:0.08em;color:#f0b429;text-transform:uppercase;margin-bottom:8px">🤖 AI Feedback</div>
+        <div style="font-size:0.85rem;line-height:1.65;color:var(--text-secondary)">${escapeHtml(r.feedback)}</div>
+      </div>`
+          : ""
+      }
+      <!-- Weak areas -->
+      ${
+        r.weakAreas && r.weakAreas.length
+          ? `<div style="background:rgba(240,86,74,0.06);border:1px solid rgba(240,86,74,0.2);border-radius:14px;padding:14px 16px;margin-bottom:14px">
+        <div style="font-size:0.68rem;font-weight:900;letter-spacing:0.08em;color:#f0564a;text-transform:uppercase;margin-bottom:8px">⚠️ Weak Areas</div>
+        ${r.weakAreas.map((w) => `<div style="font-size:0.84rem;color:var(--text-secondary);padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.04);display:flex;gap:8px"><span style="color:#f0564a;flex-shrink:0">•</span>${escapeHtml(w)}</div>`).join("")}
+      </div>`
+          : ""
+      }
+      <!-- Detailed answers -->
+      ${
+        r.detailed && r.detailed.length
+          ? `<div style="margin-bottom:14px">
+        <div style="font-size:0.68rem;font-weight:900;letter-spacing:0.08em;color:var(--text-muted);text-transform:uppercase;margin-bottom:10px">📋 Question Review</div>
+        ${r.detailed
+          .map(
+            (
+              d,
+              i,
+            ) => `<div style="background:${d.correct ? "rgba(15,202,140,0.06)" : "rgba(240,86,74,0.06)"};border:1.5px solid ${d.correct ? "rgba(15,202,140,0.25)" : "rgba(240,86,74,0.25)"};border-radius:12px;padding:12px 14px;margin-bottom:8px">
+          <div style="display:flex;gap:8px;align-items:flex-start">
+            <span style="font-size:1rem;flex-shrink:0">${d.correct ? "✅" : "❌"}</span>
+            <div>
+              <div style="font-size:0.82rem;font-weight:700;color:var(--text);margin-bottom:4px">${escapeHtml(d.question || "")}</div>
+              ${!d.correct ? `<div style="font-size:0.78rem;color:#0fca8c">✓ ${escapeHtml(d.correctAnswer || "")}</div>` : ""}
+              ${d.comment ? `<div style="font-size:0.75rem;color:var(--text-muted);margin-top:4px">${escapeHtml(d.comment)}</div>` : ""}
+            </div>
+          </div>
+        </div>`,
+          )
+          .join("")}
+      </div>`
+          : ""
+      }
+      <div style="display:flex;gap:10px">
+        <button onclick="renderMockTestSetup()" class="btn btn-primary" style="flex:1;padding:13px;background:linear-gradient(135deg,#f0b429,#f97316);border:none">Try Again</button>
+        <button onclick="navigate('home')" class="btn btn-secondary" style="flex:1;padding:13px">Home</button>
+      </div>
+    </div>
+  `;
+}
+window.renderMockTestSetup = renderMockTestSetup;
+
+// ============================================================
+// MIND MAP
+// ============================================================
+function renderMindMapSetup() {
+  const app = document.getElementById("app");
+  const subjects = [
+    "Maths",
+    "Physics",
+    "Chemistry",
+    "Biology",
+    "History",
+    "Geography",
+    "Civics",
+    "Economics",
+    "English",
+    "Hindi",
+  ];
+  const cls = S.classPreference || "10";
+  const subj = S.subjectPreference || "Maths";
+  const chapters = getChapters(cls, subj);
+  app.innerHTML = `
+    <button onclick="navigate('home')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.85rem;padding:0;font-family:inherit;margin-bottom:18px;display:block">‹ Back</button>
+    <div style="font-size:1.4rem;font-weight:900;background:linear-gradient(135deg,#9b6dff,#4f8ef7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:4px">🧠 Mind Map</div>
+    <div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:24px">AI generates an interactive visual topic breakdown</div>
+    <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:24px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><label class="form-label">Class</label>
+          <select id="mm-class" class="form-select" style="margin-top:4px" onchange="updateMmChapters()">
+            ${["6", "7", "8", "9", "10"].map((c) => `<option value="${c}" ${cls === c ? "selected" : ""}>${c}</option>`).join("")}
+          </select></div>
+        <div><label class="form-label">Subject</label>
+          <select id="mm-subject" class="form-select" style="margin-top:4px" onchange="updateMmChapters()">
+            ${subjects.map((s) => `<option value="${s}" ${subj === s ? "selected" : ""}>${s}</option>`).join("")}
+          </select></div>
+      </div>
+      <div><label class="form-label">Chapter</label>
+        <select id="mm-chapter" class="form-select" style="margin-top:4px">
+          <option value="">Select chapter</option>
+          ${chapters.map((c) => `<option value="${c}">${c}</option>`).join("")}
+        </select></div>
+    </div>
+    <button onclick="generateMindMap()" class="btn btn-primary" style="width:100%;padding:14px;font-size:1rem;font-weight:900;background:linear-gradient(135deg,#9b6dff,#4f8ef7);border:none;box-shadow:0 4px 20px rgba(155,109,255,0.4)">Generate Mind Map →</button>
+    <div id="mm-err" style="color:var(--red);font-size:0.82rem;margin-top:10px;text-align:center"></div>
+  `;
+  window.updateMmChapters = () => {
+    const sel = document.getElementById("mm-chapter");
+    const chs = getChapters(
+      document.getElementById("mm-class").value,
+      document.getElementById("mm-subject").value,
+    );
+    sel.innerHTML =
+      `<option value="">Select chapter</option>` +
+      chs.map((c) => `<option value="${c}">${c}</option>`).join("");
+  };
+}
+
+window.generateMindMap = async () => {
+  const classNum = document.getElementById("mm-class").value;
+  const subject = document.getElementById("mm-subject").value;
+  const chapter = document.getElementById("mm-chapter").value;
+  const err = document.getElementById("mm-err");
+  if (!chapter) {
+    if (err) err.textContent = "Please select a chapter";
+    return;
+  }
+  const app = document.getElementById("app");
+  app.innerHTML = `<div style="text-align:center;padding:60px 20px">${typingLoader()}<div style="font-size:0.85rem;color:var(--text-muted);margin-top:12px">Building mind map...</div></div>`;
+  try {
+    const data = await apiPost("/mind-map", { classNum, subject, chapter });
+    renderMindMapSVG(data.tree, chapter, subject);
+  } catch (e) {
+    app.innerHTML = `<div style="padding:20px;color:var(--red)">Error: ${e.message}<br><br><button class="btn btn-secondary btn-sm" onclick="renderMindMapSetup()">Back</button></div>`;
+  }
+};
+
+function renderMindMapSVG(tree, chapter, subject) {
+  const app = document.getElementById("app");
+  // Build layout
+  const W = 340,
+    CX = W / 2;
+  const nodeColors = [
+    "#9b6dff",
+    "#4f8ef7",
+    "#0fca8c",
+    "#f0b429",
+    "#f0564a",
+    "#ec4899",
+    "#06b6d4",
+  ];
+  const branches = tree.children || [];
+  const R1 = 110,
+    R2 = 185;
+  const nodes = [];
+  const lines = [];
+  // Center node
+  nodes.push({
+    x: CX,
+    y: 160,
+    label: tree.label || chapter,
+    color: "#9b6dff",
+    r: 38,
+    fontSize: 12,
+    bold: true,
+  });
+  branches.forEach((branch, bi) => {
+    const angle = (bi / branches.length) * Math.PI * 2 - Math.PI / 2;
+    const bx = CX + Math.cos(angle) * R1;
+    const by = 160 + Math.sin(angle) * R1;
+    const col = nodeColors[(bi + 1) % nodeColors.length];
+    nodes.push({
+      x: bx,
+      y: by,
+      label: branch.label,
+      color: col,
+      r: 28,
+      fontSize: 10,
+      bold: false,
+    });
+    lines.push({ x1: CX, y1: 160, x2: bx, y2: by, color: col });
+    (branch.children || []).forEach((child, ci) => {
+      const spread = Math.PI / 5;
+      const childAngle =
+        angle +
+        (ci - (branch.children.length - 1) / 2) *
+          spread *
+          (1.2 / Math.max(branch.children.length, 1));
+      const cx2 = CX + Math.cos(childAngle) * R2;
+      const cy2 = 160 + Math.sin(childAngle) * R2;
+      nodes.push({
+        x: cx2,
+        y: cy2,
+        label: child.label,
+        color: col,
+        r: 20,
+        fontSize: 9,
+        bold: false,
+        leaf: true,
+      });
+      lines.push({ x1: bx, y1: by, x2: cx2, y2: cy2, color: col, dash: true });
+    });
+  });
+  const svgH = 340;
+  const svgLines = lines
+    .map(
+      (l) =>
+        `<line x1="${l.x1}" y1="${l.y1}" x2="${l.x2}" y2="${l.y2}" stroke="${l.color}" stroke-width="${l.dash ? 1.5 : 2.5}" stroke-opacity="${l.dash ? 0.5 : 0.7}" ${l.dash ? 'stroke-dasharray="4,3"' : ""}/>`,
+    )
+    .join("");
+  const svgNodes = nodes
+    .map((n) => {
+      const words = n.label.split(" ");
+      const lines2 = [];
+      let line2 = "";
+      words.forEach((w) => {
+        if (
+          (line2 + " " + w).trim().length >
+          ((n.r * 1.6) / n.fontSize) * 2.2
+        ) {
+          if (line2) lines2.push(line2);
+          line2 = w;
+        } else {
+          line2 = (line2 + " " + w).trim();
+        }
+      });
+      if (line2) lines2.push(line2);
+      const textY = n.y - (lines2.length - 1) * n.fontSize * 0.6;
+      return `<g>
+      <circle cx="${n.x}" cy="${n.y}" r="${n.r}" fill="${n.color}22" stroke="${n.color}" stroke-width="${n.bold ? 2.5 : 1.5}"/>
+      ${n.bold ? `<circle cx="${n.x}" cy="${n.y}" r="${n.r + 6}" fill="none" stroke="${n.color}" stroke-width="1" stroke-opacity="0.3" stroke-dasharray="3,3"/>` : ""}
+      ${lines2.map((l, i) => `<text x="${n.x}" y="${textY + i * n.fontSize * 1.3}" text-anchor="middle" fill="${n.bold ? "#fff" : n.color}" font-size="${n.fontSize}" font-weight="${n.bold ? "800" : "700"}" font-family="system-ui,sans-serif">${l}</text>`).join("")}
+    </g>`;
+    })
+    .join("");
+
+  app.innerHTML = `
+    <button onclick="renderMindMapSetup()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.85rem;padding:0;font-family:inherit;margin-bottom:14px;display:block">‹ Back</button>
+    <div style="font-size:1rem;font-weight:900;margin-bottom:4px;background:linear-gradient(135deg,#9b6dff,#4f8ef7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">🧠 ${escapeHtml(chapter)}</div>
+    <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:14px">${subject} Mind Map — pinch or drag to explore</div>
+    <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.08);border-radius:16px;overflow:hidden;touch-action:none" id="mm-container">
+      <svg id="mm-svg" viewBox="0 0 ${W} ${svgH}" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;cursor:grab">
+        <defs><filter id="glow"><feGaussianBlur stdDeviation="2" result="blur"/><feComposite in="SourceGraphic" in2="blur"/></filter></defs>
+        <g id="mm-g">
+          ${svgLines}
+          ${svgNodes}
+        </g>
+      </svg>
+    </div>
+    <!-- Key -->
+    <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:8px">
+      ${branches.map((b, i) => `<span style="background:${nodeColors[(i + 1) % nodeColors.length]}18;border:1px solid ${nodeColors[(i + 1) % nodeColors.length]}33;color:${nodeColors[(i + 1) % nodeColors.length]};font-size:0.72rem;font-weight:700;padding:3px 10px;border-radius:20px">${b.label}</span>`).join("")}
+    </div>
+    <!-- Topic list -->
+    <div style="margin-top:16px">
+      ${branches
+        .map((b, i) => {
+          const col = nodeColors[(i + 1) % nodeColors.length];
+          return `<div style="margin-bottom:10px;background:${col}08;border:1px solid ${col}18;border-radius:12px;padding:12px 14px">
+          <div style="font-size:0.8rem;font-weight:900;color:${col};margin-bottom:6px">${b.label}</div>
+          ${(b.children || []).map((c) => `<div style="font-size:0.78rem;color:var(--text-secondary);padding:2px 0">• ${c.label}</div>`).join("")}
+          ${b.desc ? `<div style="font-size:0.76rem;color:var(--text-muted);margin-top:4px;font-style:italic">${b.desc}</div>` : ""}
+        </div>`;
+        })
+        .join("")}
+    </div>
+  `;
+  // Pan support
+  let drag = false,
+    lastX = 0,
+    lastY = 0,
+    tx = 0,
+    ty = 0,
+    scale = 1;
+  const svg = document.getElementById("mm-svg");
+  const g = document.getElementById("mm-g");
+  const applyTransform = () => {
+    g.setAttribute("transform", `translate(${tx},${ty}) scale(${scale})`);
+  };
+  svg.addEventListener("mousedown", (e) => {
+    drag = true;
+    lastX = e.clientX;
+    lastY = e.clientY;
+    svg.style.cursor = "grabbing";
+  });
+  svg.addEventListener("mousemove", (e) => {
+    if (!drag) return;
+    tx += e.clientX - lastX;
+    ty += e.clientY - lastY;
+    lastX = e.clientX;
+    lastY = e.clientY;
+    applyTransform();
+  });
+  svg.addEventListener("mouseup", () => {
+    drag = false;
+    svg.style.cursor = "grab";
+  });
+  svg.addEventListener(
+    "wheel",
+    (e) => {
+      e.preventDefault();
+      scale = Math.max(0.5, Math.min(3, scale - e.deltaY * 0.001));
+      applyTransform();
+    },
+    { passive: false },
+  );
+}
+window.renderMindMapSetup = renderMindMapSetup;
+
+// ============================================================
+// FLASHCARDS
+// ============================================================
+let _fcState = null;
+
+function renderFlashcardsSetup() {
+  const app = document.getElementById("app");
+  const subjects = [
+    "Maths",
+    "Physics",
+    "Chemistry",
+    "Biology",
+    "History",
+    "Geography",
+    "Civics",
+    "Economics",
+    "English",
+    "Hindi",
+  ];
+  const cls = S.classPreference || "10";
+  const subj = S.subjectPreference || "Maths";
+  const chapters = getChapters(cls, subj);
+  app.innerHTML = `
+    <button onclick="navigate('home')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.85rem;padding:0;font-family:inherit;margin-bottom:18px;display:block">‹ Back</button>
+    <div style="font-size:1.4rem;font-weight:900;background:linear-gradient(135deg,#0fca8c,#4f8ef7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:4px">🃏 Flashcards</div>
+    <div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:24px">Spaced repetition · Flip to reveal · Earn XP on deck completion</div>
+    <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:24px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><label class="form-label">Class</label>
+          <select id="fc-class" class="form-select" style="margin-top:4px" onchange="updateFcChapters()">
+            ${["6", "7", "8", "9", "10"].map((c) => `<option value="${c}" ${cls === c ? "selected" : ""}>${c}</option>`).join("")}
+          </select></div>
+        <div><label class="form-label">Subject</label>
+          <select id="fc-subject" class="form-select" style="margin-top:4px" onchange="updateFcChapters()">
+            ${subjects.map((s) => `<option value="${s}" ${subj === s ? "selected" : ""}>${s}</option>`).join("")}
+          </select></div>
+      </div>
+      <div><label class="form-label">Chapter</label>
+        <select id="fc-chapter" class="form-select" style="margin-top:4px">
+          <option value="">Select chapter</option>
+          ${chapters.map((c) => `<option value="${c}">${c}</option>`).join("")}
+        </select></div>
+      <div>
+        <label class="form-label" style="margin-bottom:8px">Number of Cards</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+          ${[10, 15, 20]
+            .map(
+              (
+                n,
+                i,
+              ) => `<button onclick="fcPickCount(${n},this)" style="border-radius:12px;padding:12px 8px;cursor:pointer;border:2px solid ${i === 0 ? "#0fca8c" : "rgba(255,255,255,0.1)"};background:${i === 0 ? "rgba(15,202,140,0.12)" : "rgba(255,255,255,0.04)"};text-align:center;font-family:inherit;transition:all .2s;box-shadow:${i === 0 ? "0 0 14px rgba(15,202,140,0.3)" : "none"}" id="fc-count-${n}">
+            <div style="font-size:1.4rem;font-weight:900;color:${i === 0 ? "#0fca8c" : "var(--text)"}">${n}</div>
+            <div style="font-size:0.7rem;color:var(--text-muted);margin-top:2px">cards</div>
+          </button>`,
+            )
+            .join("")}
+        </div>
+      </div>
+    </div>
+    <button onclick="generateFlashcards()" class="btn btn-primary" style="width:100%;padding:14px;font-size:1rem;font-weight:900;background:linear-gradient(135deg,#0fca8c,#4f8ef7);border:none;box-shadow:0 4px 20px rgba(15,202,140,0.4)">Generate Flashcards →</button>
+    <div id="fc-err" style="color:var(--red);font-size:0.82rem;margin-top:10px;text-align:center"></div>
+  `;
+  window._fcCount = 10;
+  window.fcPickCount = (n, btn) => {
+    window._fcCount = n;
+    [10, 15, 20].forEach((v) => {
+      const b = document.getElementById("fc-count-" + v);
+      if (!b) return;
+      b.style.borderColor = "rgba(255,255,255,0.1)";
+      b.style.background = "rgba(255,255,255,0.04)";
+      b.style.boxShadow = "none";
+      b.querySelector("div:first-child").style.color = "var(--text)";
+    });
+    btn.style.borderColor = "#0fca8c";
+    btn.style.background = "rgba(15,202,140,0.12)";
+    btn.style.boxShadow = "0 0 14px rgba(15,202,140,0.3)";
+    btn.querySelector("div:first-child").style.color = "#0fca8c";
+  };
+  window.updateFcChapters = () => {
+    const sel = document.getElementById("fc-chapter");
+    const chs = getChapters(
+      document.getElementById("fc-class").value,
+      document.getElementById("fc-subject").value,
+    );
+    sel.innerHTML =
+      `<option value="">Select chapter</option>` +
+      chs.map((c) => `<option value="${c}">${c}</option>`).join("");
+  };
+}
+
+window.generateFlashcards = async () => {
+  const classNum = document.getElementById("fc-class").value;
+  const subject = document.getElementById("fc-subject").value;
+  const chapter = document.getElementById("fc-chapter").value;
+  const count = window._fcCount || 10;
+  const err = document.getElementById("fc-err");
+  if (!chapter) {
+    if (err) err.textContent = "Please select a chapter";
+    return;
+  }
+  const app = document.getElementById("app");
+  app.innerHTML = `<div style="text-align:center;padding:60px 20px">${typingLoader()}<div style="font-size:0.85rem;color:var(--text-muted);margin-top:12px">Creating flashcards...</div></div>`;
+  try {
+    const data = await apiPost("/flashcards", {
+      classNum,
+      subject,
+      chapter,
+      count,
+    });
+    _fcState = {
+      cards: data.cards,
+      current: 0,
+      flipped: false,
+      due: data.cards.map((_, i) => i), // spaced repetition queue
+      ease: {},
+      lapses: {},
+      chapter,
+      subject,
+      classNum,
+    };
+    renderFlashcard();
+  } catch (e) {
+    app.innerHTML = `<div style="padding:20px;color:var(--red)">Error: ${e.message}<br><br><button class="btn btn-secondary btn-sm" onclick="renderFlashcardsSetup()">Back</button></div>`;
+  }
+};
+
+function renderFlashcard() {
+  if (!_fcState || _fcState.due.length === 0) {
+    renderFlashcardComplete();
+    return;
+  }
+  const app = document.getElementById("app");
+  const { cards, due, current: ci, chapter, subject } = _fcState;
+  const idx = due[0];
+  const card = cards[idx];
+  const done = cards.length - due.length;
+  const pct = Math.round((done / cards.length) * 100);
+  app.innerHTML = `
+    <style>
+      @keyframes _fcFlip{0%{transform:rotateY(0deg)}50%{transform:rotateY(90deg)}100%{transform:rotateY(0deg)}}
+      @keyframes _fcPop{from{opacity:0;transform:scale(0.95)}to{opacity:1;transform:scale(1)}}
+      ._fccard{perspective:1000px;cursor:pointer;animation:_fcPop .3s ease}
+      ._fcinner{position:relative;min-height:200px;transform-style:preserve-3d;transition:transform 0.5s ease}
+      ._fcinner.flipped{transform:rotateY(180deg)}
+      ._fcfront,._fcback{position:absolute;inset:0;backface-visibility:hidden;border-radius:18px;padding:28px 22px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+      ._fcfront{background:linear-gradient(135deg,rgba(15,202,140,0.12),rgba(79,142,247,0.08));border:1.5px solid rgba(15,202,140,0.3)}
+      ._fcback{background:linear-gradient(135deg,rgba(79,142,247,0.12),rgba(155,109,255,0.08));border:1.5px solid rgba(79,142,247,0.3);transform:rotateY(180deg)}
+    </style>
+    <button onclick="renderFlashcardsSetup()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.85rem;padding:0;font-family:inherit;margin-bottom:14px;display:block">‹ Back</button>
+    <!-- Progress -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div style="font-size:0.78rem;font-weight:800;color:var(--text-muted)">🃏 ${done}/${cards.length} done</div>
+      <div style="font-size:0.78rem;color:var(--text-muted)">${subject} · ${chapter}</div>
+    </div>
+    <div style="height:5px;background:rgba(255,255,255,0.07);border-radius:100px;margin-bottom:20px;overflow:hidden">
+      <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#0fca8c,#4f8ef7);border-radius:100px;transition:width .5s"></div>
+    </div>
+    <!-- Card -->
+    <div class="_fccard" onclick="flipFlashcard()" id="fc-card-wrap">
+      <div class="_fcinner" id="fc-inner">
+        <div class="_fcfront">
+          <div style="font-size:0.65rem;font-weight:900;letter-spacing:0.1em;color:#0fca8c;text-transform:uppercase;margin-bottom:14px">Question — tap to flip</div>
+          <div style="font-size:1rem;font-weight:700;line-height:1.65;color:#fff">${escapeHtml(card.front)}</div>
+          <div style="margin-top:18px;font-size:1.5rem">👆</div>
+        </div>
+        <div class="_fcback">
+          <div style="font-size:0.65rem;font-weight:900;letter-spacing:0.1em;color:#4f8ef7;text-transform:uppercase;margin-bottom:14px">Answer</div>
+          <div style="font-size:0.95rem;font-weight:600;line-height:1.65;color:#fff">${escapeHtml(card.back)}</div>
+          ${card.hint ? `<div style="margin-top:10px;font-size:0.78rem;color:rgba(255,255,255,0.5);font-style:italic">💡 ${escapeHtml(card.hint)}</div>` : ""}
+        </div>
+      </div>
+    </div>
+    <!-- Spaced rep buttons (shown after flip) -->
+    <div id="fc-actions" style="display:none;margin-top:16px;display:none">
+      <div style="font-size:0.75rem;font-weight:800;color:var(--text-muted);text-align:center;margin-bottom:10px">How well did you know this?</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+        <button onclick="fcRespond('again')" style="border-radius:14px;padding:12px;cursor:pointer;border:1.5px solid rgba(240,86,74,0.4);background:rgba(240,86,74,0.1);color:#f0564a;font-size:0.82rem;font-weight:800;font-family:inherit;transition:all .2s" onmouseover="this.style.background='rgba(240,86,74,0.2)'" onmouseout="this.style.background='rgba(240,86,74,0.1)'">🔁 Again</button>
+        <button onclick="fcRespond('hard')" style="border-radius:14px;padding:12px;cursor:pointer;border:1.5px solid rgba(240,180,41,0.4);background:rgba(240,180,41,0.1);color:#f0b429;font-size:0.82rem;font-weight:800;font-family:inherit;transition:all .2s" onmouseover="this.style.background='rgba(240,180,41,0.2)'" onmouseout="this.style.background='rgba(240,180,41,0.1)'">😅 Hard</button>
+        <button onclick="fcRespond('easy')" style="border-radius:14px;padding:12px;cursor:pointer;border:1.5px solid rgba(15,202,140,0.4);background:rgba(15,202,140,0.1);color:#0fca8c;font-size:0.82rem;font-weight:800;font-family:inherit;transition:all .2s" onmouseover="this.style.background='rgba(15,202,140,0.2)'" onmouseout="this.style.background='rgba(15,202,140,0.1)'">✅ Easy</button>
+      </div>
+    </div>
+    <!-- Mini deck preview -->
+    <div style="margin-top:14px;display:flex;gap:4px;flex-wrap:wrap;justify-content:center">
+      ${cards
+        .map((_, i) => {
+          const isDue = due.includes(i);
+          return `<div style="width:12px;height:12px;border-radius:3px;background:${i === idx ? "#0fca8c" : isDue ? "rgba(255,255,255,0.12)" : "rgba(15,202,140,0.4)"}"></div>`;
+        })
+        .join("")}
+    </div>
+  `;
+}
+
+window.flipFlashcard = () => {
+  const inner = document.getElementById("fc-inner");
+  const actions = document.getElementById("fc-actions");
+  if (!inner) return;
+  _fcState.flipped = !_fcState.flipped;
+  if (_fcState.flipped) {
+    inner.classList.add("flipped");
+    if (actions) actions.style.display = "grid";
+  } else {
+    inner.classList.remove("flipped");
+    if (actions) actions.style.display = "none";
+  }
+};
+
+window.fcRespond = (rating) => {
+  const { due, ease, lapses } = _fcState;
+  const idx = due[0];
+  // Spaced repetition: Again → back to end, Hard → back at position 3, Easy → remove from queue
+  due.shift();
+  if (rating === "again") {
+    lapses[idx] = (lapses[idx] || 0) + 1;
+    due.push(idx); // back to end
+  } else if (rating === "hard") {
+    lapses[idx] = (lapses[idx] || 0) + 0.5;
+    due.splice(Math.min(3, due.length), 0, idx); // insert at pos 3
+  }
+  // easy → removed from due (card "learned")
+  ease[idx] = rating;
+  _fcState.flipped = false;
+  renderFlashcard();
+};
+
+function renderFlashcardComplete() {
+  const app = document.getElementById("app");
+  const { cards, ease, lapses } = _fcState;
+  const learned = Object.values(ease).filter((v) => v === "easy").length;
+  const hard = Object.values(ease).filter((v) => v === "hard").length;
+  const again = Object.values(lapses).filter((v) => v >= 1).length;
+  const xp = Math.round(learned * 2 + hard * 1);
+  addXP(xp, "Flashcards");
+  app.innerHTML = `
+    <div style="text-align:center;padding:20px 0">
+      <div style="font-size:3rem;margin-bottom:12px">🎉</div>
+      <div style="font-size:1.5rem;font-weight:900;color:#fff;margin-bottom:4px">Deck Complete!</div>
+      <div style="font-size:0.85rem;color:var(--text-muted);margin-bottom:24px">+${xp} XP earned</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:24px">
+        <div style="background:rgba(15,202,140,0.1);border:1px solid rgba(15,202,140,0.3);border-radius:14px;padding:16px">
+          <div style="font-size:1.6rem;font-weight:900;color:#0fca8c">${learned}</div>
+          <div style="font-size:0.7rem;color:var(--text-muted);margin-top:3px">Learned ✅</div>
+        </div>
+        <div style="background:rgba(240,180,41,0.1);border:1px solid rgba(240,180,41,0.3);border-radius:14px;padding:16px">
+          <div style="font-size:1.6rem;font-weight:900;color:#f0b429">${hard}</div>
+          <div style="font-size:0.7rem;color:var(--text-muted);margin-top:3px">Hard 😅</div>
+        </div>
+        <div style="background:rgba(240,86,74,0.1);border:1px solid rgba(240,86,74,0.3);border-radius:14px;padding:16px">
+          <div style="font-size:1.6rem;font-weight:900;color:#f0564a">${again}</div>
+          <div style="font-size:0.7rem;color:var(--text-muted);margin-top:3px">Again 🔁</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button onclick="generateFlashcards()" class="btn btn-primary" style="flex:1;padding:13px;background:linear-gradient(135deg,#0fca8c,#4f8ef7);border:none">Study Again</button>
+        <button onclick="renderFlashcardsSetup()" class="btn btn-secondary" style="flex:1;padding:13px">New Deck</button>
+      </div>
+    </div>
+  `;
+}
+window.renderFlashcardsSetup = renderFlashcardsSetup;
+
+// ============================================================
 // LEADERBOARD PAGE
 // ============================================================
 function renderLeaderboard() {
@@ -6143,13 +7681,7 @@ function renderNotesTab() {
           "कृष्ण के बाल रूप का सजीव चित्रण — वात्सल्य रस की प्रधानता",
           "भाषा: ब्रजभाषा · काव्य रूप: पद",
         ],
-        Tulsidas: [
-          "भक्तिकाल कवि · रामभक्ति धारा",
-          "रामचरितमानस, विनय पत्रिका, कवितावली — प्रमुख रचनाएँ",
-          "पाठ में राम के लक्ष्मण को उपदेश — अच्छे मित्र की पहचान",
-          "सच्चा मित्र वही जो विपत्ति में सहायता करे और सत्य बोले",
-          "भाषा: अवधी और ब्रजभाषा · काव्य रूप: चौपाई और दोहे",
-        ],
+        Tulsidas: [],
         Dev: [
           "रीतिकाल के कवि · श्रृंगार रस की प्रधानता",
           "प्रकृति का मानवीकरण — सावन के बादलों से कृष्ण की तुलना",
@@ -6228,7 +7760,7 @@ function renderNotesTab() {
           "पाठ 'स्त्री शिक्षा के विरोधी कुतर्कों का खंडन' — तर्कपूर्ण निबंध",
           "स्त्री शिक्षा के विरोधियों के तर्कों को एक-एक कर खंडित करते हैं",
           "प्रमाण देते हैं कि प्राचीन भारत में स्त्रियाँ शिक्षित थीं (गार्गी, मैत्रेयी)",
-          "थीम: स्त्री शिक्षen� का समर्थन, सामाजिक कुरीतियों का विरोध",
+          "थीम: स्त्री शिक्षा का समर्थन, सामाजिक कुरीतियों का विरोध",
         ],
         "Mata ka Anchal": [
           "लेखक: शिवपूजन सहाय · संस्मरण",
