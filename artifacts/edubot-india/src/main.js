@@ -4327,7 +4327,7 @@ function renderWaitingRoom() {
       <div style="font-size:0.8rem;color:var(--text-muted);margin-top:4px">Share this code with friends</div>
     </div>
     <div id="wr-players" style="margin-bottom:20px"></div>
-    ${_crRoom.isHost ? `<button id="wr-start-btn" onclick="doStartRoom()" class="btn btn-primary" style="width:100%;padding:14px;font-size:1rem;background:linear-gradient(135deg,#f0b429,#f97316);border:none;box-shadow:0 4px 20px rgba(240,180,41,0.4)" disabled>Waiting for players...</button>` : `<div style="text-align:center;color:var(--text-muted);font-size:0.85rem">Waiting for host to start...</div>`}
+    ${_crRoom.isHost ? `<button id="wr-start-btn" onclick="doStartRoom()" class="btn btn-primary" style="width:100%;padding:14px;font-size:1rem;background:linear-gradient(135deg,#f0b429,#f97316);border:none;box-shadow:0 4px 20px rgba(240,180,41,0.4)">Start Quiz (Solo) →</button>` : `<div style="text-align:center;color:var(--text-muted);font-size:0.85rem">Waiting for host to start...</div>`}
     <button onclick="stopClassroomPoll();renderGames();" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.8rem;margin-top:14px;display:block;margin-left:auto;margin-right:auto;font-family:inherit">Leave Room</button>
   `;
   stopClassroomPoll();
@@ -4368,12 +4368,12 @@ async function pollWaiting() {
     `;
     const btn = document.getElementById("wr-start-btn");
     if (btn) {
-      if (data.players.length >= 2) {
+      if (data.players.length >= 1) {
         btn.disabled = false;
-        btn.textContent = `Start Quiz (${data.players.length} players) →`;
-      } else {
-        btn.disabled = true;
-        btn.textContent = "Waiting for at least 2 players...";
+        btn.textContent =
+          data.players.length === 1
+            ? `Start Quiz (Solo) →`
+            : `Start Quiz (${data.players.length} players) →`;
       }
     }
   } catch (e) {
@@ -4612,7 +4612,10 @@ window.submitVoiceDoubt = async (question) => {
       <div style="background:rgba(236,72,153,0.06);border:1.5px solid rgba(236,72,153,0.2);border-radius:14px;padding:16px;margin-top:4px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
           <div style="font-size:0.68rem;font-weight:900;letter-spacing:0.08em;color:#ec4899;text-transform:uppercase">🤖 AI Answer</div>
-          <button onclick="speakText('${fullText.replace(/'/g, "\\'")}')}" style="background:rgba(236,72,153,0.15);border:1px solid rgba(236,72,153,0.3);color:#ec4899;border-radius:20px;padding:3px 10px;font-size:0.72rem;font-weight:700;cursor:pointer;font-family:inherit">🔊 Replay</button>
+          <div style="display:flex;gap:6px">
+            <button onclick="speakText('${fullText.replace(/'/g, "\\'")}')}" style="background:rgba(236,72,153,0.15);border:1px solid rgba(236,72,153,0.3);color:#ec4899;border-radius:20px;padding:3px 10px;font-size:0.72rem;font-weight:700;cursor:pointer;font-family:inherit">🔊 Replay</button>
+            <button onclick="window.speechSynthesis&&window.speechSynthesis.cancel()" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.15);color:var(--text-muted);border-radius:20px;padding:3px 10px;font-size:0.72rem;font-weight:700;cursor:pointer;font-family:inherit">⏹ Stop</button>
+          </div>
         </div>
         <div style="font-size:0.9rem;font-weight:700;color:#fff;margin-bottom:10px">${escapeHtml(data.solution || "")}</div>
         ${(data.steps || []).map((s) => `<div style="font-size:0.84rem;color:var(--text-secondary);padding:5px 0;border-top:1px solid rgba(255,255,255,0.05);display:flex;gap:8px"><span style="color:#ec4899;flex-shrink:0">→</span>${escapeHtml(s)}</div>`).join("")}
@@ -4662,41 +4665,94 @@ function renderRevisionSchedule() {
   app.innerHTML = `
     <button onclick="navigate('home')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.85rem;padding:0;font-family:inherit;margin-bottom:18px;display:block">‹ Back</button>
     <div style="font-size:1.4rem;font-weight:900;background:linear-gradient(135deg,#06b6d4,#4f8ef7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:4px">📅 Smart Revision Schedule</div>
-    <div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:24px">AI builds a personalised day-by-day study plan based on your weak areas</div>
-    <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:24px">
-      <div><label class="form-label">Your Exam Date</label>
-        <input type="date" id="rs-date" class="form-input" style="margin-top:4px" value="${defaultDate}" min="${new Date().toISOString().split("T")[0]}"></div>
-      <div><label class="form-label">Class</label>
-        <select id="rs-class" class="form-select" style="margin-top:4px">
-          ${["6", "7", "8", "9", "10"].map((c) => `<option value="${c}" ${(S.classPreference || "10") === c ? "selected" : ""}>${c}</option>`).join("")}
-        </select></div>
-      <div>
-        <label class="form-label" style="margin-bottom:8px">Subjects to Revise</label>
-        <div id="rs-subjects" style="display:flex;flex-wrap:wrap;gap:8px">
-          ${subjects.map((s) => `<button data-subj="${s}" onclick="toggleRsSubject(this)" style="padding:6px 14px;border-radius:20px;border:1.5px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.04);color:var(--text-muted);font-size:0.78rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s">${s}</button>`).join("")}
+    <div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:24px">AI builds a personalised day-by-day study plan around your school hours</div>
+
+    <!-- STEP 1: School Timing -->
+    <div style="background:rgba(6,182,212,0.07);border:1.5px solid rgba(6,182,212,0.25);border-radius:16px;padding:16px;margin-bottom:16px">
+      <div style="font-size:0.68rem;font-weight:900;letter-spacing:0.1em;color:#06b6d4;text-transform:uppercase;margin-bottom:12px">🏫 Step 1 — Your School Hours</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+        <div>
+          <label class="form-label">School Starts</label>
+          <input type="time" id="rs-school-start" class="form-input" style="margin-top:4px" value="07:30">
+        </div>
+        <div>
+          <label class="form-label">School Ends</label>
+          <input type="time" id="rs-school-end" class="form-input" style="margin-top:4px" value="14:00">
         </div>
       </div>
-      <div>
-        <label class="form-label" style="margin-bottom:8px">Daily Study Time</label>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
-          ${[
-            { v: 2, l: "2 hrs" },
-            { v: 4, l: "4 hrs" },
-            { v: 6, l: "6 hrs" },
-          ]
-            .map(
-              (t, i) =>
-                `<button onclick="rsPickTime(${t.v},this)" style="border-radius:12px;padding:11px;cursor:pointer;border:1.5px solid ${i === 1 ? "#06b6d4" : "rgba(255,255,255,0.1)"};background:${i === 1 ? "rgba(6,182,212,0.12)" : "rgba(255,255,255,0.04)"};color:${i === 1 ? "#06b6d4" : "var(--text)"};font-size:0.85rem;font-weight:800;font-family:inherit;transition:all .2s" id="rs-time-${t.v}">${t.l}</button>`,
-            )
-            .join("")}
+      <div style="font-size:0.72rem;color:var(--text-muted)">The planner will schedule study slots before school, after school, and in the evening — avoiding your school hours.</div>
+    </div>
+
+    <!-- STEP 2: Exam & Subjects -->
+    <div style="background:rgba(79,142,247,0.07);border:1.5px solid rgba(79,142,247,0.2);border-radius:16px;padding:16px;margin-bottom:16px">
+      <div style="font-size:0.68rem;font-weight:900;letter-spacing:0.1em;color:#4f8ef7;text-transform:uppercase;margin-bottom:12px">📋 Step 2 — Exam & Subjects</div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div><label class="form-label">Your Exam Date</label>
+          <input type="date" id="rs-date" class="form-input" style="margin-top:4px" value="${defaultDate}" min="${new Date().toISOString().split("T")[0]}"></div>
+        <div><label class="form-label">Class</label>
+          <select id="rs-class" class="form-select" style="margin-top:4px">
+            ${["6", "7", "8", "9", "10"].map((c) => `<option value="${c}" ${(S.classPreference || "10") === c ? "selected" : ""}>${c}</option>`).join("")}
+          </select></div>
+        <div>
+          <label class="form-label" style="margin-bottom:8px">Subjects to Revise</label>
+          <div id="rs-subjects" style="display:flex;flex-wrap:wrap;gap:8px">
+            ${subjects.map((s) => `<button data-subj="${s}" onclick="toggleRsSubject(this)" style="padding:6px 14px;border-radius:20px;border:1.5px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.04);color:var(--text-muted);font-size:0.78rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s">${s}</button>`).join("")}
+          </div>
         </div>
       </div>
     </div>
+
+    <!-- STEP 3: Free Time Slots -->
+    <div style="background:rgba(155,109,255,0.07);border:1.5px solid rgba(155,109,255,0.2);border-radius:16px;padding:16px;margin-bottom:20px">
+      <div style="font-size:0.68rem;font-weight:900;letter-spacing:0.1em;color:#9b6dff;text-transform:uppercase;margin-bottom:12px">⏰ Step 3 — Available Study Slots</div>
+      <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:12px">Which time periods can you study? (outside school hours)</div>
+      <div style="display:flex;flex-direction:column;gap:8px" id="rs-slots">
+        ${[
+          {
+            id: "morning",
+            label: "Early Morning",
+            time: "5:00 AM – School Start",
+            emoji: "🌅",
+          },
+          {
+            id: "afternoon",
+            label: "After School",
+            time: "School End – 6:00 PM",
+            emoji: "📚",
+          },
+          {
+            id: "evening",
+            label: "Evening",
+            time: "6:00 PM – 9:00 PM",
+            emoji: "🌇",
+          },
+          {
+            id: "night",
+            label: "Night",
+            time: "9:00 PM – 11:00 PM",
+            emoji: "🌙",
+          },
+        ]
+          .map(
+            (slot, i) => `
+          <button data-slot="${slot.id}" onclick="toggleRsSlot(this)" style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:12px;border:1.5px solid ${i === 1 ? "rgba(155,109,255,0.5)" : "rgba(255,255,255,0.1)"};background:${i === 1 ? "rgba(155,109,255,0.12)" : "rgba(255,255,255,0.03)"};cursor:pointer;font-family:inherit;text-align:left;transition:all .2s" ${i === 1 ? 'data-selected="true"' : ""}>
+            <span style="font-size:1.3rem">${slot.emoji}</span>
+            <div>
+              <div style="font-size:0.85rem;font-weight:800;color:${i === 1 ? "#9b6dff" : "var(--text)"}">${slot.label}</div>
+              <div style="font-size:0.72rem;color:var(--text-muted)">${slot.time}</div>
+            </div>
+            <span style="margin-left:auto;font-size:0.75rem;font-weight:900;color:${i === 1 ? "#9b6dff" : "var(--text-muted)"}">${i === 1 ? "✓ ON" : "OFF"}</span>
+          </button>`,
+          )
+          .join("")}
+      </div>
+    </div>
+
     <button onclick="generateRevisionSchedule()" class="btn btn-primary" style="width:100%;padding:14px;font-size:1rem;font-weight:900;background:linear-gradient(135deg,#06b6d4,#4f8ef7);border:none;box-shadow:0 4px 20px rgba(6,182,212,0.4)">Generate My Plan →</button>
     <div id="rs-err" style="color:var(--red);font-size:0.82rem;margin-top:10px;text-align:center"></div>
   `;
-  window._rsTime = 4;
   window._rsSubjects = new Set();
+  window._rsSlots = new Set(["afternoon"]);
   window.toggleRsSubject = (btn) => {
     const s = btn.dataset.subj;
     if (window._rsSubjects.has(s)) {
@@ -4711,26 +4767,37 @@ function renderRevisionSchedule() {
       btn.style.color = "#06b6d4";
     }
   };
-  window.rsPickTime = (v, btn) => {
-    window._rsTime = v;
-    [2, 4, 6].forEach((t) => {
-      const b = document.getElementById("rs-time-" + t);
-      if (!b) return;
-      b.style.borderColor = "rgba(255,255,255,0.1)";
-      b.style.background = "rgba(255,255,255,0.04)";
-      b.style.color = "var(--text)";
-    });
-    btn.style.borderColor = "#06b6d4";
-    btn.style.background = "rgba(6,182,212,0.12)";
-    btn.style.color = "#06b6d4";
+  window.toggleRsSlot = (btn) => {
+    const id = btn.dataset.slot;
+    const isOn = btn.dataset.selected === "true";
+    if (isOn) {
+      window._rsSlots.delete(id);
+      btn.dataset.selected = "false";
+      btn.style.borderColor = "rgba(255,255,255,0.1)";
+      btn.style.background = "rgba(255,255,255,0.03)";
+      btn.querySelector("div > div:first-child").style.color = "var(--text)";
+      btn.querySelector("span:last-child").style.color = "var(--text-muted)";
+      btn.querySelector("span:last-child").textContent = "OFF";
+    } else {
+      window._rsSlots.add(id);
+      btn.dataset.selected = "true";
+      btn.style.borderColor = "rgba(155,109,255,0.5)";
+      btn.style.background = "rgba(155,109,255,0.12)";
+      btn.querySelector("div > div:first-child").style.color = "#9b6dff";
+      btn.querySelector("span:last-child").style.color = "#9b6dff";
+      btn.querySelector("span:last-child").textContent = "✓ ON";
+    }
   };
 }
 
 window.generateRevisionSchedule = async () => {
   const examDate = document.getElementById("rs-date")?.value;
   const classNum = document.getElementById("rs-class")?.value;
+  const schoolStart =
+    document.getElementById("rs-school-start")?.value || "07:30";
+  const schoolEnd = document.getElementById("rs-school-end")?.value || "14:00";
   const subjects = [...(window._rsSubjects || new Set())];
-  const dailyHours = window._rsTime || 4;
+  const slots = [...(window._rsSlots || new Set())];
   const err = document.getElementById("rs-err");
   if (!examDate) {
     if (err) err.textContent = "Please select your exam date";
@@ -4740,12 +4807,21 @@ window.generateRevisionSchedule = async () => {
     if (err) err.textContent = "Please select at least one subject";
     return;
   }
+  if (slots.length === 0) {
+    if (err) err.textContent = "Please select at least one study slot";
+    return;
+  }
+  // Compute approx daily hours from slots
+  const slotHours = { morning: 1.5, afternoon: 2, evening: 2, night: 1.5 };
+  const dailyHours = Math.round(
+    slots.reduce((sum, s) => sum + (slotHours[s] || 1.5), 0),
+  );
   const daysLeft = Math.max(
     1,
     Math.round((new Date(examDate) - Date.now()) / 86400000),
   );
   const app = document.getElementById("app");
-  app.innerHTML = `<div style="text-align:center;padding:60px 20px">${typingLoader()}<div style="font-size:0.85rem;color:var(--text-muted);margin-top:12px">Building your ${daysLeft}-day revision plan...</div></div>`;
+  app.innerHTML = `<div style="text-align:center;padding:60px 20px">${typingLoader()}<div style="font-size:0.85rem;color:var(--text-muted);margin-top:12px">Building your ${daysLeft}-day revision plan around your school hours...</div></div>`;
   // Build weak areas context from question history
   const subjectCounts = S.subjectCounts || {};
   const weakContext = subjects
@@ -4760,6 +4836,9 @@ window.generateRevisionSchedule = async () => {
       daysLeft,
       weakContext,
       subjectCounts: S.subjectCounts || {},
+      schoolStart,
+      schoolEnd,
+      studySlots: slots,
     });
     S.revisionSchedule = {
       ...data,
@@ -4767,6 +4846,9 @@ window.generateRevisionSchedule = async () => {
       classNum,
       subjects,
       dailyHours,
+      schoolStart,
+      schoolEnd,
+      studySlots: slots,
       createdAt: Date.now(),
     };
     saveState();
@@ -4798,6 +4880,7 @@ function renderRevisionScheduleView(schedule) {
       <div style="display:flex;justify-content:center;gap:16px;font-size:0.8rem;color:rgba(255,255,255,0.5)">
         <span>📚 ${(schedule.subjects || []).join(" · ")}</span>
       </div>
+      ${schedule.schoolStart ? `<div style="margin-top:8px;font-size:0.75rem;color:rgba(255,255,255,0.4)">🏫 School ${schedule.schoolStart}–${schedule.schoolEnd} · Study slots: ${(schedule.studySlots || []).map((s) => ({ morning: "🌅 Morning", afternoon: "📚 After School", evening: "🌇 Evening", night: "🌙 Night" })[s] || s).join(", ")}</div>` : ""}
     </div>
     <!-- Today's plan -->
     ${
@@ -5249,8 +5332,12 @@ window.mtSelectOpt = (qid, idx, btn) => {
       b.classList.remove("sel");
       b.style.borderColor = "rgba(255,255,255,0.1)";
       b.style.background = "rgba(255,255,255,0.04)";
+      b.style.color = "var(--text)";
     });
   btn.classList.add("sel");
+  btn.style.borderColor = "#f0b429";
+  btn.style.background = "rgba(240,180,41,0.12)";
+  btn.style.color = "#f0b429";
   _mtState.answers[qid] = idx;
 };
 
