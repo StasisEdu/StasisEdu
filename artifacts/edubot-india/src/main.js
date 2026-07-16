@@ -4393,13 +4393,27 @@ window.doStartRoom = async () => {
       app.innerHTML = `<div style="text-align:center;padding:60px 20px">${typingLoader()}<div style="font-size:0.85rem;color:var(--text-muted);margin-top:12px">Generating ${_gameConfig.count} ${_gameConfig.difficulty} questions...</div></div>`;
       try {
         const myLevel = getPerf()?.level || "developing";
-        await apiPost("/classroom/start", {
+        const startData = await apiPost("/classroom/start", {
           code: _crRoom.code,
           playerId: _crRoom.playerId,
           playerLevels: { [_crRoom.playerId]: myLevel },
           difficulty: _gameConfig.difficulty || "medium",
           count: _gameConfig.count || 10,
         });
+        // Host enters the game right away
+        if (startData && startData.status === "active") {
+          renderQuiz(startData);
+        } else {
+          const pollData = await apiPost("/classroom/poll", {
+            code: _crRoom.code,
+            playerId: _crRoom.playerId,
+          });
+          if (pollData && pollData.status === "active") {
+            renderQuiz(pollData);
+          } else {
+            renderWaitingRoom();
+          }
+        }
       } catch (e) {
         renderWaitingRoom();
         alert("Error: " + e.message);
@@ -5546,10 +5560,7 @@ window.generateMindMap = async () => {
 
 function renderMindMapSVG(tree, chapter, subject) {
   const app = document.getElementById("app");
-  // Build layout
-  const W = 340,
-    CX = W / 2;
-  const nodeColors = [
+  const COLORS = [
     "#9b6dff",
     "#4f8ef7",
     "#0fca8c",
@@ -5557,150 +5568,359 @@ function renderMindMapSVG(tree, chapter, subject) {
     "#f0564a",
     "#ec4899",
     "#06b6d4",
+    "#a78bfa",
   ];
   const branches = tree.children || [];
-  const R1 = 110,
-    R2 = 185;
-  const nodes = [];
-  const lines = [];
+
+  /* ── HORIZONTAL TREE LAYOUT ─────────────────────────────────────────────
+     Center node in the middle. Left half of branches go left, right half go right.
+     Each branch fans its children vertically.
+     Nodes are pills (rounded-rect) with text that always fits.
+  ─────────────────────────────────────────────────────────────────────── */
+  const PW = 110,
+    PH = 32; // branch pill w/h
+  const LW = 84,
+    LH = 24; // leaf pill w/h
+  const CW = 120,
+    CH = 44; // center pill w/h
+  const COL_GAP = 90; // horizontal gap between center→branch and branch→leaf
+  const ROW_GAP = 14; // vertical gap between sibling pills
+
+  // Split branches: right side and left side
+  const n = branches.length;
+  const rightBranches = branches.filter((_, i) => i % 2 === 0);
+  const leftBranches = branches.filter((_, i) => i % 2 !== 0);
+
+  // Compute total height needed for each side
+  function branchBlockH(br) {
+    const kids = br.children || [];
+    const kidsH = kids.length * (LH + ROW_GAP) - ROW_GAP;
+    return Math.max(PH, kidsH);
+  }
+  function sideH(brs) {
+    return brs.reduce((s, b) => s + branchBlockH(b) + ROW_GAP, -ROW_GAP);
+  }
+  const rightH = sideH(rightBranches);
+  const leftH = sideH(leftBranches);
+  const totalH = Math.max(rightH, leftH, CH) + 80;
+
+  // Canvas width: center + left-side + right-side
+  const sideW = COL_GAP + PW + COL_GAP + LW;
+  const totalW = CW + sideW * 2 + 40;
+  const CX = totalW / 2,
+    CY = totalH / 2;
+
+  const nodes = [],
+    edges = [];
+  let nodeId = 0;
+
   // Center node
   nodes.push({
-    x: CX,
-    y: 160,
+    id: nodeId++,
+    x: CX - CW / 2,
+    y: CY - CH / 2,
+    w: CW,
+    h: CH,
     label: tree.label || chapter,
     color: "#9b6dff",
-    r: 38,
-    fontSize: 12,
-    bold: true,
+    type: "center",
+    branchIdx: -1,
+    desc: "",
   });
-  branches.forEach((branch, bi) => {
-    const angle = (bi / branches.length) * Math.PI * 2 - Math.PI / 2;
-    const bx = CX + Math.cos(angle) * R1;
-    const by = 160 + Math.sin(angle) * R1;
-    const col = nodeColors[(bi + 1) % nodeColors.length];
-    nodes.push({
-      x: bx,
-      y: by,
-      label: branch.label,
-      color: col,
-      r: 28,
-      fontSize: 10,
-      bold: false,
-    });
-    lines.push({ x1: CX, y1: 160, x2: bx, y2: by, color: col });
-    (branch.children || []).forEach((child, ci) => {
-      const spread = Math.PI / 5;
-      const childAngle =
-        angle +
-        (ci - (branch.children.length - 1) / 2) *
-          spread *
-          (1.2 / Math.max(branch.children.length, 1));
-      const cx2 = CX + Math.cos(childAngle) * R2;
-      const cy2 = 160 + Math.sin(childAngle) * R2;
-      nodes.push({
-        x: cx2,
-        y: cy2,
-        label: child.label,
+
+  function layoutSide(brs, dir) {
+    // dir = +1 for right, -1 for left
+    const totalBlockH = sideH(brs);
+    let cy = CY - totalBlockH / 2;
+    brs.forEach((branch, li) => {
+      const bi = branches.indexOf(branch);
+      const col = COLORS[(bi + 1) % COLORS.length];
+      const blockH = branchBlockH(branch);
+      const bcy = cy + blockH / 2;
+      const bx = dir === 1 ? CX + CW / 2 + COL_GAP : CX - CW / 2 - COL_GAP - PW;
+      const by = bcy - PH / 2;
+      const bNode = {
+        id: nodeId++,
+        x: bx,
+        y: by,
+        w: PW,
+        h: PH,
+        label: branch.label,
         color: col,
-        r: 20,
-        fontSize: 9,
-        bold: false,
-        leaf: true,
+        type: "branch",
+        branchIdx: bi,
+        desc: branch.desc || "",
+        children: [],
+        dir,
+      };
+      nodes.push(bNode);
+      // edge: center → branch
+      edges.push({
+        x1: dir === 1 ? CX + CW / 2 : CX - CW / 2,
+        y1: CY,
+        x2: dir === 1 ? bx : bx + PW,
+        y2: bcy,
+        color: col,
+        w: 2.5,
+        dash: false,
       });
-      lines.push({ x1: bx, y1: by, x2: cx2, y2: cy2, color: col, dash: true });
+      const kids = branch.children || [];
+      const kidsH = kids.length * (LH + ROW_GAP) - ROW_GAP;
+      let lcy = bcy - kidsH / 2;
+      kids.forEach((child, ci) => {
+        const lx = dir === 1 ? bx + PW + COL_GAP : bx - COL_GAP - LW;
+        const ly = lcy;
+        const lNode = {
+          id: nodeId++,
+          x: lx,
+          y: ly,
+          w: LW,
+          h: LH,
+          label: child.label,
+          color: col,
+          type: "leaf",
+          branchIdx: bi,
+          desc: child.desc || "",
+          dir,
+        };
+        nodes.push(lNode);
+        bNode.children.push(lNode.id);
+        edges.push({
+          x1: dir === 1 ? bx + PW : bx,
+          y1: bcy,
+          x2: dir === 1 ? lx : lx + LW,
+          y2: lcy + LH / 2,
+          color: col,
+          w: 1.5,
+          dash: true,
+        });
+        lcy += LH + ROW_GAP;
+      });
+      cy += blockH + ROW_GAP;
     });
-  });
-  const svgH = 340;
-  const svgLines = lines
-    .map(
-      (l) =>
-        `<line x1="${l.x1}" y1="${l.y1}" x2="${l.x2}" y2="${l.y2}" stroke="${l.color}" stroke-width="${l.dash ? 1.5 : 2.5}" stroke-opacity="${l.dash ? 0.5 : 0.7}" ${l.dash ? 'stroke-dasharray="4,3"' : ""}/>`,
-    )
+  }
+  layoutSide(rightBranches, 1);
+  layoutSide(leftBranches, -1);
+
+  // ── SVG helpers ──────────────────────────────────────────────────────────
+  function pill(x, y, w, h, r) {
+    return `M${x + r},${y} h${w - 2 * r} a${r},${r} 0 0 1 ${r},${r} v${h - 2 * r} a${r},${r} 0 0 1 -${r},${r} h-${w - 2 * r} a${r},${r} 0 0 1 -${r},-${r} v-${h - 2 * r} a${r},${r} 0 0 1 ${r},-${r} z`;
+  }
+
+  function fitText(label, maxW, fs) {
+    // Returns tspan lines fitting maxW at given font-size (approx 0.58 * fs per char)
+    const cpl = Math.floor(maxW / (fs * 0.56));
+    const words = label.split(" ");
+    const ls = [];
+    let cur = "";
+    words.forEach((w) => {
+      const test = cur ? cur + " " + w : w;
+      if (test.length > cpl && cur) {
+        ls.push(cur);
+        cur = w;
+      } else cur = test;
+    });
+    if (cur) ls.push(cur);
+    return ls;
+  }
+
+  function bezierPath(x1, y1, x2, y2, dash) {
+    const dx = Math.abs(x2 - x1) * 0.55;
+    return `M${x1},${y1} C${x1 + dx * (x2 > x1 ? 1 : -1)},${y1} ${x2 - dx * (x2 > x1 ? 1 : -1)},${y2} ${x2},${y2}`;
+  }
+
+  // Measure SVG bounding box (add padding)
+  const PAD = 20;
+  const allX = nodes.map((n) => n.x).concat(nodes.map((n) => n.x + n.w));
+  const allY = nodes.map((n) => n.y).concat(nodes.map((n) => n.y + n.h));
+  const minX = Math.min(...allX) - PAD,
+    maxX = Math.max(...allX) + PAD;
+  const minY = Math.min(...allY) - PAD,
+    maxY = Math.max(...allY) + PAD;
+  const VW = maxX - minX,
+    VH = maxY - minY;
+
+  // ── DEFS ─────────────────────────────────────────────────────────────────
+  const defs = `<defs>
+    <filter id="mmSh" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#000" flood-opacity="0.45"/>
+    </filter>
+    <filter id="mmGl" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    ${COLORS.map(
+      (c, i) => `
+    <linearGradient id="mmLG${i}" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="${c}" stop-opacity="0.28"/>
+      <stop offset="100%" stop-color="${c}" stop-opacity="0.08"/>
+    </linearGradient>
+    <linearGradient id="mmSL${i}" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="${c}" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="${c}" stop-opacity="0.3"/>
+    </linearGradient>`,
+    ).join("")}
+    <linearGradient id="mmCG" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#9b6dff" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#4f8ef7" stop-opacity="0.18"/>
+    </linearGradient>
+    <linearGradient id="mmCS" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#9b6dff"/><stop offset="100%" stop-color="#4f8ef7"/>
+    </linearGradient>
+  </defs>`;
+
+  // ── EDGES ────────────────────────────────────────────────────────────────
+  const edgeSVG = edges
+    .map((e, i) => {
+      const ci = COLORS.indexOf(e.color);
+      const gradId = `mmSL${Math.max(0, ci)}`;
+      const path = bezierPath(e.x1, e.y1, e.x2, e.y2, e.dash);
+      return `<path d="${path}" fill="none" stroke="${e.color}" stroke-width="${e.w}"
+      stroke-opacity="${e.dash ? 0.5 : 0.8}" ${e.dash ? 'stroke-dasharray="4,3"' : ""}
+      style="animation:mmDraw .7s ease ${(i * 0.04).toFixed(2)}s both"/>`;
+    })
     .join("");
-  const svgNodes = nodes
-    .map((n) => {
-      const words = n.label.split(" ");
-      const lines2 = [];
-      let line2 = "";
-      words.forEach((w) => {
-        if (
-          (line2 + " " + w).trim().length >
-          ((n.r * 1.6) / n.fontSize) * 2.2
-        ) {
-          if (line2) lines2.push(line2);
-          line2 = w;
-        } else {
-          line2 = (line2 + " " + w).trim();
-        }
-      });
-      if (line2) lines2.push(line2);
-      const textY = n.y - (lines2.length - 1) * n.fontSize * 0.6;
-      return `<g>
-      <circle cx="${n.x}" cy="${n.y}" r="${n.r}" fill="${n.color}22" stroke="${n.color}" stroke-width="${n.bold ? 2.5 : 1.5}"/>
-      ${n.bold ? `<circle cx="${n.x}" cy="${n.y}" r="${n.r + 6}" fill="none" stroke="${n.color}" stroke-width="1" stroke-opacity="0.3" stroke-dasharray="3,3"/>` : ""}
-      ${lines2.map((l, i) => `<text x="${n.x}" y="${textY + i * n.fontSize * 1.3}" text-anchor="middle" fill="${n.bold ? "#fff" : n.color}" font-size="${n.fontSize}" font-weight="${n.bold ? "800" : "700"}" font-family="system-ui,sans-serif">${l}</text>`).join("")}
+
+  // ── NODES ────────────────────────────────────────────────────────────────
+  const nodeSVG = nodes
+    .map((n, idx) => {
+      const isCenter = n.type === "center";
+      const isLeaf = n.type === "leaf";
+      const ci = isCenter ? -1 : COLORS.indexOf(n.color);
+      const fillId = isCenter ? "mmCG" : `mmLG${Math.max(0, ci)}`;
+      const strokeId = isCenter ? "mmCS" : n.color;
+      const r = isCenter ? 12 : isLeaf ? 6 : 8;
+      const fs = isCenter ? 11.5 : isLeaf ? 9 : 10;
+      const sw = isCenter ? 2.5 : isLeaf ? 1 : 1.8;
+      const pw = n.w,
+        ph = n.h;
+      const lines = fitText(n.label, pw - 12, fs);
+      const lh = fs * 1.3;
+      const textY = n.y + ph / 2 - ((lines.length - 1) * lh) / 2;
+      const delay = (idx * 0.06).toFixed(2);
+
+      const strokeAttr = isCenter
+        ? `stroke="url(#mmCS)"`
+        : `stroke="${n.color}"`;
+      const fillAttr = `fill="url(#${fillId})"`;
+
+      return `<g id="mmN${n.id}" onclick="mmTapNode(${n.id})" style="cursor:pointer;animation:mmPop .5s cubic-bezier(.34,1.56,.64,1) ${delay}s both">
+      <path d="${pill(n.x, n.y, pw, ph, r)}" ${fillAttr} ${strokeAttr} stroke-width="${sw}" ${isCenter ? 'filter="url(#mmSh)"' : ""}/>
+      ${isCenter ? `<path d="${pill(n.x - 4, n.y - 4, pw + 8, ph + 8, r + 4)}" fill="none" stroke="url(#mmCS)" stroke-width="1" stroke-opacity="0.2" stroke-dasharray="4,4"/>` : ""}
+      ${lines
+        .map(
+          (
+            l,
+            li,
+          ) => `<text x="${n.x + pw / 2}" y="${textY + li * lh}" text-anchor="middle" dominant-baseline="middle"
+        fill="${isCenter ? "#fff" : n.color}" font-size="${fs}" font-weight="${isCenter ? "900" : isLeaf ? "600" : "800"}"
+        font-family="system-ui,-apple-system,sans-serif"
+        paint-order="stroke" stroke="rgba(0,0,0,0.6)" stroke-width="2.5">${escapeHtml(l)}</text>`,
+        )
+        .join("")}
     </g>`;
     })
     .join("");
 
+  // ── RENDER ───────────────────────────────────────────────────────────────
   app.innerHTML = `
-    <button onclick="renderMindMapSetup()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.85rem;padding:0;font-family:inherit;margin-bottom:14px;display:block">‹ Back</button>
-    <div style="font-size:1rem;font-weight:900;margin-bottom:4px;background:linear-gradient(135deg,#9b6dff,#4f8ef7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">🧠 ${escapeHtml(chapter)}</div>
-    <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:14px">${subject} Mind Map — pinch or drag to explore</div>
-    <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.08);border-radius:16px;overflow:hidden;touch-action:none" id="mm-container">
-      <svg id="mm-svg" viewBox="0 0 ${W} ${svgH}" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;cursor:grab">
-        <defs><filter id="glow"><feGaussianBlur stdDeviation="2" result="blur"/><feComposite in="SourceGraphic" in2="blur"/></filter></defs>
+    <style>
+      @keyframes mmPop{from{opacity:0;transform-box:fill-box;transform-origin:center;transform:scale(0.2)}to{opacity:1;transform:scale(1)}}
+      @keyframes mmDraw{from{opacity:0;stroke-dashoffset:300}to{opacity:1;stroke-dashoffset:0}}
+      @keyframes mmSlide{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+      #mmN0 path:first-child{transition:filter .2s}
+      .mm-tap{filter:brightness(1.35)!important}
+      #mm-detail{animation:mmSlide .22s ease}
+    </style>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+      <button onclick="renderMindMapSetup()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.85rem;padding:0;font-family:inherit;flex-shrink:0">‹ Back</button>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:0.98rem;font-weight:900;background:linear-gradient(135deg,#9b6dff,#4f8ef7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">🧠 ${escapeHtml(chapter)}</div>
+        <div style="font-size:0.7rem;color:var(--text-muted)">${escapeHtml(subject)} · tap node to expand · pinch/scroll to zoom</div>
+      </div>
+      <div style="display:flex;gap:5px;flex-shrink:0">
+        <button onclick="mmZoom(1.3)" title="Zoom in" style="background:rgba(155,109,255,0.12);border:1px solid rgba(155,109,255,0.3);color:#9b6dff;border-radius:8px;width:28px;height:28px;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;font-family:inherit;font-weight:900">+</button>
+        <button onclick="mmZoom(0.77)" title="Zoom out" style="background:rgba(155,109,255,0.12);border:1px solid rgba(155,109,255,0.3);color:#9b6dff;border-radius:8px;width:28px;height:28px;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;font-family:inherit;font-weight:900">−</button>
+        <button onclick="mmReset()" title="Reset" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:var(--text-muted);border-radius:8px;width:28px;height:28px;cursor:pointer;font-size:0.75rem;display:flex;align-items:center;justify-content:center;font-family:inherit">↺</button>
+      </div>
+    </div>
+
+    <div id="mm-wrap" style="background:rgba(255,255,255,0.015);border:1px solid rgba(255,255,255,0.08);border-radius:18px;overflow:hidden;touch-action:none;position:relative;height:${Math.min(VH, 360)}px">
+      <svg id="mm-svg" viewBox="${minX} ${minY} ${VW} ${VH}" xmlns="http://www.w3.org/2000/svg"
+        style="width:100%;height:100%;display:block;cursor:grab;user-select:none">
+        ${defs}
         <g id="mm-g">
-          ${svgLines}
-          ${svgNodes}
+          ${edgeSVG}
+          ${nodeSVG}
         </g>
       </svg>
     </div>
-    <!-- Key -->
-    <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:8px">
-      ${branches.map((b, i) => `<span style="background:${nodeColors[(i + 1) % nodeColors.length]}18;border:1px solid ${nodeColors[(i + 1) % nodeColors.length]}33;color:${nodeColors[(i + 1) % nodeColors.length]};font-size:0.72rem;font-weight:700;padding:3px 10px;border-radius:20px">${b.label}</span>`).join("")}
-    </div>
-    <!-- Topic list -->
-    <div style="margin-top:16px">
+
+    <!-- Tap detail card -->
+    <div id="mm-detail" style="display:none;margin-top:12px"></div>
+
+    <!-- Branch pills legend -->
+    <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:6px">
       ${branches
-        .map((b, i) => {
-          const col = nodeColors[(i + 1) % nodeColors.length];
-          return `<div style="margin-bottom:10px;background:${col}08;border:1px solid ${col}18;border-radius:12px;padding:12px 14px">
-          <div style="font-size:0.8rem;font-weight:900;color:${col};margin-bottom:6px">${b.label}</div>
-          ${(b.children || []).map((c) => `<div style="font-size:0.78rem;color:var(--text-secondary);padding:2px 0">• ${c.label}</div>`).join("")}
-          ${b.desc ? `<div style="font-size:0.76rem;color:var(--text-muted);margin-top:4px;font-style:italic">${b.desc}</div>` : ""}
-        </div>`;
-        })
+        .map(
+          (b, i) => `<button onclick="mmJumpBranch(${i})"
+        style="display:flex;align-items:center;gap:5px;padding:4px 11px;border-radius:20px;border:1.5px solid ${COLORS[(i + 1) % COLORS.length]}55;background:${COLORS[(i + 1) % COLORS.length]}12;color:${COLORS[(i + 1) % COLORS.length]};font-size:0.7rem;font-weight:800;cursor:pointer;font-family:inherit;transition:background .15s"
+        onmouseover="this.style.background='${COLORS[(i + 1) % COLORS.length]}28'"
+        onmouseout="this.style.background='${COLORS[(i + 1) % COLORS.length]}12'">
+        <span style="width:6px;height:6px;border-radius:50%;background:${COLORS[(i + 1) % COLORS.length]};flex-shrink:0"></span>${escapeHtml(b.label)}
+      </button>`,
+        )
         .join("")}
     </div>
   `;
-  // Pan support
+
+  // ── Store globals ────────────────────────────────────────────────────────
+  window._mmNodes = nodes;
+  window._mmBranches = branches;
+  window._mmColors = COLORS;
+
+  // ── Pan / Zoom ───────────────────────────────────────────────────────────
   let drag = false,
-    lastX = 0,
-    lastY = 0,
+    lx = 0,
+    ly = 0,
     tx = 0,
     ty = 0,
-    scale = 1;
+    sc = 1,
+    pinchD = 0;
   const svg = document.getElementById("mm-svg");
   const g = document.getElementById("mm-g");
-  const applyTransform = () => {
-    g.setAttribute("transform", `translate(${tx},${ty}) scale(${scale})`);
+  const applyT = () =>
+    g.setAttribute("transform", `translate(${tx},${ty}) scale(${sc})`);
+  window.mmZoom = (f) => {
+    sc = Math.max(0.3, Math.min(4, sc * f));
+    applyT();
   };
+  window.mmReset = () => {
+    tx = 0;
+    ty = 0;
+    sc = 1;
+    applyT();
+    mmCloseDetail();
+  };
+
   svg.addEventListener("mousedown", (e) => {
     drag = true;
-    lastX = e.clientX;
-    lastY = e.clientY;
+    lx = e.clientX;
+    ly = e.clientY;
     svg.style.cursor = "grabbing";
   });
   svg.addEventListener("mousemove", (e) => {
     if (!drag) return;
-    tx += e.clientX - lastX;
-    ty += e.clientY - lastY;
-    lastX = e.clientX;
-    lastY = e.clientY;
-    applyTransform();
+    tx += e.clientX - lx;
+    ty += e.clientY - ly;
+    lx = e.clientX;
+    ly = e.clientY;
+    applyT();
   });
   svg.addEventListener("mouseup", () => {
+    drag = false;
+    svg.style.cursor = "grab";
+  });
+  svg.addEventListener("mouseleave", () => {
     drag = false;
     svg.style.cursor = "grab";
   });
@@ -5708,12 +5928,152 @@ function renderMindMapSVG(tree, chapter, subject) {
     "wheel",
     (e) => {
       e.preventDefault();
-      scale = Math.max(0.5, Math.min(3, scale - e.deltaY * 0.001));
-      applyTransform();
+      sc = Math.max(0.3, Math.min(4, sc * (e.deltaY < 0 ? 1.12 : 0.89)));
+      applyT();
     },
     { passive: false },
   );
+  svg.addEventListener(
+    "touchstart",
+    (e) => {
+      if (e.touches.length === 1) {
+        drag = true;
+        lx = e.touches[0].clientX;
+        ly = e.touches[0].clientY;
+      } else if (e.touches.length === 2) {
+        drag = false;
+        pinchD = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY,
+        );
+      }
+    },
+    { passive: true },
+  );
+  svg.addEventListener(
+    "touchmove",
+    (e) => {
+      if (e.touches.length === 1 && drag) {
+        tx += e.touches[0].clientX - lx;
+        ty += e.touches[0].clientY - ly;
+        lx = e.touches[0].clientX;
+        ly = e.touches[0].clientY;
+        applyT();
+      } else if (e.touches.length === 2) {
+        const d = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY,
+        );
+        sc = Math.max(0.3, Math.min(4, sc * (d / pinchD)));
+        pinchD = d;
+        applyT();
+      }
+    },
+    { passive: true },
+  );
+  svg.addEventListener("touchend", () => {
+    drag = false;
+  });
+
+  // ── Tap handlers ─────────────────────────────────────────────────────────
+  window.mmCloseDetail = () => {
+    const d = document.getElementById("mm-detail");
+    if (d) {
+      d.style.display = "none";
+      d.innerHTML = "";
+    }
+  };
+
+  window.mmTapNode = (id) => {
+    const nd = window._mmNodes.find((x) => x.id === id);
+    if (!nd) return;
+    // flash
+    const el = document.getElementById("mmN" + id);
+    if (el) {
+      el.classList.add("mm-tap");
+      setTimeout(() => el.classList.remove("mm-tap"), 280);
+    }
+    const det = document.getElementById("mm-detail");
+    if (!det) return;
+    const brs = window._mmBranches;
+    const col = nd.color || "#9b6dff";
+
+    if (nd.type === "center") {
+      det.style.display = "block";
+      det.innerHTML = `<div style="background:rgba(155,109,255,0.08);border:1.5px solid rgba(155,109,255,0.25);border-radius:16px;padding:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div style="font-size:0.65rem;font-weight:900;letter-spacing:.1em;color:#9b6dff;text-transform:uppercase">🧠 Overview</div>
+          <button onclick="mmCloseDetail()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.1rem;font-family:inherit;line-height:1">×</button>
+        </div>
+        <div style="font-size:0.9rem;font-weight:900;color:#fff;margin-bottom:10px">${escapeHtml(nd.label)}</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          ${brs
+            .map(
+              (
+                b,
+                i,
+              ) => `<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:${COLORS[(i + 1) % COLORS.length]}10;border:1px solid ${COLORS[(i + 1) % COLORS.length]}25;border-radius:10px">
+            <div style="display:flex;align-items:center;gap:7px"><span style="width:7px;height:7px;border-radius:50%;background:${COLORS[(i + 1) % COLORS.length]};flex-shrink:0"></span><span style="font-size:0.82rem;font-weight:800;color:${COLORS[(i + 1) % COLORS.length]}">${escapeHtml(b.label)}</span></div>
+            <span style="font-size:0.68rem;color:var(--text-muted)">${(b.children || []).length} topics</span>
+          </div>`,
+            )
+            .join("")}
+        </div>
+      </div>`;
+      return;
+    }
+    const branch = brs[nd.branchIdx] || {};
+    if (nd.type === "branch") {
+      det.style.display = "block";
+      det.innerHTML = `<div style="background:${col}0e;border:1.5px solid ${col}40;border-radius:16px;padding:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div style="font-size:0.65rem;font-weight:900;letter-spacing:.1em;color:${col};text-transform:uppercase">🌿 Main Topic</div>
+          <button onclick="mmCloseDetail()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.1rem;font-family:inherit;line-height:1">×</button>
+        </div>
+        <div style="font-size:1rem;font-weight:900;color:#fff;margin-bottom:${branch.desc ? "6px" : "10px"}">${escapeHtml(nd.label)}</div>
+        ${branch.desc ? `<div style="font-size:0.8rem;color:var(--text-secondary);line-height:1.55;margin-bottom:10px">${escapeHtml(branch.desc)}</div>` : ""}
+        ${
+          (branch.children || []).length
+            ? `
+          <div style="font-size:0.63rem;font-weight:900;letter-spacing:.1em;color:${col};text-transform:uppercase;margin-bottom:7px">Subtopics</div>
+          <div style="display:flex;flex-direction:column;gap:5px">
+            ${(branch.children || [])
+              .map(
+                (
+                  c,
+                ) => `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:rgba(255,255,255,0.04);border-radius:9px">
+              <span style="width:4px;height:4px;border-radius:50%;background:${col};flex-shrink:0"></span>
+              <span style="font-size:0.82rem;color:var(--text-secondary)">${escapeHtml(c.label)}</span>
+            </div>`,
+              )
+              .join("")}
+          </div>`
+            : ""
+        }
+      </div>`;
+    } else {
+      det.style.display = "block";
+      det.innerHTML = `<div style="background:${col}0e;border:1.5px solid ${col}40;border-radius:16px;padding:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div style="font-size:0.65rem;font-weight:900;letter-spacing:.1em;color:${col};text-transform:uppercase">📌 Subtopic</div>
+          <button onclick="mmCloseDetail()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.1rem;font-family:inherit;line-height:1">×</button>
+        </div>
+        <div style="font-size:1rem;font-weight:900;color:#fff;margin-bottom:4px">${escapeHtml(nd.label)}</div>
+        <div style="font-size:0.75rem;color:${col};font-weight:700;margin-bottom:${nd.desc ? "8px" : "0"}">part of ${escapeHtml(branch.label || "")}</div>
+        ${nd.desc ? `<div style="font-size:0.8rem;color:var(--text-secondary);line-height:1.55">${escapeHtml(nd.desc)}</div>` : ""}
+      </div>`;
+    }
+  };
+
+  window.mmJumpBranch = (bi) => {
+    const bNode = nodes.find((n) => n.type === "branch" && n.branchIdx === bi);
+    if (bNode) window.mmTapNode(bNode.id);
+    document
+      .getElementById("mm-wrap")
+      ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  };
 }
+
 window.renderMindMapSetup = renderMindMapSetup;
 
 // ============================================================
@@ -7865,7 +8225,7 @@ function renderNotesTab() {
         "Sana Sana Haath Jodi": [
           "लेखिका: मधु कांकरिया · यात्रा वृत्तांत",
           "सिक्किम और गंगटोक की यात्रा का सजीव वर्णन",
-          "प्रकृति का अद्भुत सौंदर्य — हिमालय, बौद्ध मठ, कवि रवीन्द्रनाथ की पंक्तियाँ",
+          "पl��रकृति का अद्भुत सौंदर्य — हिमालय, बौद्ध मठ, कवि रवीन्द्रनाथ की पंक्तियाँ",
           "पर्यावरण प्रदूषण की चिंता, पहाड़ी जीवन की कठिनाइयाँ",
           "थीम: प्रकृति प्रेम, पर्यटन, पर्यावरण संरक्षण",
         ],
@@ -7907,7 +8267,7 @@ function renderNotesTab() {
           "अव्यय: प्रकार (संबंधबोधक, समुच्चयबोधक, विस्मयादिबोधक)",
         ],
         "Vyakaran: Alankaar": [
-          "अलंकार: काव्य की शोभा बढ़ाने वाले b��पकरण",
+          "अलंकार: काव्य की शोभा बढ़ाने वाले उपकरण",
           "शब्दालंकार: शब्दों की ध्वनि पर आधारित — अनुप्रास, यमक, श्लेष",
           "अनुप्रास: एक ही वर्ण की आवृत्ति (चारु-चंद्र की चंचल किरणें)",
           "यमक: एक ही शब्द अलग-अलग अर्थ में (काली घटा का घमंड घटा)",
