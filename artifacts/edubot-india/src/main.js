@@ -2100,6 +2100,9 @@ function navigate(page, extra) {
       case "search":
         renderWebSearch();
         break;
+      case "pomodoro":
+        renderPomodoro();
+        break;
     }
   });
 }
@@ -2336,6 +2339,13 @@ function renderLanding() {
       page: "saved",
       accent: "#0fca8c",
     },
+    {
+      emoji: "⏱️",
+      title: "Study Timer",
+      desc: "Pomodoro · 25 min focus sessions",
+      page: "pomodoro",
+      accent: "#ec4899",
+    },
   ];
 
   app.innerHTML = `
@@ -2470,7 +2480,7 @@ function renderLanding() {
         </div>
       </div>
 
-      <!-- ⑥ Nova AI banner -->
+      <!-- ⑥ Stasis AI banner -->
       <div class="glass lp-pop" onclick="document.getElementById('nova-fab') && document.getElementById('nova-fab').click()"
         style="cursor:pointer;padding:14px 16px;margin-top:14px;margin-bottom:4px;
                background:linear-gradient(135deg,rgba(79,142,247,0.07),rgba(155,109,255,0.09));
@@ -2480,7 +2490,7 @@ function renderLanding() {
                     display:flex;align-items:center;justify-content:center;font-size:1.15rem;
                     box-shadow:0 0 16px rgba(79,142,247,0.5);animation:lp-float 2.8s ease-in-out infinite;">✨</div>
         <div style="flex:1;">
-          <div style="font-size:0.82rem;font-weight:800;color:#4f8ef7;margin-bottom:2px;">Nova AI — your study buddy</div>
+          <div style="font-size:0.82rem;font-weight:800;color:#4f8ef7;margin-bottom:2px;">Stasis AI — your study buddy</div>
           <div style="font-size:0.72rem;color:var(--text-muted);line-height:1.4;">Tap me for homework help, concept explanations, and more.</div>
         </div>
         <div style="font-size:1rem;color:var(--text-muted);flex-shrink:0;">→</div>
@@ -4842,6 +4852,11 @@ window.generateRevisionSchedule = async () => {
     .map((s) => `${s}: ${subjectCounts[s] || 0} questions done`)
     .join(", ");
   try {
+    // Build chapter list per subject for detailed planning
+    const chapterMap = {};
+    subjects.forEach((s) => {
+      chapterMap[s] = getChapters(classNum, s);
+    });
     const data = await apiPost("/revision-schedule", {
       classNum,
       subjects,
@@ -4853,6 +4868,7 @@ window.generateRevisionSchedule = async () => {
       schoolStart,
       schoolEnd,
       studySlots: slots,
+      chapterMap,
     });
     S.revisionSchedule = {
       ...data,
@@ -4881,73 +4897,155 @@ function renderRevisionScheduleView(schedule) {
   );
   const todayPlan = (schedule.days || []).find((d) => d.date === today);
   const weekDays = (schedule.days || []).slice(0, 14);
+  const SUBJ_COLORS = {
+    Maths: "#4f8ef7",
+    Physics: "#f0b429",
+    Chemistry: "#0fca8c",
+    Biology: "#9b6dff",
+    History: "#f97316",
+    Geography: "#06b6d4",
+    Civics: "#ec4899",
+    Economics: "#a78bfa",
+    English: "#34d399",
+    Hindi: "#f0564a",
+  };
+  const PRIORITY_COL = { high: "#f0564a", medium: "#f0b429", low: "#0fca8c" };
+  const DAY_TYPE_BADGE = {
+    revision: "📖 Revision",
+    practice: "✏️ Practice",
+    "mock-test": "📝 Mock Test",
+    rest: "😴 Rest",
+  };
+  const DAY_TYPE_COL = {
+    revision: "#4f8ef7",
+    practice: "#9b6dff",
+    "mock-test": "#f0b429",
+    rest: "#0fca8c",
+  };
+
+  function taskCard(task) {
+    const col = SUBJ_COLORS[task.subject] || "#9b6dff";
+    const pc = task.priority ? PRIORITY_COL[task.priority] : null;
+    return `<div style="background:rgba(255,255,255,0.03);border:1px solid ${col}28;border-radius:12px;padding:11px 13px;margin-bottom:8px;border-left:3px solid ${col}">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:1rem">${task.emoji || "📖"}</span>
+          <span style="font-size:0.8rem;font-weight:900;color:${col}">${escapeHtml(task.subject)}</span>
+          ${pc ? `<span style="font-size:0.6rem;font-weight:900;color:${pc};background:${pc}18;border-radius:20px;padding:1px 6px;text-transform:uppercase">${task.priority}</span>` : ""}
+        </div>
+        <span style="font-size:0.72rem;font-weight:800;color:var(--text-muted);background:rgba(255,255,255,0.06);border-radius:20px;padding:2px 8px">${escapeHtml(task.duration || "")}</span>
+      </div>
+      ${task.chapter ? `<div style="font-size:0.8rem;font-weight:800;color:#fff;margin-bottom:3px">📌 ${escapeHtml(task.chapter)}</div>` : ""}
+      <div style="font-size:0.77rem;color:var(--text-muted);line-height:1.45">${escapeHtml(task.task || "")}</div>
+    </div>`;
+  }
+
   app.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
       <button onclick="navigate('home')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.85rem;padding:0;font-family:inherit">‹ Back</button>
-      <button onclick="S.revisionSchedule=null;saveState();renderRevisionSchedule()" style="background:none;border:1px solid rgba(255,255,255,0.1);color:var(--text-muted);border-radius:8px;padding:4px 10px;font-size:0.72rem;cursor:pointer;font-family:inherit">Reset Plan</button>
+      <button onclick="S.revisionSchedule=null;saveState();renderRevisionSchedule()" style="background:none;border:1px solid rgba(255,255,255,0.1);color:var(--text-muted);border-radius:8px;padding:4px 10px;font-size:0.72rem;cursor:pointer;font-family:inherit">↺ Reset Plan</button>
     </div>
-    <!-- Countdown -->
+
+    <!-- Countdown banner -->
     <div style="background:linear-gradient(135deg,rgba(6,182,212,0.15),rgba(79,142,247,0.08));border:1.5px solid rgba(6,182,212,0.3);border-radius:20px;padding:20px;text-align:center;margin-bottom:14px;position:relative;overflow:hidden">
       <div style="position:absolute;top:-40px;left:50%;transform:translateX(-50%);width:180px;height:180px;border-radius:50%;background:rgba(6,182,212,0.08);filter:blur(40px)"></div>
       <div style="font-size:3rem;font-weight:900;color:#06b6d4;text-shadow:0 0 24px rgba(6,182,212,0.5)">${daysLeft}</div>
-      <div style="font-size:0.85rem;color:rgba(255,255,255,0.6);margin-bottom:10px">days to exam · ${new Date(schedule.examDate).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</div>
-      <div style="display:flex;justify-content:center;gap:16px;font-size:0.8rem;color:rgba(255,255,255,0.5)">
-        <span>📚 ${(schedule.subjects || []).join(" · ")}</span>
+      <div style="font-size:0.85rem;color:rgba(255,255,255,0.6);margin-bottom:8px">days to exam · ${new Date(schedule.examDate).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</div>
+      <div style="display:flex;justify-content:center;flex-wrap:wrap;gap:6px">
+        ${(schedule.subjects || []).map((s) => `<span style="background:${SUBJ_COLORS[s] || "#9b6dff"}18;border:1px solid ${SUBJ_COLORS[s] || "#9b6dff"}33;color:${SUBJ_COLORS[s] || "#9b6dff"};font-size:0.7rem;font-weight:800;padding:3px 10px;border-radius:20px">${s}</span>`).join("")}
       </div>
-      ${schedule.schoolStart ? `<div style="margin-top:8px;font-size:0.75rem;color:rgba(255,255,255,0.4)">🏫 School ${schedule.schoolStart}–${schedule.schoolEnd} · Study slots: ${(schedule.studySlots || []).map((s) => ({ morning: "🌅 Morning", afternoon: "📚 After School", evening: "🌇 Evening", night: "🌙 Night" })[s] || s).join(", ")}</div>` : ""}
+      ${schedule.schoolStart ? `<div style="margin-top:8px;font-size:0.72rem;color:rgba(255,255,255,0.4)">🏫 School ${schedule.schoolStart}–${schedule.schoolEnd} · Slots: ${(schedule.studySlots || []).map((s) => ({ morning: "🌅 Morning", afternoon: "📚 After School", evening: "🌇 Evening", night: "🌙 Night" })[s] || s).join(", ")}</div>` : ""}
     </div>
+
+    <!-- Subject schedule overview -->
+    ${
+      schedule.subjectSchedule && Object.keys(schedule.subjectSchedule).length
+        ? `
+    <div style="background:rgba(155,109,255,0.06);border:1px solid rgba(155,109,255,0.2);border-radius:14px;padding:14px;margin-bottom:14px">
+      <div style="font-size:0.65rem;font-weight:900;letter-spacing:.1em;color:#9b6dff;text-transform:uppercase;margin-bottom:10px">📋 Subject Coverage Plan</div>
+      ${Object.entries(schedule.subjectSchedule)
+        .map(([subj, days]) => {
+          const col = SUBJ_COLORS[subj] || "#9b6dff";
+          return `<div style="margin-bottom:8px">
+          <div style="font-size:0.78rem;font-weight:900;color:${col};margin-bottom:3px">${subj}</div>
+          ${(Array.isArray(days) ? days : [days]).map((d) => `<div style="font-size:0.73rem;color:var(--text-muted);padding:1px 0">· ${escapeHtml(String(d))}</div>`).join("")}
+        </div>`;
+        })
+        .join("")}
+    </div>`
+        : ""
+    }
+
     <!-- Today's plan -->
     ${
       todayPlan
-        ? `<div style="background:rgba(6,182,212,0.08);border:1.5px solid rgba(6,182,212,0.3);border-radius:16px;padding:16px;margin-bottom:14px">
-      <div style="font-size:0.68rem;font-weight:900;letter-spacing:0.1em;color:#06b6d4;text-transform:uppercase;margin-bottom:10px">📌 Today's Tasks</div>
-      ${(todayPlan.tasks || [])
-        .map(
-          (
-            task,
-          ) => `<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05)">
-        <span style="font-size:0.9rem;flex-shrink:0">${task.emoji || "📖"}</span>
-        <div>
-          <div style="font-size:0.85rem;font-weight:700;color:var(--text)">${escapeHtml(task.subject)}</div>
-          <div style="font-size:0.78rem;color:var(--text-muted)">${escapeHtml(task.task)} · ${task.duration}</div>
-        </div>
-      </div>`,
-        )
-        .join("")}
+        ? `
+    <div style="background:rgba(6,182,212,0.08);border:1.5px solid rgba(6,182,212,0.35);border-radius:16px;padding:14px;margin-bottom:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div style="font-size:0.65rem;font-weight:900;letter-spacing:.1em;color:#06b6d4;text-transform:uppercase">📌 Today's Tasks</div>
+        ${todayPlan.dayType ? `<span style="font-size:0.65rem;font-weight:900;color:${DAY_TYPE_COL[todayPlan.dayType] || "#06b6d4"};background:${DAY_TYPE_COL[todayPlan.dayType] || "#06b6d4"}18;border-radius:20px;padding:2px 8px">${DAY_TYPE_BADGE[todayPlan.dayType] || todayPlan.dayType}</span>` : ""}
+      </div>
+      ${(todayPlan.tasks || []).map(taskCard).join("")}
     </div>`
         : `<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:14px;text-align:center;color:var(--text-muted);font-size:0.85rem;margin-bottom:14px">No tasks scheduled for today — enjoy the break! 🎉</div>`
     }
-    <!-- Week view -->
-    <div style="font-size:0.68rem;font-weight:900;letter-spacing:0.1em;color:var(--text-muted);text-transform:uppercase;margin-bottom:10px">📆 14-Day Overview</div>
+
+    <!-- 14-day overview -->
+    <div style="font-size:0.65rem;font-weight:900;letter-spacing:.1em;color:var(--text-muted);text-transform:uppercase;margin-bottom:10px">📆 Full 14-Day Plan</div>
     <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">
       ${weekDays
         .map((d) => {
           const isToday = d.date === today;
           const isPast = d.date < today;
-          return `<div style="background:${isToday ? "rgba(6,182,212,0.1)" : isPast ? "rgba(255,255,255,0.02)" : "rgba(255,255,255,0.03)"};border:1.5px solid ${isToday ? "rgba(6,182,212,0.4)" : "rgba(255,255,255,0.07)"};border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:12px">
-          <div style="width:44px;text-align:center;flex-shrink:0">
-            <div style="font-size:0.65rem;color:${isToday ? "#06b6d4" : "var(--text-muted)"};font-weight:800">${new Date(d.date).toLocaleDateString("en-IN", { weekday: "short" }).toUpperCase()}</div>
-            <div style="font-size:1rem;font-weight:900;color:${isToday ? "#06b6d4" : isPast ? "var(--text-muted)" : "var(--text)"}">${new Date(d.date).getDate()}</div>
+          const dtCol = DAY_TYPE_COL[d.dayType] || "#06b6d4";
+          return `<div style="background:${isToday ? "rgba(6,182,212,0.1)" : isPast ? "rgba(255,255,255,0.02)" : "rgba(255,255,255,0.03)"};border:1.5px solid ${isToday ? "rgba(6,182,212,0.4)" : "rgba(255,255,255,0.07)"};border-radius:14px;padding:10px 14px">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:${(d.tasks || []).length ? "8px" : "0"}">
+            <div style="width:44px;text-align:center;flex-shrink:0">
+              <div style="font-size:0.6rem;color:${isToday ? "#06b6d4" : "var(--text-muted)"};font-weight:900">${new Date(d.date).toLocaleDateString("en-IN", { weekday: "short" }).toUpperCase()}</div>
+              <div style="font-size:1rem;font-weight:900;color:${isToday ? "#06b6d4" : isPast ? "var(--text-muted)" : "var(--text)"};">${new Date(d.date).getDate()}</div>
+            </div>
+            <div style="flex:1;min-width:0">
+              ${d.dayType ? `<span style="font-size:0.62rem;font-weight:900;color:${dtCol};background:${dtCol}18;border-radius:20px;padding:2px 8px;margin-bottom:4px;display:inline-block">${DAY_TYPE_BADGE[d.dayType] || d.dayType}</span><br>` : ""}
+              ${(d.tasks || []).map((t) => `<span style="display:inline-flex;align-items:center;gap:3px;background:${SUBJ_COLORS[t.subject] || "#9b6dff"}15;border:1px solid ${SUBJ_COLORS[t.subject] || "#9b6dff"}30;border-radius:20px;padding:2px 8px;font-size:0.7rem;font-weight:700;color:${SUBJ_COLORS[t.subject] || "#9b6dff"};margin:2px">${t.emoji || "📖"} ${escapeHtml(t.subject)}</span>`).join("")}
+            </div>
+            ${isToday ? `<span style="background:#06b6d4;color:#000;font-size:0.6rem;font-weight:900;padding:2px 8px;border-radius:20px;flex-shrink:0">TODAY</span>` : ""}
           </div>
-          <div style="flex:1;min-width:0">
-            ${(d.tasks || []).map((t) => `<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,0.06);border-radius:20px;padding:2px 8px;font-size:0.72rem;font-weight:700;color:var(--text-secondary);margin:2px">${t.emoji || "📖"} ${t.subject}</span>`).join("")}
-          </div>
-          ${isToday ? `<span style="background:#06b6d4;color:#000;font-size:0.62rem;font-weight:900;padding:2px 8px;border-radius:20px;flex-shrink:0">TODAY</span>` : ""}
+          ${
+            (d.tasks || []).length
+              ? `
+          <div style="display:flex;flex-direction:column;gap:4px;padding-left:56px">
+            ${(d.tasks || [])
+              .map(
+                (
+                  t,
+                ) => `<div style="font-size:0.75rem;color:var(--text-muted);display:flex;align-items:center;gap:6px">
+              ${t.chapter ? `<span style="color:${SUBJ_COLORS[t.subject] || "#9b6dff"};font-weight:800;flex-shrink:0">📌 ${escapeHtml(t.chapter)}</span><span style="color:rgba(255,255,255,0.2)">·</span>` : ""}
+              <span>${escapeHtml(t.task || "")}</span>
+              <span style="color:rgba(255,255,255,0.25);flex-shrink:0">${escapeHtml(t.duration || "")}</span>
+            </div>`,
+              )
+              .join("")}
+          </div>`
+              : ""
+          }
         </div>`;
         })
         .join("")}
     </div>
+
     <!-- Tips -->
     ${
       schedule.tips && schedule.tips.length
-        ? `<div style="background:rgba(155,109,255,0.06);border:1px solid rgba(155,109,255,0.2);border-radius:14px;padding:14px 16px">
-      <div style="font-size:0.68rem;font-weight:900;letter-spacing:0.08em;color:#9b6dff;text-transform:uppercase;margin-bottom:8px">💡 AI Study Tips</div>
-      ${schedule.tips.map((tip) => `<div style="font-size:0.83rem;color:var(--text-secondary);padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.04);display:flex;gap:8px"><span style="color:#9b6dff;flex-shrink:0">•</span>${escapeHtml(tip)}</div>`).join("")}
+        ? `
+    <div style="background:rgba(155,109,255,0.06);border:1px solid rgba(155,109,255,0.2);border-radius:14px;padding:14px 16px">
+      <div style="font-size:0.65rem;font-weight:900;letter-spacing:.08em;color:#9b6dff;text-transform:uppercase;margin-bottom:10px">💡 AI Study Tips</div>
+      ${schedule.tips.map((tip) => `<div style="font-size:0.83rem;color:var(--text-secondary);padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04);display:flex;gap:8px;line-height:1.5"><span style="color:#9b6dff;flex-shrink:0">•</span>${escapeHtml(tip)}</div>`).join("")}
     </div>`
         : ""
     }
   `;
 }
+
 window.renderRevisionSchedule = renderRevisionSchedule;
 
 // ============================================================
@@ -8182,7 +8280,7 @@ function renderNotesTab() {
         "Ramvriksha Benipuri": [
           "पाठ 'बालगोबिन भगत' — रेखाचित्र · साधु स्वभाव के किसान जो कबीरपंथी हैं",
           "पुत्र की मृत्यु पर रोने की बजाय भजन गाते हैं — आत्मा परमात्मा से मिली",
-          "पतोहू को दूसरी शादी करने के लिए खुद भेजते हैं",
+          "पतोहू को दूसरी शादी करने के लि �� खुद भेजते हैं",
           "थीम: वैराग्य, सांसारिक मोह से मुक्ति, सामाजिक कुरीतियों का विरोध",
         ],
         Yashpal: [
@@ -8225,7 +8323,7 @@ function renderNotesTab() {
         "Sana Sana Haath Jodi": [
           "लेखिका: मधु कांकरिया · यात्रा वृत्तांत",
           "सिक्किम और गंगटोक की यात्रा का सजीव वर्णन",
-          "पl��रकृति का अद्भुत सौंदर्य — हिमालय, बौद्ध मठ, कवि रवीन्द्रनाथ की पंक्तियाँ",
+          "प्रकृति का अद्भुत सौंदर्य — हिमालय, बौद्ध मठ, कवि रवीन्द्रनाथ की पंक्तियाँ",
           "पर्यावरण प्रदूषण की चिंता, पहाड़ी जीवन की कठिनाइयाँ",
           "थीम: प्रकृति प्रेम, पर्यटन, पर्यावरण संरक्षण",
         ],
@@ -8552,315 +8650,285 @@ window.closePaper = () => {
 // FORMULAS TAB – Math & Science quick reference
 // ============================================================
 function renderFormulasTab() {
-  const SUBJECTS = ["Math", "Science"];
-  const MATH_CHAPTERS = [
-    {
-      name: "Real Numbers",
-      color: "#4f8ef7",
-      formulas: [
-        {
-          name: "Euclid's Division Lemma",
-          expr: "a = bq + r, where 0 ≤ r < b",
-        },
-        { name: "HCF × LCM", expr: "HCF(a,b) × LCM(a,b) = a × b" },
-      ],
-    },
-    {
-      name: "Polynomials",
-      color: "#a78bfa",
-      formulas: [
-        { name: "Sum of Zeroes (quadratic)", expr: "α + β = −b/a" },
-        { name: "Product of Zeroes (quadratic)", expr: "α × β = c/a" },
-        { name: "Sum of Zeroes (cubic)", expr: "α + β + γ = −b/a" },
-        { name: "Product of Zeroes (cubic)", expr: "αβγ = −d/a" },
-      ],
-    },
-    {
-      name: "Quadratic Equations",
-      color: "#f472b6",
-      formulas: [
-        { name: "Quadratic Formula", expr: "x = (−b ± √(b²−4ac)) / 2a" },
-        { name: "Discriminant", expr: "D = b² − 4ac" },
-        {
-          name: "Nature of Roots",
-          expr: "D>0: 2 real; D=0: equal; D<0: no real roots",
-        },
-      ],
-    },
-    {
-      name: "Arithmetic Progressions",
-      color: "#34d399",
-      formulas: [
-        { name: "nth Term", expr: "aₙ = a + (n−1)d" },
-        { name: "Sum of n Terms", expr: "Sₙ = n/2 × [2a + (n−1)d]" },
-        { name: "Sum (first & last)", expr: "Sₙ = n/2 × (a + l)" },
-      ],
-    },
-    {
-      name: "Triangles",
-      color: "#fbbf24",
-      formulas: [
-        {
-          name: "Basic Proportionality Theorem",
-          expr: "DE ∥ BC ⟹ AD/DB = AE/EC",
-        },
-        {
-          name: "Area of Similar Triangles",
-          expr: "ar(△ABC)/ar(△PQR) = (AB/PQ)²",
-        },
-        { name: "Pythagoras Theorem", expr: "AC² = AB² + BC²" },
-      ],
-    },
-    {
-      name: "Coordinate Geometry",
-      color: "#f87171",
-      formulas: [
-        { name: "Distance Formula", expr: "d = √[(x₂−x₁)² + (y₂−y₁)²]" },
-        {
-          name: "Section Formula",
-          expr: "P = ((mx₂+nx₁)/(m+n), (my₂+ny₁)/(m+n))",
-        },
-        { name: "Midpoint", expr: "M = ((x₁+x₂)/2, (y₁+y₂)/2)" },
-        {
-          name: "Area of Triangle",
-          expr: "A = ½|x₁(y₂−y₃)+x₂(y₃−y₁)+x₃(y₁−y₂)|",
-        },
-      ],
-    },
-    {
-      name: "Trigonometry",
-      color: "#38bdf8",
-      formulas: [
-        { name: "sin θ", expr: "Opposite / Hypotenuse" },
-        { name: "cos θ", expr: "Adjacent / Hypotenuse" },
-        { name: "tan θ", expr: "Opposite / Adjacent = sin θ / cos θ" },
-        { name: "Pythagorean Identity", expr: "sin²θ + cos²θ = 1" },
-        { name: "Identity 2", expr: "1 + tan²θ = sec²θ" },
-        { name: "Identity 3", expr: "1 + cot²θ = cosec²θ" },
-      ],
-    },
-    {
-      name: "Areas Related to Circles",
-      color: "#fb923c",
-      formulas: [
-        { name: "Area of Circle", expr: "A = πr²" },
-        { name: "Circumference", expr: "C = 2πr" },
-        { name: "Area of Sector", expr: "A = (θ/360) × πr²" },
-        { name: "Length of Arc", expr: "l = (θ/360) × 2πr" },
-        { name: "Area of Segment", expr: "A_segment = A_sector − A_triangle" },
-      ],
-    },
-    {
-      name: "Surface Areas & Volumes",
-      color: "#c084fc",
-      formulas: [
-        { name: "Cube SA", expr: "6a²" },
-        { name: "Cuboid SA", expr: "2(lb + bh + hl)" },
-        { name: "Cylinder CSA", expr: "2πrh" },
-        { name: "Cylinder TSA", expr: "2πr(r+h)" },
-        { name: "Cone CSA", expr: "πrl, l = √(r²+h²)" },
-        { name: "Cone TSA", expr: "πr(r+l)" },
-        { name: "Sphere SA", expr: "4πr²" },
-        { name: "Hemisphere TSA", expr: "3πr²" },
-        { name: "Cylinder Vol", expr: "πr²h" },
-        { name: "Cone Vol", expr: "⅓πr²h" },
-        { name: "Sphere Vol", expr: "⁴⁄₃πr³" },
-      ],
-    },
-    {
-      name: "Statistics",
-      color: "#2dd4bf",
-      formulas: [
-        { name: "Mean (Direct)", expr: "x̄ = Σfᵢxᵢ / Σfᵢ" },
-        { name: "Mean (Assumed)", expr: "x̄ = a + (Σfᵢdᵢ / Σfᵢ)" },
-        { name: "Median", expr: "M = l + [(n/2 − cf)/f] × h" },
-        { name: "Mode", expr: "Mo = l + [(f₁−f₀)/(2f₁−f₀−f₂)] × h" },
-      ],
-    },
-    {
-      name: "Probability",
-      color: "#facc15",
-      formulas: [
-        {
-          name: "Probability",
-          expr: "P(E) = Favourable outcomes / Total outcomes",
-        },
-        { name: "Complement", expr: "P(Ē) = 1 − P(E)" },
-        { name: "Range", expr: "0 ≤ P(E) ≤ 1" },
-      ],
-    },
+  const COLORS = [
+    "#f0b429",
+    "#0fca8c",
+    "#9b6dff",
+    "#4f8ef7",
+    "#ec4899",
+    "#f0564a",
+    "#06b6d4",
+    "#a78bfa",
   ];
+  const FORMULAS = {
+    "📐 Maths": {
+      "Real Numbers & Polynomials": [
+        { f: "HCF × LCM = a × b", l: "Product of two numbers" },
+        { f: "Euclid's Division: a = bq + r (0 ≤ r < b)", l: "Division lemma" },
+        { f: "α + β = −b/a, αβ = c/a", l: "Zeroes of quadratic ax²+bx+c" },
+        { f: "α+β+γ = −b/a, αβγ = −d/a", l: "Zeroes of cubic ax³+bx²+cx+d" },
+      ],
+      "Quadratic Equations": [
+        { f: "x = (−b ± √(b²−4ac)) / 2a", l: "Quadratic formula" },
+        {
+          f: "D = b²−4ac",
+          l: "D>0: 2 real roots · D=0: equal roots · D<0: no real roots",
+        },
+      ],
+      "Arithmetic Progressions": [
+        { f: "aₙ = a + (n−1)d", l: "nth term of AP" },
+        { f: "Sₙ = n/2 · [2a + (n−1)d]", l: "Sum of n terms" },
+        { f: "Sₙ = n/2 · (a + l)", l: "Sum when last term l is known" },
+      ],
+      "Triangles & Coordinate Geometry": [
+        { f: "AC² = AB² + BC²", l: "Pythagoras theorem" },
+        {
+          f: "ar(△ABC)/ar(△PQR) = (AB/PQ)²",
+          l: "Similar triangles — area ratio",
+        },
+        { f: "d = √[(x₂−x₁)² + (y₂−y₁)²]", l: "Distance formula" },
+        { f: "M = ((x₁+x₂)/2, (y₁+y₂)/2)", l: "Midpoint formula" },
+        {
+          f: "P = ((mx₂+nx₁)/(m+n), (my₂+ny₁)/(m+n))",
+          l: "Section formula (internal)",
+        },
+        {
+          f: "A = ½|x₁(y₂−y₃)+x₂(y₃−y₁)+x₃(y₁−y₂)|",
+          l: "Area of triangle (coords)",
+        },
+      ],
+      Trigonometry: [
+        {
+          f: "sin θ = opp/hyp · cos θ = adj/hyp · tan θ = opp/adj",
+          l: "Basic ratios",
+        },
+        { f: "sin²θ + cos²θ = 1", l: "Pythagorean identity" },
+        { f: "1 + tan²θ = sec²θ · 1 + cot²θ = cosec²θ", l: "Other identities" },
+        {
+          f: "sin 0°=0, 30°=½, 45°=1/√2, 60°=√3/2, 90°=1",
+          l: "Standard values — sin",
+        },
+        {
+          f: "cos 0°=1, 30°=√3/2, 45°=1/√2, 60°=½, 90°=0",
+          l: "Standard values — cos",
+        },
+      ],
+      "Circles & Areas": [
+        { f: "Area of circle = πr²", l: "Circle area" },
+        { f: "Circumference = 2πr", l: "Circle perimeter" },
+        { f: "Area of sector = (θ/360) × πr²", l: "Sector area" },
+        { f: "Arc length = (θ/360) × 2πr", l: "Arc length" },
+        {
+          f: "Area of segment = Area sector − Area triangle",
+          l: "Segment area",
+        },
+      ],
+      "Surface Area & Volume": [
+        { f: "Cube: SA=6a², V=a³", l: "Cube" },
+        { f: "Cuboid: SA=2(lb+bh+lh), V=lbh", l: "Cuboid" },
+        { f: "Cylinder: CSA=2πrh, TSA=2πr(r+h), V=πr²h", l: "Cylinder" },
+        { f: "Cone: CSA=πrl, TSA=πr(r+l), V=⅓πr²h, l=√(r²+h²)", l: "Cone" },
+        { f: "Sphere: SA=4πr², V=⁴⁄₃πr³", l: "Sphere" },
+        { f: "Hemisphere: CSA=2πr², TSA=3πr², V=⅔πr³", l: "Hemisphere" },
+      ],
+      "Statistics & Probability": [
+        { f: "Mean = Σfx / Σf", l: "Grouped data mean (direct method)" },
+        { f: "Median = l + [(n/2−cf)/f] × h", l: "Median of grouped data" },
+        {
+          f: "Mode = l + [(f₁−f₀)/(2f₁−f₀−f₂)] × h",
+          l: "Mode of grouped data",
+        },
+        { f: "3 Median = Mode + 2 Mean", l: "Empirical relationship" },
+        { f: "P(E) = favourable outcomes / total outcomes", l: "Probability" },
+        { f: "P(Ē) = 1 − P(E)", l: "Complement rule" },
+      ],
+    },
+    "🔬 Physics": {
+      "Light — Reflection": [
+        {
+          f: "1/f = 1/v + 1/u (mirror)",
+          l: "Mirror formula (use sign convention)",
+        },
+        { f: "m = −v/u = h'/h", l: "Magnification — mirror" },
+        { f: "f = R/2", l: "Focal length = half radius of curvature" },
+      ],
+      "Light — Refraction": [
+        { f: "n = c/v = sin i / sin r", l: "Refractive index / Snell's law" },
+        { f: "1/f = 1/v − 1/u (lens)", l: "Lens formula" },
+        { f: "m = v/u = h'/h", l: "Magnification — lens" },
+        { f: "P = 1/f (m), unit: D (dioptre)", l: "Power of lens" },
+        { f: "P = P₁ + P₂", l: "Combined power of lenses" },
+      ],
+      Electricity: [
+        { f: "V = IR", l: "Ohm's law" },
+        { f: "R = ρl/A", l: "Resistance — ρ is resistivity" },
+        { f: "Rs = R₁+R₂+R₃", l: "Series combination" },
+        { f: "1/Rp = 1/R₁+1/R₂+1/R₃", l: "Parallel combination" },
+        { f: "P = VI = I²R = V²/R", l: "Electric power" },
+        { f: "H = I²Rt (Joule's law)", l: "Heat produced" },
+        { f: "1 kWh = 3.6×10⁶ J", l: "Commercial unit of energy" },
+      ],
+      "Magnetic Effects": [
+        { f: "F = BIl sinθ", l: "Force on current-carrying conductor" },
+        {
+          f: "Fleming's Left Hand Rule",
+          l: "Thumb=Force, Index=B-field, Middle=Current",
+        },
+        {
+          f: "Fleming's Right Hand Rule",
+          l: "For generators — induced current direction",
+        },
+      ],
+    },
+    "🧪 Chemistry": {
+      "Chemical Reactions": [
+        { f: "Combination: A + B → AB", l: "Two reactants form one product" },
+        { f: "Decomposition: AB → A + B", l: "One reactant splits" },
+        {
+          f: "Displacement: A + BC → AC + B",
+          l: "More reactive displaces less",
+        },
+        { f: "Double displacement: AB + CD → AD + CB", l: "Ions exchange" },
+        { f: "2Mg + O₂ → 2MgO", l: "Magnesium burning (combination)" },
+      ],
+      "Acids, Bases & Salts": [
+        { f: "Acid + Base → Salt + Water", l: "Neutralisation reaction" },
+        { f: "pH < 7: acid · pH = 7: neutral · pH > 7: base", l: "pH scale" },
+        { f: "NaOH + HCl → NaCl + H₂O", l: "Example neutralisation" },
+        {
+          f: "CuSO₄·5H₂O = Blue vitriol",
+          l: "Water of crystallisation example",
+        },
+      ],
+      "Metals & Non-Metals": [
+        { f: "Metal + O₂ → Metal oxide (basic)", l: "Metal oxidation" },
+        {
+          f: "Non-metal + O₂ → Non-metal oxide (acidic)",
+          l: "Non-metal oxidation",
+        },
+        { f: "2Na + 2H₂O → 2NaOH + H₂↑", l: "Sodium with water" },
+        { f: "Fe₂O₃ + 2Al → Al₂O₃ + 2Fe + heat", l: "Thermite reaction" },
+        {
+          f: "Reactivity: K>Na>Ca>Mg>Al>Zn>Fe>Pb>H>Cu>Au",
+          l: "Activity series",
+        },
+      ],
+      "Carbon Compounds": [
+        {
+          f: "CₙH₂ₙ₊₂ (Alkane) · CₙH₂ₙ (Alkene) · CₙH₂ₙ₋₂ (Alkyne)",
+          l: "Homologous series",
+        },
+        {
+          f: "Saponification: Ester + NaOH → Soap + Glycerol",
+          l: "Soap making",
+        },
+        {
+          f: "Each homologue differs by −CH₂− (14 mass units)",
+          l: "Homologous series rule",
+        },
+      ],
+    },
+    "🌿 Biology": {
+      "Life Processes": [
+        {
+          f: "Photosynthesis: 6CO₂+6H₂O → C₆H₁₂O₆+6O₂ (sunlight+chlorophyll)",
+          l: "Photosynthesis",
+        },
+        {
+          f: "Aerobic: C₆H₁₂O₆+6O₂ → 6CO₂+6H₂O + 38 ATP",
+          l: "Aerobic respiration",
+        },
+        { f: "Anaerobic (yeast): C₆H₁₂O₆ → 2C₂H₅OH + 2CO₂", l: "Fermentation" },
+      ],
+      "Control & Coordination": [
+        {
+          f: "Reflex arc: Stimulus→Receptor→Sensory nerve→Spinal cord→Motor nerve→Effector→Response",
+          l: "Reflex arc pathway",
+        },
+        { f: "DNA → mRNA → Protein", l: "Central dogma of molecular biology" },
+      ],
+      Heredity: [
+        {
+          f: "Phenotype ratio (monohybrid) = 3:1 (dominant:recessive)",
+          l: "Mendel's monohybrid cross",
+        },
+        {
+          f: "Genotype ratio = 1 TT : 2 Tt : 1 tt",
+          l: "Monohybrid genotype ratio",
+        },
+        { f: "Dihybrid phenotype ratio = 9:3:3:1", l: "Dihybrid cross" },
+      ],
+    },
+  };
 
-  const SCIENCE_CHAPTERS = [
-    {
-      name: "Light – Reflection",
-      color: "#fbbf24",
-      formulas: [
-        { name: "Mirror Formula", expr: "1/f = 1/v + 1/u" },
-        { name: "Magnification (mirror)", expr: "m = −v/u = h'/h" },
-        { name: "Focal Length", expr: "f = R/2" },
-      ],
-    },
-    {
-      name: "Light – Refraction",
-      color: "#38bdf8",
-      formulas: [
-        { name: "Snell's Law", expr: "n₁ sin i = n₂ sin r" },
-        { name: "Refractive Index", expr: "n = c/v = sin i / sin r" },
-        { name: "Lens Formula", expr: "1/f = 1/v − 1/u" },
-        { name: "Magnification (lens)", expr: "m = v/u = h'/h" },
-        { name: "Lens Power", expr: "P = 1/f (metres), unit: Dioptre (D)" },
-        { name: "Combined Power", expr: "P = P₁ + P₂" },
-      ],
-    },
-    {
-      name: "Electricity",
-      color: "#a78bfa",
-      formulas: [
-        { name: "Ohm's Law", expr: "V = IR" },
-        { name: "Resistance", expr: "R = ρl/A" },
-        { name: "Resistors in Series", expr: "R_s = R₁ + R₂ + R₃" },
-        { name: "Resistors in Parallel", expr: "1/R_p = 1/R₁ + 1/R₂ + 1/R₃" },
-        { name: "Electric Power", expr: "P = VI = I²R = V²/R" },
-        { name: "Electric Energy", expr: "W = VIt = Pt" },
-      ],
-    },
-    {
-      name: "Magnetic Effects of Current",
-      color: "#34d399",
-      formulas: [
-        { name: "Force on current-carrying wire", expr: "F = BIl sinθ" },
-        {
-          name: "Fleming's Left Hand Rule",
-          expr: "Thumb: Force; Index: Field; Middle: Current",
-        },
-        {
-          name: "Fleming's Right Hand Rule",
-          expr: "For generators: induced current direction",
-        },
-      ],
-    },
-    {
-      name: "Chemical Reactions",
-      color: "#f472b6",
-      formulas: [
-        { name: "Combination", expr: "A + B → AB" },
-        { name: "Decomposition", expr: "AB → A + B" },
-        { name: "Displacement", expr: "A + BC → AC + B" },
-        { name: "Double Displacement", expr: "AB + CD → AD + CB" },
-        { name: "Oxidation", expr: "Loss of electrons / gain of oxygen" },
-        { name: "Reduction", expr: "Gain of electrons / loss of oxygen" },
-      ],
-    },
-    {
-      name: "Acids, Bases & Salts",
-      color: "#fb923c",
-      formulas: [
-        { name: "Neutralisation", expr: "Acid + Base → Salt + Water" },
-        {
-          name: "pH scale",
-          expr: "pH < 7: acid; pH = 7: neutral; pH > 7: base",
-        },
-        {
-          name: "Water of crystallisation",
-          expr: "e.g. CuSO₄·5H₂O (Blue vitriol)",
-        },
-      ],
-    },
-    {
-      name: "Metals & Non-Metals",
-      color: "#f87171",
-      formulas: [
-        { name: "Reaction with O₂", expr: "4Na + O₂ → 2Na₂O" },
-        { name: "Reaction with Water", expr: "2Na + 2H₂O → 2NaOH + H₂" },
-        { name: "Thermite Reaction", expr: "Fe₂O₃ + 2Al → Al₂O₃ + 2Fe + heat" },
-      ],
-    },
-    {
-      name: "Carbon Compounds",
-      color: "#c084fc",
-      formulas: [
-        {
-          name: "Homologous Series diff",
-          expr: "Each member differs by −CH₂− (14 mass units)",
-        },
-        { name: "Alkane general formula", expr: "CₙH₂ₙ₊₂" },
-        { name: "Alkene general formula", expr: "CₙH₂ₙ" },
-        { name: "Alkyne general formula", expr: "CₙH₂ₙ₋₂" },
-        { name: "Saponification", expr: "Ester + NaOH → Soap + Glycerol" },
-      ],
-    },
-  ];
+  const subjects = Object.keys(FORMULAS);
+  let selSubj = subjects[0];
+  let searchQ = "";
 
-  let activeSubject = "Math";
-
-  function buildHTML(subject) {
-    const chapters = subject === "Math" ? MATH_CHAPTERS : SCIENCE_CHAPTERS;
-    return chapters
-      .map(
-        (ch) => `
-      <div style="margin-bottom:18px">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;cursor:pointer" onclick="toggleFormulaChapter('${ch.name.replace(/'/g, "\\'")}')">
-          <div style="width:3px;height:18px;background:${ch.color};border-radius:2px;flex-shrink:0"></div>
-          <div style="font-weight:800;font-size:0.88rem;color:${ch.color};flex:1">${ch.name}</div>
-          <div id="chevron-${ch.name.replace(/\s/g, "-")}" style="color:var(--text-muted);font-size:0.8rem">▾</div>
-        </div>
-        <div id="fch-${ch.name.replace(/\s/g, "-")}" style="display:block">
-          ${ch.formulas
-            .map(
-              (f) => `
-            <div class="glass" style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:10px 14px;margin-bottom:8px;border:1px solid ${ch.color}22;border-radius:10px">
-              <div style="font-size:0.78rem;color:var(--text-muted);flex-shrink:0;min-width:100px;padding-top:1px">${f.name}</div>
-              <div style="font-size:0.85rem;font-weight:700;color:var(--text);text-align:right;font-family:monospace">${f.expr}</div>
-            </div>
-          `,
-            )
-            .join("")}
-        </div>
-      </div>
-    `,
-      )
+  function buildHTML() {
+    const subj = FORMULAS[selSubj] || {};
+    const cats = Object.keys(subj);
+    const q = searchQ.toLowerCase().trim();
+    return cats
+      .map((cat, ci) => {
+        const col = COLORS[ci % COLORS.length];
+        const items = (subj[cat] || []).filter(
+          (item) =>
+            !q ||
+            item.f.toLowerCase().includes(q) ||
+            item.l.toLowerCase().includes(q),
+        );
+        if (!items.length) return "";
+        return `<div style="margin-bottom:16px">
+        <div style="font-size:0.62rem;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:${col};background:${col}15;border:1px solid ${col}30;border-radius:20px;padding:3px 10px;display:inline-block;margin-bottom:8px">${cat}</div>
+        ${items
+          .map(
+            (item) => `<div onclick="
+          try{navigator.clipboard.writeText('${item.f.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/\n/g, " ")}').then(()=>{this.querySelector('.fs-copied').style.opacity=1;setTimeout(()=>{if(this.querySelector('.fs-copied'))this.querySelector('.fs-copied').style.opacity=0;},1200)});}catch(e){}
+        " style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:10px 13px;margin-bottom:7px;cursor:pointer;position:relative;transition:border-color .15s" onmouseover="this.style.borderColor='${col}55'" onmouseout="this.style.borderColor='rgba(255,255,255,0.07)'">
+          <div style="font-family:'Courier New',monospace;font-size:0.87rem;color:#fff;font-weight:700;line-height:1.5;margin-bottom:4px;padding-right:40px">${escapeHtml(item.f)}</div>
+          <div style="font-size:0.71rem;color:var(--text-muted);line-height:1.4">${escapeHtml(item.l)}</div>
+          <div class="fs-copied" style="position:absolute;top:8px;right:10px;font-size:0.62rem;font-weight:800;color:#0fca8c;opacity:0;transition:opacity .2s;pointer-events:none">✓ Copied</div>
+        </div>`,
+          )
+          .join("")}
+      </div>`;
+      })
       .join("");
   }
 
   document.getElementById("resource-tab-content").innerHTML = `
-    <div style="display:flex;gap:8px;margin-bottom:18px">
-      ${SUBJECTS.map(
-        (s) => `
-        <button id="fsub-${s}" onclick="switchFormulasSubject('${s}')"
-          style="padding:6px 18px;border-radius:20px;border:1px solid ${s === activeSubject ? "#4f8ef7" : "rgba(255,255,255,0.12)"};background:${s === activeSubject ? "rgba(79,142,247,0.15)" : "rgba(255,255,255,0.05)"};color:${s === activeSubject ? "#4f8ef7" : "var(--text-muted)"};font-size:0.82rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s">
-          ${s === "Math" ? "📐 Math" : "🔬 Science"}
-        </button>
-      `,
-      ).join("")}
+    <style>
+      .fs-subj-btn{padding:6px 14px;border-radius:20px;border:1.5px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--text-muted);font-size:0.74rem;font-weight:800;cursor:pointer;font-family:inherit;transition:all .18s;white-space:nowrap}
+      .fs-subj-btn.on{border-color:#f0b429;background:rgba(240,180,41,0.12);color:#f0b429}
+    </style>
+    <div style="position:relative;margin-bottom:14px">
+      <input id="fs-search" type="text" placeholder="🔍 Search formulas..." style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:1.5px solid rgba(255,255,255,0.1);border-radius:12px;padding:9px 13px;color:#fff;font-size:0.83rem;font-family:inherit;outline:none" oninput="fsSearch(this.value)" onfocus="this.style.borderColor='rgba(240,180,41,0.4)'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'">
     </div>
-    <div id="formulas-content">${buildHTML("Math")}</div>
+    <div style="display:flex;gap:7px;overflow-x:auto;padding-bottom:4px;margin-bottom:16px;scrollbar-width:none">
+      ${subjects.map((s) => `<button class="fs-subj-btn${s === selSubj ? " on" : ""}" id="fsbtn-${s.replace(/[^a-z]/gi, "_")}" onclick="fsSwitchSubj('${s.replace(/'/g, "\\'")}')">${s}</button>`).join("")}
+    </div>
+    <div id="fs-content">${buildHTML()}</div>
   `;
 
-  window.switchFormulasSubject = (subject) => {
-    activeSubject = subject;
-    SUBJECTS.forEach((s) => {
-      const btn = document.getElementById("fsub-" + s);
-      if (!btn) return;
-      const active = s === subject;
-      btn.style.borderColor = active ? "#4f8ef7" : "rgba(255,255,255,0.12)";
-      btn.style.background = active
-        ? "rgba(79,142,247,0.15)"
-        : "rgba(255,255,255,0.05)";
-      btn.style.color = active ? "#4f8ef7" : "var(--text-muted)";
+  window.fsSwitchSubj = (s) => {
+    subjects.forEach((sub) => {
+      const el = document.getElementById(
+        "fsbtn-" + sub.replace(/[^a-z]/gi, "_"),
+      );
+      if (el) {
+        el.classList.toggle("on", sub === s);
+      }
     });
-    document.getElementById("formulas-content").innerHTML = buildHTML(subject);
+    selSubj = s;
+    searchQ = "";
+    const si = document.getElementById("fs-search");
+    if (si) si.value = "";
+    document.getElementById("fs-content").innerHTML = buildHTML();
   };
-
-  window.toggleFormulaChapter = (name) => {
-    const id = "fch-" + name.replace(/\s/g, "-");
-    const chevId = "chevron-" + name.replace(/\s/g, "-");
-    const el = document.getElementById(id);
-    const chev = document.getElementById(chevId);
-    if (!el) return;
-    const hidden = el.style.display === "none";
-    el.style.display = hidden ? "block" : "none";
-    if (chev) chev.textContent = hidden ? "▾" : "▸";
+  window.fsSearch = (q) => {
+    searchQ = q;
+    document.getElementById("fs-content").innerHTML = buildHTML();
   };
 }
 
@@ -8938,9 +9006,9 @@ function init() {
 showNameSplash(init);
 
 // ============================================================
-// NOVA CHATBOT — uses existing apiPost() helper
+// STASIS AI CHATBOT — uses existing apiPost() helper
 // ============================================================
-(function initNovaChatbot() {
+(function initStasisChatbot() {
   let chatHistory = [];
   let isOpen = false;
   let isMaximised = false;
@@ -8949,164 +9017,186 @@ showNameSplash(init);
   const style = document.createElement("style");
   style.textContent = `
     #nova-fab {
-      position:fixed;bottom:88px;right:24px;z-index:9999;
-      width:54px;height:54px;border-radius:50%;
-      background:linear-gradient(135deg,#4f8ef7 0%,#a855f7 100%);
-      box-shadow:0 4px 20px rgba(79,142,247,0.55);
+      position:fixed;bottom:88px;right:20px;z-index:9999;
+      width:52px;height:52px;border-radius:16px;
+      background:linear-gradient(135deg,#0fca8c 0%,#06b6d4 100%);
+      box-shadow:0 4px 24px rgba(15,202,140,0.5);
       border:none;cursor:pointer;
       display:flex;align-items:center;justify-content:center;
-      transition:transform .2s,box-shadow .2s;
+      transition:transform .22s cubic-bezier(.34,1.56,.64,1),box-shadow .2s;
     }
-    #nova-fab:hover{transform:scale(1.1);box-shadow:0 6px 32px rgba(79,142,247,0.75)}
+    #nova-fab:hover{transform:scale(1.12) rotate(-4deg);box-shadow:0 8px 36px rgba(15,202,140,0.7)}
     #nova-fab::before{
-      content:'';position:absolute;inset:-5px;border-radius:50%;
-      border:2px solid rgba(79,142,247,0.35);
-      animation:nova-pulse 2.2s ease-in-out infinite;
+      content:'';position:absolute;inset:-5px;border-radius:20px;
+      background:linear-gradient(135deg,#0fca8c,#06b6d4);
+      opacity:0;animation:sai-pulse 2.4s ease-in-out infinite;
     }
-    @keyframes nova-pulse{0%,100%{transform:scale(1);opacity:.6}50%{transform:scale(1.2);opacity:0}}
+    @keyframes sai-pulse{0%,100%{opacity:0;transform:scale(1)}50%{opacity:0.18;transform:scale(1.18)}}
     #nova-panel{
-      position:fixed;z-index:9998;bottom:154px;right:24px;
-      width:360px;height:500px;
-      background:rgba(10,12,20,0.97);
-      backdrop-filter:blur(20px);
-      border:1px solid rgba(79,142,247,0.2);border-radius:20px;
-      box-shadow:0 8px 48px rgba(0,0,0,0.7),0 0 0 1px rgba(255,255,255,0.04);
+      position:fixed;z-index:9998;bottom:152px;right:20px;
+      width:348px;max-height:520px;
+      background:linear-gradient(160deg,rgba(8,14,26,0.98) 0%,rgba(6,10,20,0.99) 100%);
+      backdrop-filter:blur(24px);
+      border:1px solid rgba(15,202,140,0.18);border-radius:22px;
+      box-shadow:0 12px 60px rgba(0,0,0,0.8),0 0 0 1px rgba(255,255,255,0.04),inset 0 1px 0 rgba(255,255,255,0.06);
       display:flex;flex-direction:column;overflow:hidden;
-      transform:scale(0.88) translateY(14px);opacity:0;pointer-events:none;
-      transition:transform .28s cubic-bezier(0.34,1.56,0.64,1),opacity .2s;
+      transform:scale(0.9) translateY(16px);opacity:0;pointer-events:none;
+      transition:transform .3s cubic-bezier(0.34,1.56,0.64,1),opacity .22s;
       transform-origin:bottom right;
     }
     #nova-panel.open{transform:scale(1) translateY(0);opacity:1;pointer-events:all}
     #nova-panel.maximised{
-      width:min(720px,calc(100vw - 32px));
-      height:min(580px,calc(100vh - 110px));
+      width:min(700px,calc(100vw - 28px));
+      max-height:min(600px,calc(100vh - 108px));
     }
     #nova-header{
-      display:flex;align-items:center;gap:10px;padding:13px 14px;
-      background:rgba(255,255,255,0.03);border-bottom:1px solid rgba(255,255,255,0.07);
-      flex-shrink:0;
+      display:flex;align-items:center;gap:10px;padding:13px 15px 12px;
+      background:linear-gradient(135deg,rgba(15,202,140,0.08),rgba(6,182,212,0.05));
+      border-bottom:1px solid rgba(15,202,140,0.12);
+      flex-shrink:0;position:relative;
+    }
+    #nova-header::after{
+      content:'';position:absolute;bottom:0;left:15px;right:15px;height:1px;
+      background:linear-gradient(90deg,transparent,rgba(15,202,140,0.3),transparent);
     }
     #nova-avatar{
-      width:34px;height:34px;border-radius:50%;
-      background:linear-gradient(135deg,#4f8ef7,#a855f7);
+      width:36px;height:36px;border-radius:11px;
+      background:linear-gradient(135deg,#0fca8c,#06b6d4);
       display:flex;align-items:center;justify-content:center;
-      font-size:17px;flex-shrink:0;
+      font-size:18px;flex-shrink:0;
+      box-shadow:0 4px 14px rgba(15,202,140,0.4);
     }
     #nova-title{flex:1}
-    #nova-title strong{display:block;font-size:.88rem;color:#fff;font-weight:700}
-    #nova-title span{font-size:.68rem;color:#4ade80;font-weight:600;letter-spacing:.05em}
+    #nova-title strong{display:block;font-size:.9rem;color:#fff;font-weight:800;letter-spacing:-.01em}
+    #nova-title span{font-size:.65rem;color:#0fca8c;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
     .nhbtn{
-      background:rgba(255,255,255,0.07);border:none;border-radius:7px;
-      color:rgba(255,255,255,0.45);cursor:pointer;padding:5px 8px;
+      background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:8px;
+      color:rgba(255,255,255,0.4);cursor:pointer;padding:5px 8px;
       font-size:.78rem;line-height:1;transition:.15s;
     }
-    .nhbtn:hover{background:rgba(255,255,255,0.14);color:#fff}
+    .nhbtn:hover{background:rgba(15,202,140,0.12);border-color:rgba(15,202,140,0.3);color:#0fca8c}
     #nova-msgs{
-      flex:1;overflow-y:auto;padding:14px;
-      display:flex;flex-direction:column;gap:10px;scroll-behavior:smooth;
+      flex:1;overflow-y:auto;padding:14px 12px;
+      display:flex;flex-direction:column;gap:9px;scroll-behavior:smooth;
     }
     #nova-msgs::-webkit-scrollbar{width:3px}
-    #nova-msgs::-webkit-scrollbar-thumb{background:rgba(79,142,247,0.4);border-radius:10px}
-    .nmsg{display:flex;max-width:86%}
+    #nova-msgs::-webkit-scrollbar-thumb{background:rgba(15,202,140,0.3);border-radius:10px}
+    .nmsg{display:flex;max-width:88%}
     .nmsg.user{align-self:flex-end;justify-content:flex-end}
     .nmsg.ai{align-self:flex-start}
     .nbub{
       padding:9px 13px;border-radius:16px;
-      font-size:.81rem;line-height:1.6;word-break:break-word;
+      font-size:.82rem;line-height:1.6;word-break:break-word;
     }
     .nmsg.user .nbub{
-      background:linear-gradient(135deg,#4f8ef7,#6366f1);
-      color:#fff;border-bottom-right-radius:3px;
+      background:linear-gradient(135deg,#0fca8c,#06b6d4);
+      color:#fff;border-bottom-right-radius:4px;
+      box-shadow:0 3px 14px rgba(15,202,140,0.3);
     }
     .nmsg.ai .nbub{
-      background:rgba(255,255,255,0.06);
+      background:rgba(255,255,255,0.05);
       border:1px solid rgba(255,255,255,0.08);
-      color:rgba(255,255,255,0.87);border-bottom-left-radius:3px;
+      color:rgba(255,255,255,0.88);border-bottom-left-radius:4px;
     }
     .nbub p{margin:0 0 5px}.nbub p:last-child{margin:0}
     .nbub strong{color:#fff}
-    .nbub code{background:rgba(255,255,255,0.1);border-radius:4px;padding:1px 5px;font-size:.77rem}
-    .nbub pre{background:rgba(0,0,0,0.35);border-radius:8px;padding:9px;overflow-x:auto;margin:6px 0 0}
-    .nbub pre code{background:none;padding:0}
+    .nbub code{background:rgba(15,202,140,0.12);border:1px solid rgba(15,202,140,0.2);border-radius:4px;padding:1px 5px;font-size:.77rem;color:#0fca8c}
+    .nbub pre{background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:10px;overflow-x:auto;margin:6px 0 0}
+    .nbub pre code{background:none;padding:0;border:none;color:#e2e8f0}
     .nbub ul,.nbub ol{margin:3px 0;padding-left:16px}
     .nbub li{margin-bottom:2px}
     .nova-typing{display:flex;gap:5px;align-items:center;padding:11px 14px}
-    .nova-dot{width:6px;height:6px;border-radius:50%;background:#4f8ef7;animation:ndot 1.2s infinite}
-    .nova-dot:nth-child(2){animation-delay:.2s}
-    .nova-dot:nth-child(3){animation-delay:.4s}
-    @keyframes ndot{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-7px)}}
+    .nova-dot{width:7px;height:7px;border-radius:50%;background:linear-gradient(135deg,#0fca8c,#06b6d4);animation:ndot 1.3s infinite}
+    .nova-dot:nth-child(2){animation-delay:.18s}
+    .nova-dot:nth-child(3){animation-delay:.36s}
+    @keyframes ndot{0%,60%,100%{transform:translateY(0);opacity:.6}30%{transform:translateY(-7px);opacity:1}}
     .nova-redir{
-      background:rgba(79,142,247,0.1);border:1px solid rgba(79,142,247,0.28);
-      border-radius:12px;padding:11px 13px;font-size:.79rem;
+      background:rgba(15,202,140,0.07);border:1px solid rgba(15,202,140,0.22);
+      border-radius:14px;padding:11px 13px;font-size:.79rem;
       color:rgba(255,255,255,0.85);line-height:1.5;
-      max-width:86%;align-self:flex-start;
+      max-width:88%;align-self:flex-start;
     }
     .nova-redir-btn{
       display:inline-block;margin-top:8px;
-      background:linear-gradient(135deg,#4f8ef7,#6366f1);
-      color:#fff;border:none;border-radius:7px;
-      padding:5px 13px;font-size:.74rem;font-weight:700;cursor:pointer;font-family:inherit;
+      background:linear-gradient(135deg,#0fca8c,#06b6d4);
+      color:#fff;border:none;border-radius:8px;
+      padding:5px 13px;font-size:.74rem;font-weight:800;cursor:pointer;font-family:inherit;
+      box-shadow:0 2px 10px rgba(15,202,140,0.35);
     }
     #nova-input-row{
-      padding:10px;border-top:1px solid rgba(255,255,255,0.07);
-      display:flex;gap:8px;flex-shrink:0;background:rgba(255,255,255,0.02);
+      padding:10px 12px;border-top:1px solid rgba(15,202,140,0.1);
+      display:flex;gap:8px;flex-shrink:0;
+      background:rgba(15,202,140,0.03);
     }
     #nova-input{
-      flex:1;background:rgba(255,255,255,0.06);
-      border:1px solid rgba(255,255,255,0.1);border-radius:11px;
-      padding:9px 13px;color:#fff;font-size:.81rem;font-family:inherit;
+      flex:1;background:rgba(255,255,255,0.05);
+      border:1.5px solid rgba(255,255,255,0.09);border-radius:12px;
+      padding:9px 13px;color:#fff;font-size:.82rem;font-family:inherit;
       outline:none;resize:none;max-height:76px;line-height:1.5;
-      transition:border-color .2s;
+      transition:border-color .2s,background .2s;
     }
-    #nova-input::placeholder{color:rgba(255,255,255,0.28)}
-    #nova-input:focus{border-color:rgba(79,142,247,0.5)}
+    #nova-input::placeholder{color:rgba(255,255,255,0.25)}
+    #nova-input:focus{border-color:rgba(15,202,140,0.45);background:rgba(15,202,140,0.04)}
     #nova-send{
-      width:38px;height:38px;border-radius:11px;flex-shrink:0;
-      background:linear-gradient(135deg,#4f8ef7,#a855f7);
+      width:38px;height:38px;border-radius:12px;flex-shrink:0;
+      background:linear-gradient(135deg,#0fca8c,#06b6d4);
       border:none;cursor:pointer;display:flex;align-items:center;
       justify-content:center;align-self:flex-end;
-      transition:opacity .2s,transform .15s;
+      transition:opacity .2s,transform .18s;
+      box-shadow:0 3px 14px rgba(15,202,140,0.4);
     }
-    #nova-send:hover{opacity:.85;transform:scale(1.06)}
-    #nova-send:disabled{opacity:.35;cursor:not-allowed;transform:none}
+    #nova-send:hover{opacity:.88;transform:scale(1.08)}
+    #nova-send:disabled{opacity:.3;cursor:not-allowed;transform:none;box-shadow:none}
     #nova-send svg{width:17px;height:17px;fill:white}
     #nova-welcome{
       display:flex;flex-direction:column;align-items:center;
-      justify-content:center;flex:1;text-align:center;padding:18px;gap:8px;
+      justify-content:center;flex:1;text-align:center;padding:22px 18px;gap:10px;
     }
-    #nova-welcome .nw-icon{font-size:2.4rem}
-    #nova-welcome h3{margin:0;font-size:.95rem;color:#fff}
-    #nova-welcome p{margin:0;font-size:.75rem;color:rgba(255,255,255,0.42);line-height:1.55}
-    .nw-chips{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:6px}
+    #nova-welcome .nw-icon{
+      width:56px;height:56px;border-radius:17px;
+      background:linear-gradient(135deg,#0fca8c,#06b6d4);
+      display:flex;align-items:center;justify-content:center;
+      font-size:26px;box-shadow:0 6px 24px rgba(15,202,140,0.4);
+      margin-bottom:2px;
+    }
+    #nova-welcome h3{margin:0;font-size:1rem;color:#fff;font-weight:900;letter-spacing:-.01em}
+    #nova-welcome .nw-sub{font-size:.78rem;color:rgba(255,255,255,0.38);line-height:1.55;max-width:220px}
+    .nw-chips{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:4px}
     .nw-chip{
-      background:rgba(79,142,247,0.1);border:1px solid rgba(79,142,247,0.22);
-      border-radius:20px;padding:5px 11px;font-size:.71rem;
-      color:rgba(255,255,255,0.6);cursor:pointer;transition:.15s;font-family:inherit;
+      background:rgba(15,202,140,0.08);border:1px solid rgba(15,202,140,0.2);
+      border-radius:20px;padding:5px 12px;font-size:.71rem;
+      color:rgba(255,255,255,0.55);cursor:pointer;transition:.15s;font-family:inherit;font-weight:600;
     }
-    .nw-chip:hover{background:rgba(79,142,247,0.25);color:#fff}
+    .nw-chip:hover{background:rgba(15,202,140,0.2);border-color:rgba(15,202,140,0.4);color:#fff}
+    .sai-badge{
+      display:inline-flex;align-items:center;gap:4px;
+      font-size:.6rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+      color:#0fca8c;background:rgba(15,202,140,0.1);border:1px solid rgba(15,202,140,0.2);
+      border-radius:20px;padding:2px 7px;margin-top:4px;
+    }
   `;
   document.head.appendChild(style);
 
   const fab = document.createElement("button");
   fab.id = "nova-fab";
-  fab.title = "Chat with Nova";
-  fab.innerHTML = `<svg width="26" height="26" viewBox="0 0 24 24" fill="white"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg>`;
+  fab.title = "Chat with Stasis AI";
+  fab.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M12 2L9.5 9.5 2 12l7.5 2.5L12 22l2.5-7.5L22 12l-7.5-2.5z"/></svg>`;
   document.body.appendChild(fab);
 
   const panel = document.createElement("div");
   panel.id = "nova-panel";
   panel.innerHTML = `
     <div id="nova-header">
-      <div id="nova-avatar">✦</div>
-      <div id="nova-title"><strong>Nova</strong><span>● Online</span></div>
+      <div id="nova-avatar">⟡</div>
+      <div id="nova-title"><strong>Stasis AI</strong><span>● Online</span></div>
       <button class="nhbtn" id="nova-max-btn" title="Maximise">⤢</button>
       <button class="nhbtn" id="nova-close-btn" title="Close">✕</button>
     </div>
     <div id="nova-msgs">
       <div id="nova-welcome">
-        <div class="nw-icon">✦</div>
-        <h3>Hey, I'm Nova!</h3>
-        <p>Your general AI — not Stasis. Ask me anything: science, code, trivia, opinions. For CBSE homework, use the Home tab!</p>
+        <div class="nw-icon">⟡</div>
+        <h3>Hey, I'm Stasis AI!</h3>
+        <p class="nw-sub">Your general AI assistant. Ask me anything — science, code, trivia, creative writing. For CBSE study help, use the Home tab!</p>
         <div class="nw-chips">
           <button class="nw-chip" data-q="Explain quantum entanglement simply">⚛️ Quantum</button>
           <button class="nw-chip" data-q="Write a Python bubble sort">🐍 Python</button>
@@ -9116,7 +9206,7 @@ showNameSplash(init);
       </div>
     </div>
     <div id="nova-input-row">
-      <textarea id="nova-input" placeholder="Ask Nova anything…" rows="1"></textarea>
+      <textarea id="nova-input" placeholder="Ask Stasis AI anything…" rows="1"></textarea>
       <button id="nova-send"><svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
     </div>`;
   document.body.appendChild(panel);
@@ -9252,3 +9342,511 @@ showNameSplash(init);
     if (c) send(c.dataset.q);
   });
 })();
+
+// ============================================================
+// FORMULA SHEET
+// ============================================================
+function renderFormulaSheet() {
+  const app = document.getElementById("app");
+  const cls = S.classPreference || "10";
+  const FORMULAS = {
+    Maths: {
+      Algebra: [
+        { f: "(a+b)² = a²+2ab+b²", l: "Square of sum" },
+        { f: "(a-b)² = a²-2ab+b²", l: "Square of difference" },
+        { f: "(a+b)(a-b) = a²-b²", l: "Difference of squares" },
+        { f: "(a+b)³ = a³+3a²b+3ab²+b³", l: "Cube of sum" },
+        { f: "a³+b³ = (a+b)(a²-ab+b²)", l: "Sum of cubes" },
+        { f: "a³-b³ = (a-b)(a²+ab+b²)", l: "Difference of cubes" },
+        { f: "Quadratic: x = (-b±√(b²-4ac)) / 2a", l: "Quadratic formula" },
+        {
+          f: "Discriminant D = b²-4ac",
+          l: "D>0: 2 real roots, D=0: 1 root, D<0: no real root",
+        },
+      ],
+      "Arithmetic Progressions": [
+        { f: "aₙ = a + (n-1)d", l: "nth term of AP" },
+        { f: "Sₙ = n/2 · [2a + (n-1)d]", l: "Sum of n terms" },
+        { f: "Sₙ = n/2 · (a + l)", l: "Sum when last term l is known" },
+      ],
+      "Triangles & Geometry": [
+        { f: "Pythagoras: a²+b²=c²", l: "Right-angled triangle" },
+        { f: "Area = ½ × base × height", l: "Triangle area" },
+        { f: "Heron's: A = √(s(s-a)(s-b)(s-c))", l: "s = (a+b+c)/2" },
+        { f: "Area of circle = πr²", l: "Circle area" },
+        { f: "Circumference = 2πr", l: "Circle perimeter" },
+        { f: "Area of sector = (θ/360)×πr²", l: "Sector area" },
+        { f: "Arc length = (θ/360)×2πr", l: "Arc length" },
+      ],
+      Statistics: [
+        { f: "Mean = Σfx / Σf", l: "Grouped data mean" },
+        {
+          f: "Mode = l + [(f₁-f₀)/(2f₁-f₀-f₂)] × h",
+          l: "Mode of grouped data",
+        },
+        { f: "Median = l + [(n/2-cf)/f] × h", l: "Median of grouped data" },
+        { f: "3 Median = Mode + 2 Mean", l: "Empirical relationship" },
+      ],
+      Trigonometry: [
+        { f: "sin²θ + cos²θ = 1", l: "Pythagorean identity" },
+        { f: "1 + tan²θ = sec²θ", l: "Secant identity" },
+        { f: "1 + cot²θ = cosec²θ", l: "Cosecant identity" },
+        {
+          f: "sin θ = opp/hyp, cos θ = adj/hyp, tan θ = opp/adj",
+          l: "Basic ratios",
+        },
+        {
+          f: "sin 0°=0, sin 30°=½, sin 45°=1/√2, sin 60°=√3/2, sin 90°=1",
+          l: "Standard values",
+        },
+      ],
+      "Surface Area & Volume": [
+        { f: "Cube: SA=6a², V=a³", l: "Cube" },
+        { f: "Cuboid: SA=2(lb+bh+lh), V=lbh", l: "Cuboid" },
+        { f: "Cylinder: CSA=2πrh, TSA=2πr(r+h), V=πr²h", l: "Cylinder" },
+        { f: "Cone: CSA=πrl, TSA=πr(r+l), V=⅓πr²h, l=√(r²+h²)", l: "Cone" },
+        { f: "Sphere: SA=4πr², V=⁴⁄₃πr³", l: "Sphere" },
+        { f: "Hemisphere: CSA=2πr², TSA=3πr², V=⅔πr³", l: "Hemisphere" },
+      ],
+      "Coordinate Geometry": [
+        {
+          f: "Distance = √((x₂-x₁)²+(y₂-y₁)²)",
+          l: "Distance between two points",
+        },
+        { f: "Midpoint = ((x₁+x₂)/2, (y₁+y₂)/2)", l: "Midpoint formula" },
+        {
+          f: "Section formula: ((mx₂+nx₁)/(m+n), (my₂+ny₁)/(m+n))",
+          l: "Internal division",
+        },
+        {
+          f: "Area of Δ = ½|x₁(y₂-y₃)+x₂(y₃-y₁)+x₃(y₁-y₂)|",
+          l: "Triangle area with coords",
+        },
+      ],
+    },
+    Physics: {
+      Motion: [
+        { f: "v = u + at", l: "First equation of motion" },
+        { f: "s = ut + ½at²", l: "Second equation of motion" },
+        { f: "v² = u² + 2as", l: "Third equation of motion" },
+        { f: "v_avg = (u+v)/2", l: "Average velocity (uniform acceleration)" },
+      ],
+      "Force & Laws": [
+        { f: "F = ma", l: "Newton's 2nd law" },
+        { f: "p = mv", l: "Momentum" },
+        { f: "F·t = Δp", l: "Impulse-momentum theorem" },
+        { f: "W = F·d·cosθ", l: "Work done" },
+        { f: "KE = ½mv²", l: "Kinetic energy" },
+        { f: "PE = mgh", l: "Potential energy" },
+        { f: "Power = W/t = F·v", l: "Power" },
+      ],
+      Gravitation: [
+        { f: "F = Gm₁m₂/r²", l: "Universal law of gravitation" },
+        { f: "g = GM/R²", l: "Acceleration due to gravity" },
+        { f: "Weight W = mg", l: "Weight" },
+        { f: "Escape velocity = √(2gR)", l: "Escape velocity" },
+      ],
+      Electricity: [
+        { f: "V = IR", l: "Ohm's law" },
+        { f: "P = VI = I²R = V²/R", l: "Electric power" },
+        { f: "E = Pt", l: "Electrical energy" },
+        { f: "Series: R = R₁+R₂+R₃", l: "Resistors in series" },
+        { f: "Parallel: 1/R = 1/R₁+1/R₂+1/R₃", l: "Resistors in parallel" },
+        { f: "Q = It", l: "Charge" },
+        { f: "H = I²Rt", l: "Heat produced (Joule's law)" },
+      ],
+      Light: [
+        { f: "1/f = 1/v - 1/u", l: "Mirror formula" },
+        { f: "1/f = 1/v + 1/u (lens)", l: "Lens formula" },
+        { f: "m = -v/u (mirror) = v/u (lens) = h₂/h₁", l: "Magnification" },
+        { f: "P = 1/f (metres)", l: "Power of lens (dioptre)" },
+        { f: "n = c/v = sin i / sin r", l: "Refractive index / Snell's law" },
+      ],
+    },
+    Chemistry: {
+      "Chemical Reactions": [
+        { f: "Mole = mass(g) / molar mass", l: "Mole calculation" },
+        {
+          f: "Number of particles = moles × 6.022×10²³",
+          l: "Avogadro's number",
+        },
+        {
+          f: "Molarity M = moles of solute / litres of solution",
+          l: "Molarity",
+        },
+      ],
+      "Acids & Bases": [
+        { f: "pH = -log[H⁺]", l: "pH definition" },
+        { f: "pH < 7: acid, pH = 7: neutral, pH > 7: base", l: "pH scale" },
+        { f: "Acid + Base → Salt + Water", l: "Neutralisation" },
+      ],
+      "Periodic Table Trends": [
+        {
+          f: "Atomic radius: decreases across period, increases down group",
+          l: "Atomic radius trend",
+        },
+        {
+          f: "Ionisation energy: increases across period, decreases down group",
+          l: "IE trend",
+        },
+        {
+          f: "Electronegativity: increases across period, decreases down group",
+          l: "EN trend",
+        },
+      ],
+      "Metals & Non-Metals": [
+        { f: "Metal + O₂ → Metal oxide (basic)", l: "Metal oxidation" },
+        {
+          f: "Non-metal + O₂ → Non-metal oxide (acidic)",
+          l: "Non-metal oxidation",
+        },
+        { f: "2Mg + O₂ → 2MgO", l: "Magnesium burning" },
+        { f: "Metal + Acid → Salt + H₂↑", l: "Metal-acid reaction" },
+      ],
+    },
+    Biology: {
+      Cell: [
+        {
+          f: "Cell theory: all living things are made of cells",
+          l: "Cell theory",
+        },
+        {
+          f: "Cell wall (plant) → Cell membrane → Cytoplasm → Nucleus",
+          l: "Basic cell structure",
+        },
+        {
+          f: "Plant cell has: cell wall, chloroplast, large vacuole",
+          l: "Plant vs animal cell",
+        },
+      ],
+      "Life Processes": [
+        {
+          f: "Photosynthesis: 6CO₂+6H₂O → C₆H₁₂O₆+6O₂ (light, chlorophyll)",
+          l: "Photosynthesis equation",
+        },
+        {
+          f: "Aerobic respiration: C₆H₁₂O₆+6O₂ → 6CO₂+6H₂O + 38 ATP",
+          l: "Aerobic respiration",
+        },
+        { f: "Anaerobic (yeast): C₆H₁₂O₆ → 2C₂H₅OH + 2CO₂", l: "Fermentation" },
+        { f: "BMR = energy needed at rest", l: "Basal metabolic rate" },
+      ],
+      Genetics: [
+        {
+          f: "Mendel's Law of Segregation: alleles separate during gamete formation",
+          l: "Law of Segregation",
+        },
+        {
+          f: "Genotype ratio monohybrid: 1:2:1 (TT:Tt:tt)",
+          l: "Monohybrid cross",
+        },
+        {
+          f: "Phenotype ratio: 3:1 (dominant:recessive)",
+          l: "Phenotype ratio",
+        },
+        { f: "DNA → RNA → Protein", l: "Central dogma" },
+      ],
+    },
+  };
+  const subjects = Object.keys(FORMULAS);
+  let selSubj = subjects[0];
+
+  function renderSheetUI() {
+    const subj = FORMULAS[selSubj] || {};
+    const cats = Object.keys(subj);
+    app.innerHTML = `
+      <style>
+        .fs-formula{font-family:'Courier New',monospace;font-size:0.88rem;color:#fff;font-weight:700;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:7px 10px;word-break:break-word;line-height:1.5}
+        .fs-cat-hdr{font-size:0.65rem;font-weight:900;letter-spacing:.12em;text-transform:uppercase;margin:16px 0 8px;padding:4px 10px;border-radius:20px;display:inline-block}
+        .fs-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:12px 14px;margin-bottom:8px}
+        .fs-label{font-size:0.72rem;color:var(--text-muted);margin-top:5px;line-height:1.4}
+        .fs-tab{padding:6px 14px;border-radius:20px;border:1.5px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--text-muted);font-size:0.76rem;font-weight:800;cursor:pointer;font-family:inherit;transition:all .18s;white-space:nowrap}
+        .fs-tab.active{border-color:#f0b429;background:rgba(240,180,41,0.12);color:#f0b429}
+      </style>
+      <button onclick="navigate('home')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.85rem;padding:0;font-family:inherit;margin-bottom:16px;display:block">‹ Back</button>
+      <div style="font-size:1.3rem;font-weight:900;background:linear-gradient(135deg,#f0b429,#f97316);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:4px">📐 Formula Sheet</div>
+      <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:16px">Tap any formula to copy it</div>
+      <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:20px;scrollbar-width:none">
+        ${subjects.map((s) => `<button class="fs-tab${s === selSubj ? " active" : ""}" onclick="fsSwitchSubj('${s}')">${s}</button>`).join("")}
+      </div>
+      ${cats
+        .map((cat, ci) => {
+          const cols = [
+            "#f0b429",
+            "#0fca8c",
+            "#9b6dff",
+            "#4f8ef7",
+            "#ec4899",
+            "#f0564a",
+          ][ci % 6];
+          return `<div>
+          <div class="fs-cat-hdr" style="color:${cols};background:${cols}18;border:1px solid ${cols}30">${cat}</div>
+          ${(subj[cat] || [])
+            .map(
+              (
+                item,
+              ) => `<div class="fs-card" onclick="navigator.clipboard&&navigator.clipboard.writeText('${item.f.replace(/'/g, "\\'")}').then(()=>{this.style.borderColor='#0fca8c';setTimeout(()=>this.style.borderColor='',1000)})" style="cursor:pointer">
+            <div class="fs-formula">${escapeHtml(item.f)}</div>
+            <div class="fs-label">${escapeHtml(item.l)}</div>
+          </div>`,
+            )
+            .join("")}
+        </div>`;
+        })
+        .join("")}
+    `;
+    window.fsSwitchSubj = (s) => {
+      selSubj = s;
+      renderSheetUI();
+    };
+  }
+  renderSheetUI();
+}
+window.renderFormulaSheet = renderFormulaSheet;
+
+// ============================================================
+// CHAPTER SUMMARY
+// ============================================================
+function renderChapterSummary() {
+  const app = document.getElementById("app");
+  const cls = S.classPreference || "10";
+  const subj = S.subjectPreference || "Maths";
+  const subjects = [
+    "Maths",
+    "Physics",
+    "Chemistry",
+    "Biology",
+    "History",
+    "Geography",
+    "Civics",
+    "Economics",
+    "English",
+    "Hindi",
+  ];
+  const chapters = getChapters(cls, subj);
+  app.innerHTML = `
+    <button onclick="navigate('home')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.85rem;padding:0;font-family:inherit;margin-bottom:18px;display:block">‹ Back</button>
+    <div style="font-size:1.3rem;font-weight:900;background:linear-gradient(135deg,#0fca8c,#06b6d4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:4px">📖 Chapter Summary</div>
+    <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:20px">AI generates a crisp exam-ready summary of any chapter</div>
+    <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><label class="form-label">Class</label>
+          <select id="cs-class" class="form-select" style="margin-top:4px" onchange="csUpdateChapters()">
+            ${["6", "7", "8", "9", "10"].map((c) => `<option value="${c}" ${cls === c ? "selected" : ""}>${c}</option>`).join("")}
+          </select></div>
+        <div><label class="form-label">Subject</label>
+          <select id="cs-subject" class="form-select" style="margin-top:4px" onchange="csUpdateChapters()">
+            ${subjects.map((s) => `<option value="${s}" ${subj === s ? "selected" : ""}>${s}</option>`).join("")}
+          </select></div>
+      </div>
+      <div><label class="form-label">Chapter</label>
+        <select id="cs-chapter" class="form-select" style="margin-top:4px">
+          <option value="">Select chapter</option>
+          ${chapters.map((c) => `<option value="${c}">${c}</option>`).join("")}
+        </select></div>
+    </div>
+    <button onclick="generateChapterSummary()" class="btn btn-primary" style="width:100%;padding:14px;font-size:1rem;font-weight:900;background:linear-gradient(135deg,#0fca8c,#06b6d4);border:none;box-shadow:0 4px 20px rgba(15,202,140,0.4)">Generate Summary →</button>
+    <div id="cs-err" style="color:var(--red);font-size:0.82rem;margin-top:10px;text-align:center"></div>
+    <div id="cs-result" style="margin-top:20px"></div>
+  `;
+  window.csUpdateChapters = () => {
+    const sel = document.getElementById("cs-chapter");
+    const chs = getChapters(
+      document.getElementById("cs-class").value,
+      document.getElementById("cs-subject").value,
+    );
+    sel.innerHTML =
+      `<option value="">Select chapter</option>` +
+      chs.map((c) => `<option value="${c}">${c}</option>`).join("");
+  };
+  window.generateChapterSummary = async () => {
+    const classNum = document.getElementById("cs-class").value;
+    const subject = document.getElementById("cs-subject").value;
+    const chapter = document.getElementById("cs-chapter").value;
+    const err = document.getElementById("cs-err");
+    const result = document.getElementById("cs-result");
+    if (!chapter) {
+      if (err) err.textContent = "Please select a chapter";
+      return;
+    }
+    if (err) err.textContent = "";
+    result.innerHTML = `<div style="text-align:center;padding:40px 0">${typingLoader()}<div style="font-size:0.82rem;color:var(--text-muted);margin-top:10px">Generating summary...</div></div>`;
+    try {
+      const data = await apiPost("/chapter-summary", {
+        classNum,
+        subject,
+        chapter,
+      });
+      const d = data.summary || {};
+      result.innerHTML = `
+        <div style="background:rgba(15,202,140,0.06);border:1.5px solid rgba(15,202,140,0.2);border-radius:18px;padding:16px;animation:csSlide .3s ease">
+          <div style="font-size:0.65rem;font-weight:900;letter-spacing:.1em;color:#0fca8c;text-transform:uppercase;margin-bottom:8px">📖 ${escapeHtml(chapter)}</div>
+          <div style="font-size:1rem;font-weight:900;color:#fff;margin-bottom:14px">${escapeHtml(subject)} · Class ${classNum}</div>
+          ${d.overview ? `<div style="font-size:0.84rem;color:var(--text-secondary);line-height:1.65;margin-bottom:16px;padding:10px 12px;background:rgba(255,255,255,0.04);border-radius:10px">${escapeHtml(d.overview)}</div>` : ""}
+          ${
+            (d.keyPoints || []).length
+              ? `
+            <div style="font-size:0.65rem;font-weight:900;letter-spacing:.1em;color:#0fca8c;text-transform:uppercase;margin-bottom:8px">⚡ Key Points</div>
+            <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px">
+              ${(d.keyPoints || []).map((p) => `<div style="display:flex;gap:8px;align-items:flex-start;font-size:0.83rem;color:var(--text-secondary);line-height:1.5"><span style="color:#0fca8c;flex-shrink:0;margin-top:1px">✓</span>${escapeHtml(p)}</div>`).join("")}
+            </div>`
+              : ""
+          }
+          ${
+            (d.importantTerms || []).length
+              ? `
+            <div style="font-size:0.65rem;font-weight:900;letter-spacing:.1em;color:#9b6dff;text-transform:uppercase;margin-bottom:8px">📌 Important Terms</div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">
+              ${(d.importantTerms || []).map((t) => `<span style="background:rgba(155,109,255,0.1);border:1px solid rgba(155,109,255,0.25);color:#9b6dff;border-radius:20px;padding:3px 10px;font-size:0.74rem;font-weight:700">${escapeHtml(t)}</span>`).join("")}
+            </div>`
+              : ""
+          }
+          ${
+            (d.examTips || []).length
+              ? `
+            <div style="font-size:0.65rem;font-weight:900;letter-spacing:.1em;color:#f0b429;text-transform:uppercase;margin-bottom:8px">🎯 Board Exam Tips</div>
+            <div style="display:flex;flex-direction:column;gap:5px">
+              ${(d.examTips || []).map((t) => `<div style="display:flex;gap:8px;align-items:flex-start;font-size:0.82rem;color:var(--text-secondary);line-height:1.5;padding:7px 10px;background:rgba(240,180,41,0.06);border-radius:9px;border-left:3px solid #f0b429"><span style="color:#f0b429;flex-shrink:0">★</span>${escapeHtml(t)}</div>`).join("")}
+            </div>`
+              : ""
+          }
+        </div>
+        <style>@keyframes csSlide{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}</style>
+      `;
+    } catch (e) {
+      result.innerHTML = `<div style="color:var(--red);font-size:0.84rem">Error: ${e.message}</div>`;
+    }
+  };
+}
+window.renderChapterSummary = renderChapterSummary;
+
+// ============================================================
+// POMODORO STUDY TIMER
+// ============================================================
+function renderPomodoro() {
+  const app = document.getElementById("app");
+  let phase = "study"; // study | break | longbreak
+  let totalSecs = 25 * 60;
+  let secsLeft = totalSecs;
+  let running = false;
+  let interval = null;
+  let sessionsCompleted = 0;
+  const STUDY = 25 * 60,
+    SHORT = 5 * 60,
+    LONG = 15 * 60;
+
+  function fmt(s) {
+    return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+  }
+  function phaseName(p) {
+    return { study: "Study", break: "Short Break", longbreak: "Long Break" }[p];
+  }
+  function phaseColor(p) {
+    return { study: "#ec4899", break: "#0fca8c", longbreak: "#4f8ef7" }[p];
+  }
+
+  function render() {
+    const pct = Math.round((1 - secsLeft / totalSecs) * 100);
+    const col = phaseColor(phase);
+    const circumference = 2 * Math.PI * 80;
+    const dash = circumference * (1 - secsLeft / totalSecs);
+    app.innerHTML = `
+      <style>
+        @keyframes pmPulse{0%,100%{opacity:1}50%{opacity:0.6}}
+        .pm-running .pm-ring-progress{animation:none}
+      </style>
+      <button onclick="if(interval){clearInterval(interval);interval=null;} navigate('home')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.85rem;padding:0;font-family:inherit;margin-bottom:16px;display:block">‹ Back</button>
+      <div style="font-size:1.3rem;font-weight:900;background:linear-gradient(135deg,#ec4899,#9b6dff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:4px">⏱️ Study Timer</div>
+      <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:24px">Pomodoro technique — 25 min focus, then break</div>
+
+      <div style="text-align:center;padding:10px 0 24px">
+        <svg width="200" height="200" viewBox="0 0 200 200" style="display:block;margin:0 auto">
+          <circle cx="100" cy="100" r="80" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="10"/>
+          <circle cx="100" cy="100" r="80" fill="none" stroke="${col}" stroke-width="10"
+            stroke-linecap="round"
+            stroke-dasharray="${circumference}"
+            stroke-dashoffset="${circumference - dash}"
+            transform="rotate(-90 100 100)"
+            style="transition:stroke-dashoffset 0.8s ease,stroke .4s;filter:drop-shadow(0 0 8px ${col}88)"/>
+          <text x="100" y="95" text-anchor="middle" fill="#fff" font-size="36" font-weight="900" font-family="system-ui,sans-serif">${fmt(secsLeft)}</text>
+          <text x="100" y="122" text-anchor="middle" fill="${col}" font-size="13" font-weight="800" font-family="system-ui,sans-serif">${phaseName(phase)}</text>
+          <text x="100" y="141" text-anchor="middle" fill="rgba(255,255,255,0.35)" font-size="11" font-family="system-ui,sans-serif">Session ${sessionsCompleted + 1}</text>
+        </svg>
+      </div>
+
+      <div style="display:flex;gap:10px;justify-content:center;margin-bottom:20px">
+        <button onclick="pmSetPhase('study')" style="padding:7px 16px;border-radius:20px;border:1.5px solid ${phase === "study" ? "#ec4899" : "rgba(255,255,255,0.1)"};background:${phase === "study" ? "rgba(236,72,153,0.12)" : "rgba(255,255,255,0.04)"};color:${phase === "study" ? "#ec4899" : "var(--text-muted)"};font-size:0.75rem;font-weight:800;cursor:pointer;font-family:inherit">🎯 Study</button>
+        <button onclick="pmSetPhase('break')" style="padding:7px 16px;border-radius:20px;border:1.5px solid ${phase === "break" ? "#0fca8c" : "rgba(255,255,255,0.1)"};background:${phase === "break" ? "rgba(15,202,140,0.12)" : "rgba(255,255,255,0.04)"};color:${phase === "break" ? "#0fca8c" : "var(--text-muted)"};font-size:0.75rem;font-weight:800;cursor:pointer;font-family:inherit">☕ Short Break</button>
+        <button onclick="pmSetPhase('longbreak')" style="padding:7px 16px;border-radius:20px;border:1.5px solid ${phase === "longbreak" ? "#4f8ef7" : "rgba(255,255,255,0.1)"};background:${phase === "longbreak" ? "rgba(79,142,247,0.12)" : "rgba(255,255,255,0.04)"};color:${phase === "longbreak" ? "#4f8ef7" : "var(--text-muted)"};font-size:0.75rem;font-weight:800;cursor:pointer;font-family:inherit">🌙 Long Break</button>
+      </div>
+
+      <div style="display:flex;gap:12px;justify-content:center;margin-bottom:24px">
+        <button onclick="pmToggle()" style="width:64px;height:64px;border-radius:50%;border:none;background:linear-gradient(135deg,${col},${col}aa);box-shadow:0 4px 20px ${col}55;cursor:pointer;font-size:1.5rem;display:flex;align-items:center;justify-content:center;transition:transform .18s" onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'">${running ? "⏸" : "▶"}</button>
+        <button onclick="pmReset()" style="width:48px;height:48px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.05);cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;margin-top:8px;color:var(--text-muted)">↺</button>
+      </div>
+
+      ${
+        sessionsCompleted > 0
+          ? `
+      <div style="text-align:center;background:rgba(240,180,41,0.08);border:1px solid rgba(240,180,41,0.2);border-radius:14px;padding:12px">
+        <div style="font-size:0.7rem;font-weight:900;letter-spacing:.1em;color:#f0b429;text-transform:uppercase;margin-bottom:4px">Today's Focus</div>
+        <div style="font-size:1.4rem;font-weight:900;color:#fff">${sessionsCompleted} ${"🍅".repeat(Math.min(sessionsCompleted, 8))}</div>
+        <div style="font-size:0.75rem;color:var(--text-muted)">${sessionsCompleted * 25} minutes of focused study</div>
+      </div>`
+          : ""
+      }
+    `;
+    window.pmToggle = () => {
+      running = !running;
+      if (running) {
+        interval = setInterval(() => {
+          secsLeft--;
+          if (secsLeft <= 0) {
+            clearInterval(interval);
+            interval = null;
+            running = false;
+            if (phase === "study") {
+              sessionsCompleted++;
+              S.pomodoroSessions = (S.pomodoroSessions || 0) + 1;
+              saveState();
+              phase = sessionsCompleted % 4 === 0 ? "longbreak" : "break";
+              totalSecs = phase === "longbreak" ? LONG : SHORT;
+            } else {
+              phase = "study";
+              totalSecs = STUDY;
+            }
+            secsLeft = totalSecs;
+            try {
+              new Audio(
+                "data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAA",
+              ).play();
+            } catch (e) {}
+          }
+          render();
+        }, 1000);
+      } else {
+        clearInterval(interval);
+        interval = null;
+      }
+      render();
+    };
+    window.pmReset = () => {
+      clearInterval(interval);
+      interval = null;
+      running = false;
+      secsLeft = totalSecs;
+      render();
+    };
+    window.pmSetPhase = (p) => {
+      clearInterval(interval);
+      interval = null;
+      running = false;
+      phase = p;
+      totalSecs = p === "study" ? STUDY : p === "break" ? SHORT : LONG;
+      secsLeft = totalSecs;
+      render();
+    };
+  }
+  render();
+}
+window.renderPomodoro = renderPomodoro;

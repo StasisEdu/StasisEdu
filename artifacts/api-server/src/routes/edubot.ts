@@ -990,6 +990,10 @@ router.post("/revision-schedule", async (req, res) => {
     daysLeft,
     weakContext,
     subjectCounts,
+    schoolStart,
+    schoolEnd,
+    studySlots,
+    chapterMap,
   } = req.body as {
     classNum: string;
     subjects: string[];
@@ -998,39 +1002,65 @@ router.post("/revision-schedule", async (req, res) => {
     daysLeft: number;
     weakContext: string;
     subjectCounts: Record<string, number>;
+    schoolStart?: string;
+    schoolEnd?: string;
+    studySlots?: string[];
+    chapterMap?: Record<string, string[]>;
   };
-  // Generate dates for next 14 days (or until exam)
   const days = Math.min(daysLeft, 14);
   const dateList = Array.from({ length: days }, (_, i) => {
     const d = new Date(Date.now() + i * 86400000);
     return d.toISOString().split("T")[0];
   });
-  // Weight subjects by how little they've been practiced
-  const subjectWeights = subjects.map((s) => ({
-    subject: s,
-    weight: Math.max(1, 10 - Math.floor((subjectCounts[s] || 0) / 5)),
-  }));
-  const totalWeight = subjectWeights.reduce((a, b) => a + b.weight, 0);
-  const prompt = `You are a CBSE Class ${classNum} exam planner. The student has ${daysLeft} days until their exam on ${examDate}.
-They study ${dailyHours} hours/day. Subjects: ${subjects.join(", ")}.
-Subject practice history (weak subjects have lower counts): ${weakContext}
+  const chapterContext = chapterMap
+    ? Object.entries(chapterMap)
+        .map(([subj, chs]) => `${subj}: ${(chs as string[]).join(", ")}`)
+        .join("\n")
+    : "";
+  const slotCtx = studySlots?.length
+    ? `Available study slots: ${studySlots.join(", ")} (school ${schoolStart || "?"}-${schoolEnd || "?"})`
+    : "";
+  const firstRevDay = Math.ceil(days * 0.7);
+  const prompt = `You are an expert CBSE Class ${classNum} exam planner. ${daysLeft} days until exam on ${examDate}. ~${dailyHours} hrs/day. ${slotCtx}
+Subjects: ${subjects.join(", ")}.
+Practice history (lower count = weaker): ${weakContext}
 
-Create a 14-day revision schedule. Prioritise weaker subjects more. Include revision, practice, and mock test days.
-Return ONLY valid JSON:
+Chapters available per subject:
+${chapterContext}
+
+Rules for the ${days}-day plan:
+1. Assign SPECIFIC chapter names (from the list above) to every task — never generic "revise chapter"
+2. Give exact duration per task: "45 min", "1 hr", "1.5 hrs", "2 hrs"
+3. Cover EVERY chapter at least once across the ${days} days
+4. Weaker subjects (lower counts) get more days/tasks
+5. Days 1-${firstRevDay}: systematic chapter-by-chapter revision; Days ${firstRevDay + 1}-${days}: revision rounds + mock tests
+6. Every 7th day: rest/light day (only 1 light task)
+7. Include: chapter read, practice Qs, formula drill, NCERT examples, and 1-2 full mock test days
+
+Return ONLY valid JSON (no markdown):
 {
   "days": [
     {
       "date": "YYYY-MM-DD",
+      "dayType": "revision",
       "tasks": [
-        {"subject":"Maths","task":"Revise Quadratic Equations + solve 5 PYQs","duration":"2 hrs","emoji":"📐"},
-        {"subject":"Physics","task":"Practice Electricity numericals","duration":"1.5 hrs","emoji":"⚡"}
+        {
+          "subject": "Maths",
+          "chapter": "Quadratic Equations",
+          "task": "Read NCERT + solve 10 PYQ practice questions + write all key formulas",
+          "duration": "1.5 hrs",
+          "emoji": "📐",
+          "priority": "high"
+        }
       ]
     }
   ],
-  "tips": ["3-4 specific study tips based on their weak areas and days remaining"]
+  "tips": ["5 specific actionable tips targeting their weakest subjects"],
+  "subjectSchedule": {
+    "Maths": ["Days 1-2: Real Numbers & Polynomials", "Days 3-4: Quadratic Equations & AP"]
+  }
 }
-Generate exactly ${days} day entries. Use these dates in order: ${dateList.join(", ")}.
-Vary tasks — include revision, practice questions, mock tests, and rest/light revision days.`;
+Dates in order: ${dateList.join(", ")}. dayType: revision | practice | mock-test | rest.`;
 
   try {
     const text = await ask(prompt, 2000);
