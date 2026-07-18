@@ -747,6 +747,270 @@ function makeCode(): string {
   return Math.random().toString(36).slice(2, 7).toUpperCase();
 }
 
+// ============================================================
+// TEACHER CLASS SYSTEM
+// ============================================================
+interface TeacherAssignment {
+  id: string;
+  type: "question" | "quiz" | "announcement";
+  title: string;
+  content: string;
+  subject: string;
+  chapter?: string;
+  options?: string[];
+  answer?: string;
+  marks?: number;
+  dueDate?: string;
+  createdAt: number;
+  submissions: Record<
+    string,
+    { studentName: string; answer: string; submittedAt: number; marks?: number }
+  >;
+}
+
+interface TeacherClass {
+  code: string;
+  teacherName: string;
+  className: string;
+  subject: string;
+  createdAt: number;
+  assignments: TeacherAssignment[];
+  announcements: string[];
+  students: Record<string, { name: string; joinedAt: number; xp: number }>;
+}
+
+const TEACHER_CLASSES: Record<string, TeacherClass> = {};
+
+// Prune old teacher classes after 7 days
+setInterval(
+  () => {
+    const now = Date.now();
+    for (const code of Object.keys(TEACHER_CLASSES)) {
+      if (now - TEACHER_CLASSES[code].createdAt > 7 * 24 * 60 * 60 * 1000)
+        delete TEACHER_CLASSES[code];
+    }
+  },
+  60 * 60 * 1000,
+);
+
+function makeTeacherCode(): string {
+  const letters = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  return Array.from(
+    { length: 6 },
+    () => letters[Math.floor(Math.random() * letters.length)],
+  ).join("");
+}
+
+// POST /api/teacher/create-class
+router.post("/teacher/create-class", (req, res) => {
+  const { teacherName, className, subject } = req.body as Record<
+    string,
+    string
+  >;
+  if (!teacherName || !className || !subject) {
+    res.status(400).json({ error: "Missing fields" });
+    return;
+  }
+  let code = makeTeacherCode();
+  while (TEACHER_CLASSES[code]) code = makeTeacherCode();
+  TEACHER_CLASSES[code] = {
+    code,
+    teacherName,
+    className,
+    subject,
+    createdAt: Date.now(),
+    assignments: [],
+    announcements: [],
+    students: {},
+  };
+  res.json({ code });
+});
+
+// POST /api/teacher/get-class
+router.post("/teacher/get-class", (req, res) => {
+  const { code } = req.body as { code: string };
+  const cls = TEACHER_CLASSES[code?.toUpperCase()];
+  if (!cls) {
+    res.status(404).json({ error: "Class not found" });
+    return;
+  }
+  res.json(cls);
+});
+
+// POST /api/teacher/post-assignment
+router.post("/teacher/post-assignment", async (req, res) => {
+  const {
+    code,
+    type,
+    title,
+    content,
+    subject,
+    chapter,
+    options,
+    answer,
+    marks,
+    dueDate,
+  } = req.body as any;
+  const cls = TEACHER_CLASSES[code?.toUpperCase()];
+  if (!cls) {
+    res.status(404).json({ error: "Class not found" });
+    return;
+  }
+  const id = "a_" + Date.now() + Math.random().toString(36).slice(2, 5);
+  const assignment: TeacherAssignment = {
+    id,
+    type: type || "question",
+    title,
+    content,
+    subject: subject || cls.subject,
+    chapter,
+    options,
+    answer,
+    marks: marks || 5,
+    dueDate,
+    createdAt: Date.now(),
+    submissions: {},
+  };
+  cls.assignments.unshift(assignment);
+  if (cls.assignments.length > 50)
+    cls.assignments = cls.assignments.slice(0, 50);
+  res.json({ id, assignment });
+});
+
+// POST /api/teacher/ai-generate-assignment
+router.post("/teacher/ai-generate-assignment", async (req, res) => {
+  const { code, subject, chapter, type, difficulty, classNum } =
+    req.body as any;
+  const cls = TEACHER_CLASSES[code?.toUpperCase()];
+  if (!cls) {
+    res.status(404).json({ error: "Class not found" });
+    return;
+  }
+  const prompt = `Generate a CBSE Class ${classNum || "10"} ${subject} assignment on "${chapter || subject}".
+Type: ${type || "mcq"} (mcq = multiple choice with 4 options, short = short answer question, long = long answer).
+Difficulty: ${difficulty || "medium"}.
+Return ONLY valid JSON:
+{
+  "title": "short title",
+  "content": "the full question text",
+  "options": ["A) ...", "B) ...", "C) ...", "D) ..."],
+  "answer": "correct option letter or full answer",
+  "marks": 5,
+  "explanation": "brief explanation of the answer"
+}
+For short/long questions, options can be empty array [].`;
+  try {
+    const text = await ask(prompt, 600);
+    const parsed = safeJson(text) as any;
+    if (!parsed?.content) {
+      res.status(500).json({ error: "AI generation failed" });
+      return;
+    }
+    res.json(parsed);
+  } catch (e) {
+    res.status(500).json({ error: "AI error" });
+  }
+});
+
+// POST /api/teacher/grade-submission
+router.post("/teacher/grade-submission", async (req, res) => {
+  const { code, assignmentId, studentId, marks } = req.body as any;
+  const cls = TEACHER_CLASSES[code?.toUpperCase()];
+  if (!cls) {
+    res.status(404).json({ error: "Class not found" });
+    return;
+  }
+  const asgn = cls.assignments.find((a) => a.id === assignmentId);
+  if (!asgn || !asgn.submissions[studentId]) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+  asgn.submissions[studentId].marks = marks;
+  res.json({ ok: true });
+});
+
+// POST /api/student/join-class
+router.post("/student/join-class", (req, res) => {
+  const { code, studentName } = req.body as Record<string, string>;
+  const cls = TEACHER_CLASSES[code?.toUpperCase()];
+  if (!cls) {
+    res
+      .status(404)
+      .json({ error: "Invalid class code — please check with your teacher" });
+    return;
+  }
+  const studentId = "s_" + Date.now() + Math.random().toString(36).slice(2, 5);
+  cls.students[studentId] = { name: studentName, joinedAt: Date.now(), xp: 0 };
+  res.json({
+    studentId,
+    class: {
+      code: cls.code,
+      teacherName: cls.teacherName,
+      className: cls.className,
+      subject: cls.subject,
+    },
+  });
+});
+
+// POST /api/student/get-assignments
+router.post("/student/get-assignments", (req, res) => {
+  const { code } = req.body as { code: string };
+  const cls = TEACHER_CLASSES[code?.toUpperCase()];
+  if (!cls) {
+    res.status(404).json({ error: "Class not found" });
+    return;
+  }
+  // Return assignments without other students' submission details
+  const safe = cls.assignments.map((a) => ({
+    id: a.id,
+    type: a.type,
+    title: a.title,
+    content: a.content,
+    subject: a.subject,
+    chapter: a.chapter,
+    options: a.options,
+    marks: a.marks,
+    dueDate: a.dueDate,
+    createdAt: a.createdAt,
+    submissionCount: Object.keys(a.submissions).length,
+  }));
+  res.json({
+    assignments: safe,
+    teacherName: cls.teacherName,
+    className: cls.className,
+  });
+});
+
+// POST /api/student/submit-answer
+router.post("/student/submit-answer", (req, res) => {
+  const { code, assignmentId, studentId, studentName, answer } =
+    req.body as any;
+  const cls = TEACHER_CLASSES[code?.toUpperCase()];
+  if (!cls) {
+    res.status(404).json({ error: "Class not found" });
+    return;
+  }
+  const asgn = cls.assignments.find((a) => a.id === assignmentId);
+  if (!asgn) {
+    res.status(404).json({ error: "Assignment not found" });
+    return;
+  }
+  asgn.submissions[studentId] = {
+    studentName,
+    answer,
+    submittedAt: Date.now(),
+  };
+  // Auto-grade MCQ
+  let autoMarks: number | undefined;
+  if (asgn.type === "question" && asgn.options && asgn.answer) {
+    const correct = asgn.answer.charAt(0).toUpperCase();
+    const given = answer.charAt(0).toUpperCase();
+    autoMarks = correct === given ? asgn.marks || 5 : 0;
+    asgn.submissions[studentId].marks = autoMarks;
+  }
+  res.json({ ok: true, autoMarks });
+});
+
 // POST /api/classroom/create
 router.post("/classroom/create", async (req, res) => {
   const { hostName, subject, chapter, classNum } = req.body as Record<
@@ -990,10 +1254,6 @@ router.post("/revision-schedule", async (req, res) => {
     daysLeft,
     weakContext,
     subjectCounts,
-    schoolStart,
-    schoolEnd,
-    studySlots,
-    chapterMap,
   } = req.body as {
     classNum: string;
     subjects: string[];
@@ -1002,65 +1262,39 @@ router.post("/revision-schedule", async (req, res) => {
     daysLeft: number;
     weakContext: string;
     subjectCounts: Record<string, number>;
-    schoolStart?: string;
-    schoolEnd?: string;
-    studySlots?: string[];
-    chapterMap?: Record<string, string[]>;
   };
+  // Generate dates for next 14 days (or until exam)
   const days = Math.min(daysLeft, 14);
   const dateList = Array.from({ length: days }, (_, i) => {
     const d = new Date(Date.now() + i * 86400000);
     return d.toISOString().split("T")[0];
   });
-  const chapterContext = chapterMap
-    ? Object.entries(chapterMap)
-        .map(([subj, chs]) => `${subj}: ${(chs as string[]).join(", ")}`)
-        .join("\n")
-    : "";
-  const slotCtx = studySlots?.length
-    ? `Available study slots: ${studySlots.join(", ")} (school ${schoolStart || "?"}-${schoolEnd || "?"})`
-    : "";
-  const firstRevDay = Math.ceil(days * 0.7);
-  const prompt = `You are an expert CBSE Class ${classNum} exam planner. ${daysLeft} days until exam on ${examDate}. ~${dailyHours} hrs/day. ${slotCtx}
-Subjects: ${subjects.join(", ")}.
-Practice history (lower count = weaker): ${weakContext}
+  // Weight subjects by how little they've been practiced
+  const subjectWeights = subjects.map((s) => ({
+    subject: s,
+    weight: Math.max(1, 10 - Math.floor((subjectCounts[s] || 0) / 5)),
+  }));
+  const totalWeight = subjectWeights.reduce((a, b) => a + b.weight, 0);
+  const prompt = `You are a CBSE Class ${classNum} exam planner. The student has ${daysLeft} days until their exam on ${examDate}.
+They study ${dailyHours} hours/day. Subjects: ${subjects.join(", ")}.
+Subject practice history (weak subjects have lower counts): ${weakContext}
 
-Chapters available per subject:
-${chapterContext}
-
-Rules for the ${days}-day plan:
-1. Assign SPECIFIC chapter names (from the list above) to every task — never generic "revise chapter"
-2. Give exact duration per task: "45 min", "1 hr", "1.5 hrs", "2 hrs"
-3. Cover EVERY chapter at least once across the ${days} days
-4. Weaker subjects (lower counts) get more days/tasks
-5. Days 1-${firstRevDay}: systematic chapter-by-chapter revision; Days ${firstRevDay + 1}-${days}: revision rounds + mock tests
-6. Every 7th day: rest/light day (only 1 light task)
-7. Include: chapter read, practice Qs, formula drill, NCERT examples, and 1-2 full mock test days
-
-Return ONLY valid JSON (no markdown):
+Create a 14-day revision schedule. Prioritise weaker subjects more. Include revision, practice, and mock test days.
+Return ONLY valid JSON:
 {
   "days": [
     {
       "date": "YYYY-MM-DD",
-      "dayType": "revision",
       "tasks": [
-        {
-          "subject": "Maths",
-          "chapter": "Quadratic Equations",
-          "task": "Read NCERT + solve 10 PYQ practice questions + write all key formulas",
-          "duration": "1.5 hrs",
-          "emoji": "📐",
-          "priority": "high"
-        }
+        {"subject":"Maths","task":"Revise Quadratic Equations + solve 5 PYQs","duration":"2 hrs","emoji":"📐"},
+        {"subject":"Physics","task":"Practice Electricity numericals","duration":"1.5 hrs","emoji":"⚡"}
       ]
     }
   ],
-  "tips": ["5 specific actionable tips targeting their weakest subjects"],
-  "subjectSchedule": {
-    "Maths": ["Days 1-2: Real Numbers & Polynomials", "Days 3-4: Quadratic Equations & AP"]
-  }
+  "tips": ["3-4 specific study tips based on their weak areas and days remaining"]
 }
-Dates in order: ${dateList.join(", ")}. dayType: revision | practice | mock-test | rest.`;
+Generate exactly ${days} day entries. Use these dates in order: ${dateList.join(", ")}.
+Vary tasks — include revision, practice questions, mock tests, and rest/light revision days.`;
 
   try {
     const text = await ask(prompt, 2000);
@@ -1349,6 +1583,30 @@ Make each card concise — front under 15 words, back under 30 words.`;
     }
   } catch (e) {
     req.log.error({ err: e }, "flashcards error");
+    res.status(500).json({ error: "AI error" });
+  }
+});
+
+// POST /api/chapter-summary
+router.post("/chapter-summary", async (req, res) => {
+  const { classNum, subject, chapter } = req.body as Record<string, string>;
+  const prompt = `Generate a concise CBSE Class ${classNum} ${subject} summary for the chapter "${chapter}".
+Return ONLY valid JSON:
+{
+  "overview": "2-3 sentence overview of what the chapter covers",
+  "keyPoints": ["8-12 most important points students must know for boards"],
+  "importantTerms": ["10-15 key vocabulary/concept terms"],
+  "examTips": ["4-5 specific board exam tips for this chapter"]
+}`;
+  try {
+    const text = await ask(prompt, 1000);
+    const parsed = safeJson(text) as any;
+    if (parsed?.keyPoints) {
+      res.json({ summary: parsed });
+    } else {
+      res.status(500).json({ error: "Parse failed" });
+    }
+  } catch (e) {
     res.status(500).json({ error: "AI error" });
   }
 });

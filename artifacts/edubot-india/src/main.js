@@ -829,9 +829,11 @@ window.switchUser = function () {
   localStorage.removeItem("stasis_name");
   localStorage.removeItem("stasis_performance");
   localStorage.removeItem("stasis_state");
-  showNameSplash(function () {
-    location.reload();
-  });
+  localStorage.removeItem("stasis_role");
+  localStorage.removeItem("stasis_teacher_code");
+  localStorage.removeItem("stasis_student_class_code");
+  localStorage.removeItem("stasis_student_id");
+  location.reload();
 };
 
 function showNameSplash(onDone) {
@@ -1390,6 +1392,775 @@ function saveState() {
 }
 
 let S = loadState();
+
+// ============================================================
+// ROLE SYSTEM — Teacher / Student
+// ============================================================
+function getRole() {
+  return localStorage.getItem("stasis_role") || "";
+}
+function setRole(r) {
+  localStorage.setItem("stasis_role", r);
+}
+function getTeacherCode() {
+  return localStorage.getItem("stasis_teacher_code") || "";
+}
+function getStudentClassCode() {
+  return localStorage.getItem("stasis_student_class_code") || "";
+}
+function getStudentId() {
+  return localStorage.getItem("stasis_student_id") || "";
+}
+
+// ============================================================
+// ROLE SELECTION SPLASH — shown before name splash if no role
+// ============================================================
+function showRoleSplash(onDone) {
+  const splash = document.createElement("div");
+  splash.id = "role-splash";
+  splash.style.cssText =
+    "position:fixed;inset:0;z-index:10000;background:#07070f;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:Inter,system-ui,sans-serif;padding:24px;";
+
+  splash.innerHTML = `
+    <style>
+      @keyframes rsFade{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+      .rs-card{animation:rsFade .4s ease}
+      .role-btn{width:100%;padding:0;border:none;background:none;cursor:pointer;font-family:inherit;transition:transform .2s}
+      .role-btn:hover .role-inner{border-color:rgba(255,255,255,0.25)!important;transform:translateY(-2px)}
+      .role-btn:active .role-inner{transform:scale(0.97)}
+      .role-inner{border-radius:20px;padding:24px 20px;display:flex;flex-direction:column;align-items:center;gap:12px;transition:all .2s;border:2px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03)}
+    </style>
+    <div class="rs-card" style="width:100%;max-width:360px">
+      <div style="text-align:center;margin-bottom:32px">
+        <div style="font-size:2.8rem;margin-bottom:10px;filter:drop-shadow(0 0 30px rgba(15,202,140,0.5))">⚡</div>
+        <div style="font-size:1.8rem;font-weight:900;background:linear-gradient(135deg,#0fca8c,#4f8ef7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-0.02em">Stasis Education</div>
+        <div style="color:#5a6a8a;font-size:0.85rem;margin-top:4px">Who are you?</div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <button class="role-btn" onclick="chooseRole('student')">
+          <div class="role-inner" style="border-color:rgba(79,142,247,0.3)">
+            <div style="width:56px;height:56px;border-radius:18px;background:linear-gradient(135deg,#4f8ef7,#6366f1);display:flex;align-items:center;justify-content:center;font-size:1.8rem;box-shadow:0 6px 20px rgba(79,142,247,0.4)">🎒</div>
+            <div style="text-align:center">
+              <div style="font-size:1.1rem;font-weight:900;color:#fff">I'm a Student</div>
+              <div style="font-size:0.78rem;color:#5a6a8a;margin-top:3px">Practice, learn & compete with friends</div>
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center">
+              ${["📝 Practice", "🎮 Games", "🧠 AI Tutor", "📊 Stats"].map((t) => `<span style="font-size:0.68rem;background:rgba(79,142,247,0.12);color:#4f8ef7;border:1px solid rgba(79,142,247,0.2);border-radius:20px;padding:2px 8px">${t}</span>`).join("")}
+            </div>
+          </div>
+        </button>
+
+        <button class="role-btn" onclick="chooseRole('teacher')">
+          <div class="role-inner" style="border-color:rgba(15,202,140,0.3)">
+            <div style="width:56px;height:56px;border-radius:18px;background:linear-gradient(135deg,#0fca8c,#06b6d4);display:flex;align-items:center;justify-content:center;font-size:1.8rem;box-shadow:0 6px 20px rgba(15,202,140,0.4)">🧑‍🏫</div>
+            <div style="text-align:center">
+              <div style="font-size:1.1rem;font-weight:900;color:#fff">I'm a Teacher</div>
+              <div style="font-size:0.78rem;color:#5a6a8a;margin-top:3px">Create assignments & monitor your class</div>
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center">
+              ${["📋 Assignments", "🤖 AI Generate", "📈 Student Stats", "🏆 Leaderboard"].map((t) => `<span style="font-size:0.68rem;background:rgba(15,202,140,0.1);color:#0fca8c;border:1px solid rgba(15,202,140,0.2);border-radius:20px;padding:2px 8px">${t}</span>`).join("")}
+            </div>
+          </div>
+        </button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(splash);
+
+  window.chooseRole = (role) => {
+    setRole(role);
+    splash.style.opacity = "0";
+    splash.style.transition = "opacity .25s";
+    setTimeout(() => {
+      splash.remove();
+      onDone(role);
+    }, 250);
+  };
+}
+
+// ============================================================
+// TEACHER DASHBOARD
+// ============================================================
+// ============================================================
+// TEACHER INTERFACE — completely separate from student UI
+// ============================================================
+function teacherEnterMode() {
+  // Hide student chrome
+  const hdr = document.getElementById("header");
+  const nav = document.getElementById("bottomNav");
+  const fab = document.getElementById("nova-fab");
+  if (hdr) hdr.style.display = "none";
+  if (nav) nav.style.display = "none";
+  if (fab) fab.style.display = "none";
+  document.body.style.background = "#07101a";
+}
+function teacherExitMode() {
+  const hdr = document.getElementById("header");
+  const nav = document.getElementById("bottomNav");
+  const fab = document.getElementById("nova-fab");
+  if (hdr) hdr.style.display = "";
+  if (nav) nav.style.display = "";
+  if (fab) fab.style.display = "";
+  document.body.style.background = "";
+}
+
+function renderTeacherDashboard() {
+  teacherEnterMode();
+  const app = document.getElementById("app");
+  const tCode = getTeacherCode();
+  const tName = localStorage.getItem("stasis_name") || "Teacher";
+
+  if (!tCode) {
+    app.innerHTML = `
+      <style>
+        @keyframes tSetup{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+        .t-setup-wrap{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;font-family:Inter,system-ui,sans-serif;animation:tSetup .4s ease}
+        .t-setup-card{width:100%;max-width:400px;background:rgba(255,255,255,0.03);border:1.5px solid rgba(15,202,140,0.2);border-radius:24px;padding:28px 24px}
+      </style>
+      <div class="t-setup-wrap">
+        <div class="t-setup-card">
+          <div style="text-align:center;margin-bottom:28px">
+            <div style="width:64px;height:64px;border-radius:20px;background:linear-gradient(135deg,#0fca8c,#06b6d4);display:flex;align-items:center;justify-content:center;font-size:2rem;margin:0 auto 14px;box-shadow:0 8px 28px rgba(15,202,140,0.4)">🧑‍🏫</div>
+            <div style="font-size:1.5rem;font-weight:900;color:#fff;letter-spacing:-.02em">Create Your Class</div>
+            <div style="font-size:0.82rem;color:#4a6080;margin-top:5px">Set up once, share your code with students</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <div>
+              <label style="font-size:0.7rem;font-weight:800;color:#4a6080;letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:5px">Your Name</label>
+              <input id="tc-name" class="form-input" value="${escapeHtml(tName)}" placeholder="e.g. Mrs. Sharma">
+            </div>
+            <div>
+              <label style="font-size:0.7rem;font-weight:800;color:#4a6080;letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:5px">Class Name</label>
+              <input id="tc-classname" class="form-input" placeholder="e.g. Class 10A — Science" value="Class 10 — ${escapeHtml(tName)}'s Class">
+            </div>
+            <div>
+              <label style="font-size:0.7rem;font-weight:800;color:#4a6080;letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:5px">Main Subject</label>
+              <select id="tc-subject" class="form-select">
+                ${["Maths", "Physics", "Chemistry", "Biology", "History", "Geography", "Civics", "Economics", "English", "Hindi"].map((s) => `<option>${s}</option>`).join("")}
+              </select>
+            </div>
+            <button onclick="tcCreateClass()" style="width:100%;padding:15px;border-radius:14px;border:none;background:linear-gradient(135deg,#0fca8c,#06b6d4);color:#fff;font-size:1rem;font-weight:900;cursor:pointer;font-family:inherit;box-shadow:0 4px 20px rgba(15,202,140,0.4);margin-top:4px">
+              Create Class →
+            </button>
+            <div id="tc-err" style="color:#f0564a;font-size:0.8rem;text-align:center;min-height:16px"></div>
+          </div>
+          <div style="text-align:center;margin-top:20px">
+            <button onclick="teacherExitMode();localStorage.removeItem('stasis_role');location.reload()" style="background:none;border:none;color:#4a6080;font-size:0.75rem;cursor:pointer;font-family:inherit">← Back to student mode</button>
+          </div>
+        </div>
+      </div>
+    `;
+    window.tcCreateClass = async () => {
+      const teacherName =
+        document.getElementById("tc-name").value.trim() || tName;
+      const className = document.getElementById("tc-classname").value.trim();
+      const subject = document.getElementById("tc-subject").value;
+      const err = document.getElementById("tc-err");
+      if (!className) {
+        err.textContent = "Enter a class name";
+        return;
+      }
+      const btn = document.querySelector("[onclick='tcCreateClass()']");
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = "Creating...";
+      }
+      try {
+        const data = await apiPost("/teacher/create-class", {
+          teacherName,
+          className,
+          subject,
+        });
+        localStorage.setItem("stasis_teacher_code", data.code);
+        localStorage.setItem("stasis_name", teacherName);
+        renderTeacherDashboard();
+      } catch (e) {
+        err.textContent = e.message;
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = "Create Class →";
+        }
+      }
+    };
+    return;
+  }
+
+  app.innerHTML = `<div style="min-height:100vh;display:flex;align-items:center;justify-content:center">${typingLoader()}</div>`;
+  apiPost("/teacher/get-class", { code: tCode })
+    .then((cls) => renderTeacherClassView(cls))
+    .catch(() => {
+      localStorage.removeItem("stasis_teacher_code");
+      renderTeacherDashboard();
+    });
+}
+
+function renderTeacherClassView(cls) {
+  teacherEnterMode();
+  const app = document.getElementById("app");
+  const tName = localStorage.getItem("stasis_name") || "Teacher";
+  const studentCount = Object.keys(cls.students || {}).length;
+  const totalSubs = (cls.assignments || []).reduce(
+    (s, a) => s + Object.keys(a.submissions || {}).length,
+    0,
+  );
+  const pending = (cls.assignments || []).reduce(
+    (s, a) =>
+      s +
+      Object.keys(a.submissions || {}).filter(
+        (sid) =>
+          a.submissions[sid].marks === undefined && a.type !== "announcement",
+      ).length,
+    0,
+  );
+
+  const SUBJ_COL = {
+    Maths: "#4f8ef7",
+    Physics: "#f0b429",
+    Chemistry: "#0fca8c",
+    Biology: "#9b6dff",
+    History: "#f97316",
+    Geography: "#06b6d4",
+    Civics: "#ec4899",
+    Economics: "#a78bfa",
+    English: "#34d399",
+    Hindi: "#f0564a",
+  };
+
+  app.innerHTML = `
+  <style>
+    :root{--t-bg:#07101a;--t-surface:rgba(255,255,255,0.03);--t-border:rgba(255,255,255,0.07);--t-accent:#0fca8c;--t-text:#e2eaf4;--t-muted:#4a6080}
+    *{box-sizing:border-box}
+    .t-shell{display:flex;flex-direction:column;min-height:100vh;background:var(--t-bg);font-family:Inter,system-ui,sans-serif;color:var(--t-text)}
+    /* Top bar */
+    .t-topbar{display:flex;align-items:center;gap:12px;padding:14px 18px;background:rgba(7,16,26,0.96);border-bottom:1px solid var(--t-border);backdrop-filter:blur(12px);position:sticky;top:0;z-index:100;flex-shrink:0}
+    .t-logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#0fca8c,#06b6d4);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
+    .t-topbar-title{flex:1;min-width:0}
+    .t-topbar-title strong{display:block;font-size:0.9rem;font-weight:800;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .t-topbar-title span{font-size:0.65rem;color:var(--t-muted);font-weight:600}
+    .t-code-pill{background:rgba(15,202,140,0.1);border:1.5px solid rgba(15,202,140,0.3);border-radius:10px;padding:6px 12px;cursor:pointer;text-align:center;flex-shrink:0}
+    .t-code-pill .code{font-size:1rem;font-weight:900;color:#0fca8c;letter-spacing:.14em;font-family:'Courier New',monospace}
+    .t-code-pill .label{font-size:0.55rem;color:var(--t-muted);font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-top:1px}
+    /* Bottom nav - teacher style */
+    .t-nav{display:flex;background:rgba(7,16,26,0.97);border-top:1px solid var(--t-border);position:fixed;bottom:0;left:0;right:0;z-index:100}
+    .t-nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:10px 4px 14px;border:none;background:none;cursor:pointer;font-family:inherit;color:var(--t-muted);font-size:0.6rem;font-weight:700;transition:color .15s;position:relative}
+    .t-nav-btn.on{color:var(--t-accent)}
+    .t-nav-btn.on::after{content:'';position:absolute;top:0;left:20%;right:20%;height:2px;background:var(--t-accent);border-radius:0 0 2px 2px}
+    .t-nav-btn .t-nav-icon{font-size:1.25rem;line-height:1}
+    /* Content area */
+    .t-content{flex:1;padding:16px;padding-bottom:80px;overflow-y:auto}
+    /* Cards */
+    .t-card{background:var(--t-surface);border:1px solid var(--t-border);border-radius:16px;padding:16px;margin-bottom:12px;transition:border-color .15s}
+    .t-card:hover{border-color:rgba(255,255,255,0.13)}
+    .t-stat{background:var(--t-surface);border:1px solid var(--t-border);border-radius:14px;padding:14px 12px;text-align:center}
+    .t-stat-val{font-size:1.6rem;font-weight:900;color:#fff;line-height:1}
+    .t-stat-lbl{font-size:0.62rem;color:var(--t-muted);margin-top:4px;font-weight:600}
+    /* Badges */
+    .t-badge{display:inline-block;font-size:0.62rem;font-weight:800;border-radius:20px;padding:2px 8px;text-transform:uppercase;letter-spacing:.06em}
+    /* Form elements */
+    .t-input{width:100%;background:rgba(255,255,255,0.05);border:1.5px solid rgba(255,255,255,0.09);border-radius:11px;padding:10px 13px;color:#fff;font-size:0.85rem;font-family:inherit;outline:none;transition:border-color .2s}
+    .t-input:focus{border-color:rgba(15,202,140,0.45)}
+    .t-input::placeholder{color:var(--t-muted)}
+    .t-select{width:100%;background:rgba(255,255,255,0.05);border:1.5px solid rgba(255,255,255,0.09);border-radius:11px;padding:10px 13px;color:#fff;font-size:0.85rem;font-family:inherit;outline:none;appearance:none}
+    .t-select option{background:#0d1a2a;color:#fff}
+    .t-label{font-size:0.65rem;font-weight:800;color:var(--t-muted);letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:5px}
+    .t-btn-primary{border:none;background:linear-gradient(135deg,#0fca8c,#06b6d4);color:#fff;font-weight:900;font-family:inherit;cursor:pointer;border-radius:12px;padding:12px;box-shadow:0 3px 14px rgba(15,202,140,0.35);transition:opacity .18s,transform .15s}
+    .t-btn-primary:hover{opacity:.88;transform:translateY(-1px)}
+    .t-btn-primary:disabled{opacity:.35;cursor:not-allowed;transform:none}
+    .t-btn-ghost{border:1.5px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--t-muted);font-family:inherit;cursor:pointer;border-radius:12px;padding:11px;font-weight:700;transition:all .15s}
+    .t-btn-ghost:hover{border-color:rgba(15,202,140,0.35);color:var(--t-accent)}
+    @keyframes tPop{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+    .t-anim{animation:tPop .3s ease}
+    /* Pill tabs inside content */
+    .t-ptab{padding:6px 14px;border-radius:20px;border:1.5px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);color:var(--t-muted);font-size:0.73rem;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;transition:all .15s}
+    .t-ptab.on{border-color:var(--t-accent);background:rgba(15,202,140,0.1);color:var(--t-accent)}
+  </style>
+
+  <div class="t-shell">
+    <!-- Top bar -->
+    <div class="t-topbar">
+      <div class="t-logo">🧑‍🏫</div>
+      <div class="t-topbar-title">
+        <strong>${escapeHtml(cls.className)}</strong>
+        <span>Teacher: ${escapeHtml(tName)} · ${cls.subject}</span>
+      </div>
+      <div class="t-code-pill" onclick="navigator.clipboard&&navigator.clipboard.writeText('${cls.code}').then(()=>{this.querySelector('.label').textContent='Copied!';setTimeout(()=>this.querySelector('.label').textContent='Class Code',1500)})">
+        <div class="code">${cls.code}</div>
+        <div class="label">Class Code</div>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="t-content" id="t-content">
+      <!-- loaded by tNav() -->
+    </div>
+
+    <!-- Bottom Nav -->
+    <nav class="t-nav">
+      <button class="t-nav-btn on" id="tnav-overview" onclick="tNav('overview')"><span class="t-nav-icon">📊</span>Overview</button>
+      <button class="t-nav-btn" id="tnav-assign" onclick="tNav('assign')"><span class="t-nav-icon">📋</span>Assignments</button>
+      <button class="t-nav-btn" id="tnav-create" onclick="tNav('create')"><span class="t-nav-icon">✏️</span>Create</button>
+      <button class="t-nav-btn" id="tnav-students" onclick="tNav('students')"><span class="t-nav-icon">👥</span>Students</button>
+      <button class="t-nav-btn" id="tnav-subs" onclick="tNav('subs')"><span class="t-nav-icon">📬</span>Submissions${pending > 0 ? `<span style="position:absolute;top:8px;right:calc(50% - 18px);width:8px;height:8px;border-radius:50%;background:#f0564a"></span>` : ""}</button>
+    </nav>
+  </div>
+  `;
+
+  window._tcClass = cls;
+
+  // ── Tab renderer ──────────────────────────────────────────────────────
+  window.tNav = (tab) => {
+    document
+      .querySelectorAll(".t-nav-btn")
+      .forEach((b) => b.classList.remove("on"));
+    const btn = document.getElementById("tnav-" + tab);
+    if (btn) btn.classList.add("on");
+    const content = document.getElementById("t-content");
+    if (!content) return;
+    const c = window._tcClass;
+    content.innerHTML = "";
+    content.className = "t-content t-anim";
+
+    // ── OVERVIEW ──────────────────────────────────────────────────────
+    if (tab === "overview") {
+      const totalSubs2 = (c.assignments || []).reduce(
+        (s, a) => s + Object.keys(a.submissions || {}).length,
+        0,
+      );
+      const pending2 = (c.assignments || []).reduce(
+        (s, a) =>
+          s +
+          Object.keys(a.submissions || {}).filter(
+            (sid) =>
+              a.submissions[sid].marks === undefined &&
+              a.type !== "announcement",
+          ).length,
+        0,
+      );
+      const stdCount = Object.keys(c.students || {}).length;
+      const recent = (c.assignments || []).slice(0, 3);
+      content.innerHTML = `
+        <!-- Stats row -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px">
+          <div class="t-stat"><div class="t-stat-val">${stdCount}</div><div class="t-stat-lbl">Students</div></div>
+          <div class="t-stat"><div class="t-stat-val">${c.assignments.length}</div><div class="t-stat-lbl">Assignments</div></div>
+          <div class="t-stat"><div class="t-stat-val">${totalSubs2}</div><div class="t-stat-lbl">Submissions</div></div>
+          <div class="t-stat" style="${pending2 > 0 ? "border-color:rgba(240,86,74,0.3)" : ""}"><div class="t-stat-val" style="${pending2 > 0 ? "color:#f0564a" : ""}">${pending2}</div><div class="t-stat-lbl">Ungraded</div></div>
+        </div>
+
+        <!-- Share code card -->
+        <div style="background:linear-gradient(135deg,rgba(15,202,140,0.12),rgba(6,182,212,0.06));border:1.5px solid rgba(15,202,140,0.25);border-radius:18px;padding:18px;margin-bottom:16px;text-align:center">
+          <div style="font-size:0.65rem;font-weight:800;color:#0fca8c;letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">Share with Students</div>
+          <div style="font-size:2.8rem;font-weight:900;color:#fff;letter-spacing:.2em;font-family:'Courier New',monospace;text-shadow:0 0 30px rgba(15,202,140,0.5);margin-bottom:10px">${cls.code}</div>
+          <button onclick="navigator.clipboard&&navigator.clipboard.writeText('${cls.code}').then(()=>{this.textContent='✓ Copied!';setTimeout(()=>this.textContent='📋 Copy Code',1400)})" style="background:rgba(15,202,140,0.15);border:1.5px solid rgba(15,202,140,0.35);color:#0fca8c;border-radius:22px;padding:8px 20px;font-size:0.82rem;font-weight:800;cursor:pointer;font-family:inherit">📋 Copy Code</button>
+          <div style="font-size:0.72rem;color:var(--t-muted);margin-top:8px">Students enter this code to join your class</div>
+        </div>
+
+        <!-- Recent activity -->
+        ${
+          recent.length
+            ? `
+        <div style="font-size:0.65rem;font-weight:800;color:var(--t-muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px">Recent Assignments</div>
+        ${recent
+          .map((a) => {
+            const subCount = Object.keys(a.submissions || {}).length;
+            const typeCol =
+              { question: "#4f8ef7", quiz: "#9b6dff", announcement: "#f0b429" }[
+                a.type
+              ] || "#0fca8c";
+            return `<div class="t-card" onclick="tNav('assign')" style="cursor:pointer">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+              <span class="t-badge" style="color:${typeCol};background:${typeCol}15">${a.type}</span>
+              <span style="font-size:0.7rem;color:var(--t-muted)">${new Date(a.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
+            </div>
+            <div style="font-size:0.9rem;font-weight:800;color:#fff;margin-bottom:2px">${escapeHtml(a.title)}</div>
+            <div style="font-size:0.73rem;color:var(--t-muted)">${escapeHtml(a.subject)}${a.chapter ? " · " + escapeHtml(a.chapter) : ""} · ${subCount} submission${subCount !== 1 ? "s" : ""}</div>
+          </div>`;
+          })
+          .join("")}`
+            : `<div style="text-align:center;padding:30px 20px;color:var(--t-muted);font-size:0.85rem">No assignments yet — tap <strong style="color:#fff">Create</strong> to add one</div>`
+        }
+
+        <!-- Settings -->
+        <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--t-border);display:flex;flex-direction:column;gap:8px">
+          <button onclick="localStorage.removeItem('stasis_teacher_code');renderTeacherDashboard()" style="background:none;border:1px solid rgba(255,255,255,0.08);color:var(--t-muted);border-radius:10px;padding:9px;font-size:0.78rem;cursor:pointer;font-family:inherit;font-weight:600">🔄 Reset / New Class</button>
+          <button onclick="teacherExitMode();localStorage.removeItem('stasis_role');location.reload()" style="background:none;border:none;color:var(--t-muted);font-size:0.72rem;cursor:pointer;font-family:inherit">← Switch to Student Mode</button>
+        </div>
+      `;
+    }
+
+    // ── ASSIGNMENTS ───────────────────────────────────────────────────
+    if (tab === "assign") {
+      if (!c.assignments.length) {
+        content.innerHTML = `<div style="text-align:center;padding:60px 20px"><div style="font-size:3rem;margin-bottom:12px">📋</div><div style="font-size:1rem;font-weight:800;color:#fff;margin-bottom:6px">No assignments yet</div><div style="color:var(--t-muted);font-size:0.82rem;margin-bottom:20px">Tap Create to post your first question</div><button onclick="tNav('create')" class="t-btn-primary" style="padding:11px 24px;font-size:0.9rem">✏️ Create Assignment</button></div>`;
+        return;
+      }
+      content.innerHTML = c.assignments
+        .map((a) => {
+          const subCount = Object.keys(a.submissions || {}).length;
+          const ungraded = Object.values(a.submissions || {}).filter(
+            (s) => s.marks === undefined && a.type !== "announcement",
+          ).length;
+          const typeCol =
+            { question: "#4f8ef7", quiz: "#9b6dff", announcement: "#f0b429" }[
+              a.type
+            ] || "#0fca8c";
+          return `<div class="t-card" style="cursor:pointer" onclick="tViewAssignment('${a.id}')">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px">
+            <div style="display:flex;align-items:center;gap:7px">
+              <span class="t-badge" style="color:${typeCol};background:${typeCol}15">${a.type}</span>
+              <span style="font-size:0.7rem;color:var(--t-muted)">${escapeHtml(a.subject)}${a.chapter ? " · " + escapeHtml(a.chapter) : ""}</span>
+            </div>
+            <span style="font-size:0.7rem;color:var(--t-muted)">${new Date(a.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
+          </div>
+          <div style="font-size:0.92rem;font-weight:800;color:#fff;margin-bottom:6px">${escapeHtml(a.title)}</div>
+          <div style="font-size:0.78rem;color:var(--t-muted);margin-bottom:8px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${escapeHtml(a.content)}</div>
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <div style="display:flex;gap:8px;align-items:center">
+              <span style="font-size:0.75rem;font-weight:700;color:#0fca8c">📬 ${subCount} submitted</span>
+              ${ungraded > 0 ? `<span style="font-size:0.72rem;font-weight:800;color:#f0564a;background:rgba(240,86,74,0.1);border-radius:20px;padding:1px 7px">⚡ ${ungraded} to grade</span>` : ""}
+            </div>
+            <span style="font-size:0.72rem;color:rgba(255,255,255,0.2)">view →</span>
+          </div>
+        </div>`;
+        })
+        .join("");
+    }
+
+    // ── CREATE ─────────────────────────────────────────────────────────
+    if (tab === "create") {
+      const subjects = [
+        "Maths",
+        "Physics",
+        "Chemistry",
+        "Biology",
+        "History",
+        "Geography",
+        "Civics",
+        "Economics",
+        "English",
+        "Hindi",
+      ];
+      const chs = getChapters(S.classPreference || "10", c.subject);
+      content.innerHTML = `
+        <!-- Type selector -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px">
+          ${[
+            ["question", "📝 Question", "Post a Q&A or MCQ"],
+            ["announcement", "📢 Announcement", "Notice for all students"],
+          ]
+            .map(
+              ([type, label, sub], i) => `
+          <button onclick="tSetType('${type}')" id="ttype-${type}" style="padding:14px 10px;border-radius:16px;border:1.5px solid ${i === 0 ? "rgba(79,142,247,0.4)" : "rgba(255,255,255,0.08)"};background:${i === 0 ? "rgba(79,142,247,0.1)" : "rgba(255,255,255,0.03)"};cursor:pointer;font-family:inherit;text-align:left;transition:all .15s">
+            <div style="font-size:1.2rem;margin-bottom:5px">${label.split(" ")[0]}</div>
+            <div style="font-size:0.82rem;font-weight:800;color:${i === 0 ? "#4f8ef7" : "#fff"}">${label.slice(3)}</div>
+            <div style="font-size:0.68rem;color:var(--t-muted);margin-top:2px">${sub}</div>
+          </button>`,
+            )
+            .join("")}
+        </div>
+
+        <!-- AI Generate strip -->
+        <div style="background:linear-gradient(135deg,rgba(155,109,255,0.1),rgba(79,142,247,0.06));border:1px solid rgba(155,109,255,0.25);border-radius:14px;padding:12px 14px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:10px">
+          <div>
+            <div style="font-size:0.8rem;font-weight:800;color:#9b6dff">🤖 AI Generate</div>
+            <div style="font-size:0.7rem;color:var(--t-muted);margin-top:2px">Auto-create a question from subject & chapter</div>
+          </div>
+          <button id="tc-ai-btn" onclick="tcAIGenerate()" style="background:rgba(155,109,255,0.15);border:1.5px solid rgba(155,109,255,0.35);color:#9b6dff;border-radius:10px;padding:8px 14px;font-size:0.78rem;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0">Generate →</button>
+        </div>
+
+        <div id="tc-create-form">${tcQuestionForm(c.subject, chs)}</div>
+      `;
+      window._tcAType = "question";
+      window.tSetType = (type) => {
+        window._tcAType = type;
+        ["question", "announcement"].forEach((t) => {
+          const b = document.getElementById("ttype-" + t);
+          if (!b) return;
+          const active = t === type;
+          const col = t === "question" ? "#4f8ef7" : "#f0b429";
+          b.style.borderColor = active
+            ? `rgba(${t === "question" ? "79,142,247" : "240,180,41"},0.4)`
+            : "rgba(255,255,255,0.08)";
+          b.style.background = active
+            ? `rgba(${t === "question" ? "79,142,247" : "240,180,41"},0.1)`
+            : "rgba(255,255,255,0.03)";
+          b.querySelector("div:nth-child(2)").style.color = active
+            ? col
+            : "#fff";
+        });
+        const chs2 = getChapters(S.classPreference || "10", c.subject);
+        document.getElementById("tc-create-form").innerHTML =
+          type === "question"
+            ? tcQuestionForm(c.subject, chs2)
+            : tcAnnouncementForm();
+      };
+    }
+
+    // ── STUDENTS ──────────────────────────────────────────────────────
+    if (tab === "students") {
+      const students = Object.entries(c.students || {});
+      if (!students.length) {
+        content.innerHTML = `<div style="text-align:center;padding:60px 20px"><div style="font-size:3rem;margin-bottom:12px">👥</div><div style="font-size:1rem;font-weight:800;color:#fff;margin-bottom:6px">No students joined yet</div><div style="color:var(--t-muted);font-size:0.82rem;margin-bottom:16px">Share your class code <strong style="color:#0fca8c;font-family:'Courier New',monospace;letter-spacing:.1em">${c.code}</strong> with students</div></div>`;
+        return;
+      }
+      const AVATARS = [
+        "#4f8ef7",
+        "#0fca8c",
+        "#9b6dff",
+        "#f0b429",
+        "#ec4899",
+        "#f0564a",
+        "#06b6d4",
+      ];
+      content.innerHTML = `
+        <div style="font-size:0.65rem;font-weight:800;color:var(--t-muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:12px">${students.length} Student${students.length !== 1 ? "s" : ""} Enrolled</div>
+        ${students
+          .map(([sid, st], i) => {
+            const done = (c.assignments || []).filter(
+              (a) => a.submissions[sid],
+            ).length;
+            const total = c.assignments.length;
+            const pct = total ? Math.round((done / total) * 100) : 0;
+            const col = AVATARS[i % AVATARS.length];
+            return `<div class="t-card" style="display:flex;align-items:center;gap:14px">
+            <div style="width:44px;height:44px;border-radius:14px;background:${col}22;border:2px solid ${col}44;display:flex;align-items:center;justify-content:center;font-weight:900;color:${col};font-size:1.1rem;flex-shrink:0">${st.name.charAt(0).toUpperCase()}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:0.9rem;font-weight:800;color:#fff;margin-bottom:2px">${escapeHtml(st.name)}</div>
+              <div style="font-size:0.7rem;color:var(--t-muted);margin-bottom:6px">Joined ${new Date(st.joinedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</div>
+              <div style="height:4px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden">
+                <div style="height:100%;width:${pct}%;background:${col};border-radius:2px;transition:width .5s"></div>
+              </div>
+            </div>
+            <div style="text-align:center;flex-shrink:0">
+              <div style="font-size:1rem;font-weight:900;color:#fff">${done}/${total}</div>
+              <div style="font-size:0.62rem;color:var(--t-muted)">done</div>
+            </div>
+          </div>`;
+          })
+          .join("")}
+      `;
+    }
+
+    // ── SUBMISSIONS ───────────────────────────────────────────────────
+    if (tab === "subs") {
+      const withSubs = (c.assignments || []).filter(
+        (a) => Object.keys(a.submissions || {}).length > 0,
+      );
+      if (!withSubs.length) {
+        content.innerHTML = `<div style="text-align:center;padding:60px 20px"><div style="font-size:3rem;margin-bottom:12px">📬</div><div style="font-size:1rem;font-weight:800;color:#fff;margin-bottom:6px">No submissions yet</div><div style="color:var(--t-muted);font-size:0.82rem">Students haven't answered yet</div></div>`;
+        return;
+      }
+      content.innerHTML = withSubs
+        .map((a) => {
+          const typeCol =
+            { question: "#4f8ef7", quiz: "#9b6dff", announcement: "#f0b429" }[
+              a.type
+            ] || "#0fca8c";
+          return `<div style="margin-bottom:20px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+            <span class="t-badge" style="color:${typeCol};background:${typeCol}15">${a.type}</span>
+            <span style="font-size:0.85rem;font-weight:800;color:#fff">${escapeHtml(a.title)}</span>
+          </div>
+          ${Object.entries(a.submissions || {})
+            .map(([sid, sub]) => {
+              const graded = sub.marks !== undefined;
+              return `<div class="t-card" style="margin-bottom:8px">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+                <span style="font-size:0.85rem;font-weight:800;color:#fff">${escapeHtml(sub.studentName)}</span>
+                ${graded ? `<span style="font-size:0.78rem;font-weight:900;color:#0fca8c;background:rgba(15,202,140,0.1);border-radius:20px;padding:2px 10px">${sub.marks}/${a.marks || 5} marks</span>` : `<span style="font-size:0.7rem;color:#f0b429;font-weight:700">⏳ Ungraded</span>`}
+              </div>
+              <div style="font-size:0.82rem;color:var(--t-muted);margin-bottom:${a.type !== "question" || !a.options ? "10px" : "4px"};line-height:1.5;background:rgba(255,255,255,0.03);border-radius:8px;padding:8px 10px">${escapeHtml(sub.answer)}</div>
+              ${
+                a.type === "question" && a.options
+                  ? `<div style="font-size:0.72rem;color:${sub.marks > 0 ? "#0fca8c" : "#f0564a"};font-weight:700;margin-bottom:8px">${sub.marks > 0 ? "✓ Correct" : "✗ Incorrect"} · Answer: ${escapeHtml(a.answer || "")}</div>`
+                  : `<div style="display:flex;gap:5px;flex-wrap:wrap">
+                <span style="font-size:0.65rem;color:var(--t-muted);align-self:center;margin-right:2px">Grade:</span>
+                ${Array.from({ length: a.marks || 5 }, (_, i) => i + 1)
+                  .map(
+                    (m) =>
+                      `<button onclick="tcGrade('${a.id}','${sid}',${m},this)" style="padding:4px 10px;border-radius:8px;border:1px solid ${sub.marks === m ? "#0fca8c" : "rgba(255,255,255,0.1)"};background:${sub.marks === m ? "rgba(15,202,140,0.15)" : "rgba(255,255,255,0.04)"};color:${sub.marks === m ? "#0fca8c" : "var(--t-muted)"};font-size:0.78rem;font-weight:800;cursor:pointer;font-family:inherit;transition:all .15s">${m}</button>`,
+                  )
+                  .join("")}
+              </div>`
+              }
+            </div>`;
+            })
+            .join("")}
+        </div>`;
+        })
+        .join("");
+    }
+  };
+
+  // Global handlers
+  window.tViewAssignment = (id) => {
+    const a = window._tcClass.assignments.find((x) => x.id === id);
+    if (!a) return;
+    const typeCol =
+      { question: "#4f8ef7", quiz: "#9b6dff", announcement: "#f0b429" }[
+        a.type
+      ] || "#0fca8c";
+    const overlay = document.createElement("div");
+    overlay.style.cssText =
+      "position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:flex-end;justify-content:center";
+    overlay.innerHTML = `<div style="background:#0d1a2a;border:1px solid rgba(255,255,255,0.1);border-radius:24px 24px 0 0;width:100%;max-width:520px;padding:22px 20px 32px;max-height:90vh;overflow-y:auto">
+      <div style="width:36px;height:4px;background:rgba(255,255,255,0.1);border-radius:2px;margin:0 auto 18px"></div>
+      <span class="t-badge" style="color:${typeCol};background:${typeCol}15;margin-bottom:10px">${a.type}</span>
+      <div style="font-size:1rem;font-weight:900;color:#fff;margin:8px 0 4px">${escapeHtml(a.title)}</div>
+      <div style="font-size:0.8rem;color:var(--t-muted);margin-bottom:14px">${escapeHtml(a.subject)}${a.chapter ? " · " + escapeHtml(a.chapter) : ""}  ·  ${a.marks || 5} marks</div>
+      <div style="font-size:0.85rem;color:#c8d8e8;line-height:1.65;background:rgba(255,255,255,0.03);border-radius:10px;padding:12px 14px;margin-bottom:14px">${escapeHtml(a.content)}</div>
+      ${(a.options || []).length ? `<div style="display:flex;flex-direction:column;gap:7px;margin-bottom:12px">${a.options.map((opt, i) => `<div style="padding:9px 13px;border-radius:11px;border:1.5px solid ${a.answer === ["A", "B", "C", "D"][i] ? "rgba(15,202,140,0.5)" : "rgba(255,255,255,0.08)"};background:${a.answer === ["A", "B", "C", "D"][i] ? "rgba(15,202,140,0.1)" : "rgba(255,255,255,0.03)"};font-size:0.85rem;color:${a.answer === ["A", "B", "C", "D"][i] ? "#0fca8c" : "#c8d8e8"}"><strong>${["A", "B", "C", "D"][i]})</strong> ${escapeHtml(opt)}</div>`).join("")}</div>` : ""}
+      ${a.answer && !(a.options || []).length ? `<div style="font-size:0.8rem;color:#0fca8c;margin-bottom:12px"><strong>Answer:</strong> ${escapeHtml(a.answer)}</div>` : ""}
+      <div style="font-size:0.72rem;color:var(--t-muted);margin-bottom:16px">📬 ${Object.keys(a.submissions || {}).length} submission${Object.keys(a.submissions || {}).length !== 1 ? "s" : ""}</div>
+      <button onclick="this.closest('[style*=fixed]').remove()" style="width:100%;padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--t-muted);font-size:0.85rem;cursor:pointer;font-family:inherit">Close</button>
+    </div>`;
+    document.body.appendChild(overlay);
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) overlay.remove();
+    });
+  };
+
+  window.tcGrade = async (asgnId, studentId, marks, btn) => {
+    try {
+      await apiPost("/teacher/grade-submission", {
+        code: window._tcClass.code,
+        assignmentId: asgnId,
+        studentId,
+        marks,
+      });
+      const asgn = window._tcClass.assignments.find((a) => a.id === asgnId);
+      if (asgn && asgn.submissions[studentId])
+        asgn.submissions[studentId].marks = marks;
+      tNav("subs");
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  window.tcAIGenerate = async () => {
+    const subject = document.getElementById("tq-subject")?.value || cls.subject;
+    const chapter = document.getElementById("tq-chapter")?.value || "";
+    const classNum = S.classPreference || "10";
+    const btn = document.getElementById("tc-ai-btn");
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = "Generating...";
+    }
+    try {
+      const data = await apiPost("/teacher/ai-generate-assignment", {
+        code: window._tcClass.code,
+        subject,
+        chapter,
+        type: "mcq",
+        difficulty: "medium",
+        classNum,
+      });
+      const fi = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.value = val;
+      };
+      fi("tq-title", data.title || "");
+      fi("tq-content", data.content || "");
+      const opts = data.options || [];
+      ["a", "b", "c", "d"].forEach((l, i) =>
+        fi("tq-opt-" + l, opts[i] ? opts[i].replace(/^[ABCD]\)\s*/, "") : ""),
+      );
+      fi("tq-answer", data.answer ? data.answer.charAt(0).toUpperCase() : "");
+      if (data.marks) fi("tq-marks", data.marks);
+    } catch (e) {
+      const err = document.getElementById("tc-form-err");
+      if (err) err.textContent = "AI failed — try again";
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = "Generate →";
+      }
+    }
+  };
+
+  window.tcPostAssignment = async () => {
+    const code = window._tcClass.code;
+    const type = window._tcAType || "question";
+    const err = document.getElementById("tc-form-err");
+    let payload = { code, type };
+    if (type === "announcement") {
+      const cnt = document.getElementById("ta-content")?.value.trim();
+      if (!cnt) {
+        if (err) err.textContent = "Write the announcement";
+        return;
+      }
+      payload = {
+        ...payload,
+        title: "Announcement",
+        content: cnt,
+        subject: window._tcClass.subject,
+        marks: 0,
+      };
+    } else {
+      const title = document.getElementById("tq-title")?.value.trim();
+      const content = document.getElementById("tq-content")?.value.trim();
+      const subject =
+        document.getElementById("tq-subject")?.value || window._tcClass.subject;
+      const chapter = document.getElementById("tq-chapter")?.value || "";
+      const marks = parseInt(document.getElementById("tq-marks")?.value || "5");
+      const opts = ["a", "b", "c", "d"]
+        .map((l) => document.getElementById("tq-opt-" + l)?.value.trim() || "")
+        .filter(Boolean);
+      const answer = document.getElementById("tq-answer")?.value || "";
+      if (!title || !content) {
+        if (err) err.textContent = "Fill in title and question";
+        return;
+      }
+      payload = {
+        ...payload,
+        title,
+        content,
+        subject,
+        chapter,
+        marks,
+        options: opts.length ? opts : undefined,
+        answer: answer || undefined,
+      };
+    }
+    const btn = document.getElementById("tc-post-btn");
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = "Posting...";
+    }
+    try {
+      const data = await apiPost("/teacher/post-assignment", payload);
+      window._tcClass.assignments.unshift(data.assignment);
+      tNav("assign");
+      document
+        .querySelectorAll(".t-nav-btn")
+        .forEach((b) => b.classList.remove("on"));
+      document.getElementById("tnav-assign")?.classList.add("on");
+    } catch (e) {
+      if (err) err.textContent = e.message;
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = "Post Assignment";
+      }
+    }
+  };
+
+  window.tcUpdateChapters = () => {
+    const subj = document.getElementById("tq-subject")?.value || "Maths";
+    const sel = document.getElementById("tq-chapter");
+    if (!sel) return;
+    const chs = getChapters(S.classPreference || "10", subj);
+    sel.innerHTML =
+      `<option value="">All chapters</option>` +
+      chs.map((c) => `<option>${c}</option>`).join("");
+  };
+
+  // Boot into overview
+  tNav("overview");
+}
+
+window.renderTeacherDashboard = renderTeacherDashboard;
+window.renderStudentClassView = renderStudentClassView;
 
 // ============================================================
 // ADAPTIVE PERFORMANCE LEVELS
@@ -2103,6 +2874,12 @@ function navigate(page, extra) {
       case "pomodoro":
         renderPomodoro();
         break;
+      case "teacher":
+        renderTeacherDashboard();
+        break;
+      case "my-class":
+        renderStudentClassView();
+        break;
     }
   });
 }
@@ -2345,6 +3122,13 @@ function renderLanding() {
       desc: "Pomodoro · 25 min focus sessions",
       page: "pomodoro",
       accent: "#ec4899",
+    },
+    {
+      emoji: "🎒",
+      title: "My Class",
+      desc: "View teacher assignments & submit answers",
+      page: "my-class",
+      accent: "#4f8ef7",
     },
   ];
 
@@ -8280,7 +9064,7 @@ function renderNotesTab() {
         "Ramvriksha Benipuri": [
           "पाठ 'बालगोबिन भगत' — रेखाचित्र · साधु स्वभाव के किसान जो कबीरपंथी हैं",
           "पुत्र की मृत्यु पर रोने की बजाय भजन गाते हैं — आत्मा परमात्मा से मिली",
-          "पतोहू को दूसरी शादी करने के लि �� खुद भेजते हैं",
+          "पतोहू को दूसरी शादी करने के लिए खुद भेजते हैं",
           "थीम: वैराग्य, सांसारिक मोह से मुक्ति, सामाजिक कुरीतियों का विरोध",
         ],
         Yashpal: [
@@ -8553,7 +9337,7 @@ window.showPaper = (id) => {
         <div class="pm-options" id="${id}_opts">
           ${opts.map((opt, i) => `<button class="pm-opt" onclick="pmSelectOpt('${id}',${i},${correctIdx})">${String.fromCharCode(65 + i)}. ${opt}</button>`).join("")}
         </div>
-        ${hint ? `<div class="pm-hint" id="${id}_hint" style="display:none">💡 ${hint}</div>` : ""}
+        ${hint ? `<div class="pm-hint" id="${id}_hint" style="display:none">T��� ${hint}</div>` : ""}
         <button class="pm-hint-btn" onclick="document.getElementById('${id}_hint').style.display='block';this.style.display='none'">Show Hint</button>`;
 
           const renderSaBody = (id, answerText) => {
@@ -8998,12 +9782,33 @@ function init() {
   updateHeader();
   initBackground();
   applyNavLang();
-  navigate("landing");
+  const _role = localStorage.getItem("stasis_role");
+  if (_role === "teacher") {
+    navigate("teacher");
+  } else {
+    navigate("landing");
+  }
   window.S = S;
   if (!loadPerformance()) showOnboardingModal();
 }
 
-showNameSplash(init);
+// ── ROLE-AWARE APP ENTRY POINT ───────────────────────────────
+(function startApp() {
+  const existingRole = localStorage.getItem("stasis_role");
+  if (!existingRole) {
+    // First time — show role selection, then name splash
+    showRoleSplash(function (role) {
+      showNameSplash(function () {
+        init();
+      });
+    });
+  } else {
+    // Returning user — skip role splash
+    showNameSplash(function () {
+      init();
+    });
+  }
+})();
 
 // ============================================================
 // STASIS AI CHATBOT — uses existing apiPost() helper
