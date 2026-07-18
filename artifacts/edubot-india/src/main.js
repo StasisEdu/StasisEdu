@@ -1708,6 +1708,7 @@ function getLevelInfo(xp) {
 function addXP(amount, label) {
   const oldLvl = getLevel(S.xp);
   S.xp += amount;
+  if (window.awardLeagueXP) window.awardLeagueXP(amount);
   const dayIdx = new Date().getDay();
   S.weeklyXP[dayIdx] = (S.weeklyXP[dayIdx] || 0) + amount;
   const today = todayKey();
@@ -2102,6 +2103,9 @@ function navigate(page, extra) {
         break;
       case "pomodoro":
         renderPomodoro();
+        break;
+      case "leagues":
+        renderLeagues();
         break;
     }
   });
@@ -3205,6 +3209,18 @@ function renderPracticeCards(questions) {
         ${
           !q.done
             ? `
+          <div id="prac-pwr-bar-${i}" style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+            <button onclick="window.pracPwr('hint',${i})" style="flex:1;min-width:80px;padding:7px 6px;border-radius:11px;border:1.5px solid rgba(247,199,79,0.4);background:rgba(247,199,79,0.08);cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:5px;">
+              <span style="font-size:0.95rem;">💡</span><span style="font-size:0.7rem;font-weight:800;color:#f7c74f;">Hint</span>
+            </button>
+            <button onclick="window.pracPwr('eliminate',${i})" style="flex:1;min-width:80px;padding:7px 6px;border-radius:11px;border:1.5px solid rgba(79,217,179,0.4);background:rgba(79,217,179,0.08);cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:5px;">
+              <span style="font-size:0.95rem;">🎯</span><span style="font-size:0.7rem;font-weight:800;color:#4fd9b3;">Key Point</span>
+            </button>
+            <button onclick="window.pracPwr('simplify',${i})" style="flex:1;min-width:80px;padding:7px 6px;border-radius:11px;border:1.5px solid rgba(155,109,255,0.4);background:rgba(155,109,255,0.08);cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:5px;">
+              <span style="font-size:0.95rem;">🔍</span><span style="font-size:0.7rem;font-weight:800;color:#9b6dff;">Simplify</span>
+            </button>
+          </div>
+          <div id="prac-pwr-hint-${i}" style="margin-bottom:8px;"></div>
           <textarea class="form-textarea" id="pans-${i}" placeholder="${t("type_answer")}" style="min-height:80px;background:rgba(0,0,0,0.3);border-color:${ac}44;border-radius:12px"></textarea>
           <button class="btn btn-primary btn-sm mt-2" onclick="submitPractice(${i})" style="background:${ac};border:none;box-shadow:0 4px 14px ${ac}55">${t("submit_answer")}</button>
         `
@@ -3804,6 +3820,10 @@ let _crTimeLeft = 30;
 let _crTimedOut = {}; // qIndex -> true
 let _crMyLevel = null; // player's own level string
 
+// ── POWERUPS state ──
+const _PWR_DEFAULT = { fiftyFifty: 2, extraTime: 2, skip: 1, shield: 1 };
+let _pwrUps = { ..._PWR_DEFAULT };
+let _pwrShieldActive = false;
 function stopCrTimer() {
   if (_crTimerInterval) {
     clearInterval(_crTimerInterval);
@@ -3887,7 +3907,22 @@ function renderCrQuestion() {
       <div id="cr-options">
         ${q.options.map((opt) => `<button class="_cropt" onclick="selectCrOption(this,'${opt.replace(/'/g, "\\'").replace(/"/g, "&quot;")}')">${escapeHtml(opt)}</button>`).join("")}
       </div>
-      <div id="cr-feedback" style="margin-top:14px">
+      <div id="pwr-bar" style="display:flex;gap:8px;margin:14px 0;flex-wrap:wrap;">
+        <button id="pwr-5050" onclick="window.usePwr('fiftyFifty')" class="_pwrbtn" style="flex:1;min-width:70px;padding:8px 6px;border-radius:12px;border:1.5px solid rgba(247,199,79,0.4);background:rgba(247,199,79,0.1);cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:3px;${_pwrUps.fiftyFifty === 0 ? "opacity:0.35;pointer-events:none;" : ""}">
+          <span style="font-size:1.2rem;">⚡</span><span style="font-size:0.6rem;font-weight:800;color:#f7c74f;">50/50</span><span style="font-size:0.58rem;color:#5a6a8a;font-weight:600;">${_pwrUps.fiftyFifty}x left</span>
+        </button>
+        <button id="pwr-time" onclick="window.usePwr('extraTime')" class="_pwrbtn" style="flex:1;min-width:70px;padding:8px 6px;border-radius:12px;border:1.5px solid rgba(79,217,179,0.4);background:rgba(79,217,179,0.1);cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:3px;${_pwrUps.extraTime === 0 ? "opacity:0.35;pointer-events:none;" : ""}">
+          <span style="font-size:1.2rem;">⏰</span><span style="font-size:0.6rem;font-weight:800;color:#4fd9b3;">+15s</span><span style="font-size:0.58rem;color:#5a6a8a;font-weight:600;">${_pwrUps.extraTime}x left</span>
+        </button>
+        <button id="pwr-skip" onclick="window.usePwr('skip')" class="_pwrbtn" style="flex:1;min-width:70px;padding:8px 6px;border-radius:12px;border:1.5px solid rgba(155,109,255,0.4);background:rgba(155,109,255,0.1);cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:3px;${_pwrUps.skip === 0 ? "opacity:0.35;pointer-events:none;" : ""}">
+          <span style="font-size:1.2rem;">⏭</span><span style="font-size:0.6rem;font-weight:800;color:#9b6dff;">Skip</span><span style="font-size:0.58rem;color:#5a6a8a;font-weight:600;">${_pwrUps.skip}x left</span>
+        </button>
+        <button id="pwr-shield" onclick="window.usePwr('shield')" class="_pwrbtn" style="flex:1;min-width:70px;padding:8px 6px;border-radius:12px;border:1.5px solid rgba(247,113,79,0.4);background:${_pwrShieldActive ? "rgba(247,113,79,0.25)" : "rgba(247,113,79,0.1)"};cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:3px;${_pwrUps.shield === 0 && !_pwrShieldActive ? "opacity:0.35;pointer-events:none;" : ""}">
+          <span style="font-size:1.2rem;">🛡️</span><span style="font-size:0.6rem;font-weight:800;color:#f7714f;">Shield</span><span style="font-size:0.58rem;color:#5a6a8a;font-weight:600;">${_pwrShieldActive ? "ACTIVE" : _pwrUps.shield + "x left"}</span>
+        </button>
+      </div>
+      <div id="pwr-toast" style="height:28px;"></div>
+      <div id="cr-feedback" style="margin-top:6px;">
         <button id="cr-next-btn" onclick="confirmCrAnswer(${qi})" class="btn btn-primary" style="width:100%;padding:13px;font-size:0.95rem;background:linear-gradient(135deg,#4f8ef7,#9b6dff);border:none;opacity:0.4;pointer-events:none">Select an answer to continue</button>
       </div>
     </div>
@@ -3984,6 +4019,11 @@ window.confirmCrAnswer = (qIndex) => {
 window.submitCrAnswer = async (qIndex, chosen) => {
   if (_crAnswered[qIndex] !== undefined) return;
   stopCrTimer();
+
+  // ── Shield powerup: if wrong answer and shield active, block penalty ──
+  // (We don't know correct answer client-side, so shield shows visual feedback after server reply)
+  const hadShield = _pwrShieldActive;
+
   _crAnswered[qIndex] = chosen;
   _crSelectedOption = null;
   document.querySelectorAll("._cropt").forEach((b) => {
@@ -4003,6 +4043,11 @@ window.submitCrAnswer = async (qIndex, chosen) => {
   } catch (e) {}
   const fb = document.getElementById("cr-feedback");
   if (!fb) return;
+  // Deactivate shield after use on this answer
+  if (hadShield) {
+    _pwrShieldActive = false;
+    showPwrToast("🛡️ Shield absorbed any penalty!", "#f7714f");
+  }
   if (answered < total) {
     fb.innerHTML = `<button onclick="goNextCrQ()" class="btn btn-primary" style="width:100%;padding:13px;font-size:0.95rem;background:linear-gradient(135deg,#4f8ef7,#9b6dff);border:none">Next Question →</button>`;
   } else {
@@ -4299,6 +4344,8 @@ window.doCreateRoom = async () => {
     _crRoom = { code: data.code, playerId: data.playerId, isHost: true };
     _crAnswered = {};
     _crCurrentQ = 0;
+    _pwrUps = { ..._PWR_DEFAULT };
+    _pwrShieldActive = false;
     renderWaitingRoom();
   } catch (e) {
     err.textContent = "Error: " + e.message;
@@ -4322,6 +4369,8 @@ window.doJoinRoom = async () => {
     _crRoom = { code: data.code, playerId: data.playerId, isHost: false };
     _crAnswered = {};
     _crCurrentQ = 0;
+    _pwrUps = { ..._PWR_DEFAULT };
+    _pwrShieldActive = false;
     renderWaitingRoom();
   } catch (e) {
     err.textContent = e.message.includes("404") ? "Room not found" : e.message;
@@ -9004,6 +9053,381 @@ function init() {
 }
 
 showNameSplash(init);
+
+// ============================================================
+// POWERUPS SYSTEM
+// ============================================================
+
+function showPwrToast(msg, color) {
+  const el = document.getElementById("pwr-toast");
+  if (!el) return;
+  el.innerHTML = `<div style="font-size:0.78rem;font-weight:700;color:${color || "#f7c74f"};background:rgba(0,0,0,0.5);border-radius:8px;padding:5px 12px;display:inline-block;animation:_pwrPop .3s ease">${msg}</div>`;
+  setTimeout(() => {
+    if (el) el.innerHTML = "";
+  }, 2500);
+}
+
+// Inject the toast animation keyframe once
+(function () {
+  if (document.getElementById("_pwr-style")) return;
+  const s = document.createElement("style");
+  s.id = "_pwr-style";
+  s.textContent = `@keyframes _pwrPop{from{transform:scale(0.8) translateY(4px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}`;
+  document.head.appendChild(s);
+})();
+
+window.usePwr = function (type) {
+  if (_pwrUps[type] <= 0 && !(type === "shield" && _pwrShieldActive)) return;
+
+  if (type === "fiftyFifty") {
+    // Remove 2 wrong options, keep correct + 1 wrong
+    const q = _crState?.questions?.[_crCurrentQ];
+    if (!q) return;
+    const correctAns = q.answer;
+    const opts = document.querySelectorAll("._cropt");
+    let removed = 0;
+    opts.forEach((btn) => {
+      if (removed >= 2) return;
+      if (btn.textContent.trim() !== correctAns && !btn.disabled) {
+        btn.style.opacity = "0.25";
+        btn.style.pointerEvents = "none";
+        btn.style.textDecoration = "line-through";
+        removed++;
+      }
+    });
+    _pwrUps.fiftyFifty--;
+    showPwrToast("⚡ 50/50 — two wrong options removed!", "#f7c74f");
+    document
+      .getElementById("pwr-5050")
+      .querySelector("span:last-child").textContent =
+      _pwrUps.fiftyFifty + "x left";
+    if (_pwrUps.fiftyFifty === 0) {
+      const b = document.getElementById("pwr-5050");
+      b.style.opacity = "0.35";
+      b.style.pointerEvents = "none";
+    }
+  } else if (type === "extraTime") {
+    _crTimeLeft = Math.min(_crTimeLeft + 15, 90);
+    const numEl = document.getElementById("cr-timer-num");
+    if (numEl) {
+      numEl.textContent = _crTimeLeft;
+      numEl.style.color = "#4fd9b3";
+      setTimeout(() => {
+        if (numEl) numEl.style.color = "#f0b429";
+      }, 1500);
+    }
+    _pwrUps.extraTime--;
+    showPwrToast("⏰ +15 seconds added!", "#4fd9b3");
+    document
+      .getElementById("pwr-time")
+      .querySelector("span:last-child").textContent =
+      _pwrUps.extraTime + "x left";
+    if (_pwrUps.extraTime === 0) {
+      const b = document.getElementById("pwr-time");
+      b.style.opacity = "0.35";
+      b.style.pointerEvents = "none";
+    }
+  } else if (type === "skip") {
+    // Auto-submit a SKIP and move to next question
+    _pwrUps.skip--;
+    showPwrToast("⏭ Question skipped! No penalty.", "#9b6dff");
+    stopCrTimer();
+    _crAnswered[_crCurrentQ] = "SKIP";
+    setTimeout(() => {
+      const total = _crState?.questions?.length || 1;
+      if (_crCurrentQ + 1 < total) {
+        goNextCrQ();
+      } else {
+        showCrAllDone();
+      }
+    }, 800);
+    const b = document.getElementById("pwr-skip");
+    if (b) {
+      b.style.opacity = "0.35";
+      b.style.pointerEvents = "none";
+      b.querySelector("span:last-child").textContent = "0x left";
+    }
+  } else if (type === "shield") {
+    if (_pwrShieldActive) return; // already on
+    _pwrShieldActive = true;
+    _pwrUps.shield = Math.max(0, _pwrUps.shield - 1);
+    showPwrToast("🛡️ Shield ON — next wrong answer absorbed!", "#f7714f");
+    const b = document.getElementById("pwr-shield");
+    if (b) {
+      b.style.background = "rgba(247,113,79,0.25)";
+      b.querySelector("span:last-child").textContent = "ACTIVE";
+      b.style.pointerEvents = "none";
+    }
+  }
+};
+
+// Practice mode powerups (hint/key-point/simplify via AI)
+window.pracPwr = async function (type, idx) {
+  const q = S.todayPractice?.[idx];
+  if (!q) return;
+  const hintEl = document.getElementById(`prac-pwr-hint-${idx}`);
+  if (!hintEl) return;
+
+  const btn = event.target.closest("button");
+  if (btn) {
+    btn.disabled = true;
+    btn.style.opacity = "0.5";
+  }
+
+  hintEl.innerHTML = `<div style="font-size:0.78rem;color:#5a6a8a;padding:8px 10px;border-radius:10px;border:1px dashed rgba(255,255,255,0.1);">✨ Getting your powerup...</div>`;
+
+  const prompts = {
+    hint: `Give a short helpful HINT (2-3 sentences, no full answer) for this CBSE question: "${q.question}". Subject: ${S.subjectPreference}, Class ${S.classPreference}.`,
+    eliminate: `Give the single most important KEY POINT or concept needed to answer this question (1-2 sentences): "${q.question}". Subject: ${S.subjectPreference}.`,
+    simplify: `Rephrase this exam question in much simpler language a student can easily understand. Just the rephrased question, nothing else: "${q.question}"`,
+  };
+  const colors = { hint: "#f7c74f", eliminate: "#4fd9b3", simplify: "#9b6dff" };
+  const labels = {
+    hint: "💡 Hint",
+    eliminate: "🎯 Key Point",
+    simplify: "🔍 Simplified",
+  };
+
+  try {
+    const res = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: prompts[type], history: [] }),
+    });
+    const data = await res.json();
+    const text =
+      data.reply ||
+      data.message ||
+      "Try breaking the question into parts and recall the chapter.";
+    hintEl.innerHTML = `<div style="font-size:0.82rem;line-height:1.55;padding:10px 12px;border-radius:10px;border:1px solid rgba(${type === "hint" ? "247,199,79" : type === "eliminate" ? "79,217,179" : "155,109,255"},0.25);background:rgba(${type === "hint" ? "247,199,79" : type === "eliminate" ? "79,217,179" : "155,109,255"},0.07);color:#eef2ff;margin-bottom:6px;"><span style="font-weight:800;color:${colors[type]}">${labels[type]}: </span>${escapeHtml(text)}</div>`;
+  } catch (e) {
+    hintEl.innerHTML = `<div style="font-size:0.78rem;color:#f7714f;padding:8px;">Powerup unavailable right now.</div>`;
+    if (btn) {
+      btn.disabled = false;
+      btn.style.opacity = "1";
+    }
+  }
+};
+
+// ============================================================
+// LEAGUES SYSTEM
+// ============================================================
+
+function getLeagues() {
+  try {
+    return JSON.parse(localStorage.getItem("stasis_leagues") || "[]");
+  } catch {
+    return [];
+  }
+}
+function saveLeagues(ls) {
+  localStorage.setItem("stasis_leagues", JSON.stringify(ls));
+}
+function getMyLeagueId() {
+  return localStorage.getItem("stasis_my_league") || null;
+}
+
+function getStudentId() {
+  let id = localStorage.getItem("stasis_student_id");
+  if (!id) {
+    id = "S" + Math.random().toString(36).slice(2, 8).toUpperCase();
+    localStorage.setItem("stasis_student_id", id);
+  }
+  return id;
+}
+
+window.awardLeagueXP = function (amount) {
+  const leagues = getLeagues();
+  const myId = getStudentId();
+  const myLeagueId = getMyLeagueId();
+  if (!myLeagueId) return;
+  const league = leagues.find((l) => l.id === myLeagueId);
+  if (!league) return;
+  const member = league.members.find((m) => m.id === myId);
+  if (member) {
+    member.xp = (member.xp || 0) + amount;
+    member.questions = (member.questions || 0) + 1;
+  }
+  saveLeagues(leagues);
+};
+
+function renderLeagues() {
+  const app = document.getElementById("app");
+  const leagues = getLeagues();
+  const myLeagueId = getMyLeagueId();
+  const myId = getStudentId();
+
+  app.innerHTML = `
+    <div style="padding:16px;max-width:480px;margin:0 auto;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;">
+        <div style="font-size:1.6rem;">⚔️</div>
+        <div>
+          <div style="font-size:1.15rem;font-weight:900;color:#eef2ff;">Leagues</div>
+          <div style="font-size:0.78rem;color:#5a6a8a;">Compete with your squad</div>
+        </div>
+      </div>
+
+      <div style="background:rgba(79,217,179,0.08);border:1px solid rgba(79,217,179,0.2);border-radius:14px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:10px;">
+        <div>
+          <div style="font-size:0.7rem;font-weight:700;color:#4fd9b3;text-transform:uppercase;letter-spacing:0.06em;">Your Player ID</div>
+          <div style="font-size:1.1rem;font-weight:900;color:#eef2ff;font-family:monospace;letter-spacing:0.1em;">${myId}</div>
+          <div style="font-size:0.7rem;color:#3a4a62;margin-top:2px;">Share this with friends so they can add you to a league</div>
+        </div>
+        <button onclick="window.copyPlayerId()" style="padding:8px 14px;border-radius:8px;border:1px solid rgba(79,217,179,0.25);background:rgba(79,217,179,0.08);color:#4fd9b3;font-size:0.75rem;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0;">📋 Copy ID</button>
+      </div>
+
+      <div id="league-main-area">
+        ${myLeagueId ? renderMyLeagueHTML(leagues, myLeagueId, myId) : `<div style="text-align:center;padding:20px 16px;color:#5a6a8a;font-size:0.85rem;">You're not in a league yet.<br>Create one below or ask a friend for their League ID.</div>`}
+      </div>
+
+      <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:18px;padding:16px;margin-top:16px;">
+        <div style="font-size:0.85rem;font-weight:800;color:#eef2ff;margin-bottom:12px;">🏆 Create a New League</div>
+        <input id="league-name-input" placeholder="League name (e.g. Class 10 Rivals)" maxlength="30"
+          style="width:100%;box-sizing:border-box;padding:10px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:#eef2ff;font-size:0.9rem;font-family:inherit;outline:none;margin-bottom:10px;">
+        <div style="font-size:0.75rem;color:#5a6a8a;margin-bottom:6px;">Add member Player IDs (comma-separated). Your ID is auto-included.</div>
+        <input id="league-members-input" placeholder="e.g. S4AB2X, SFGH3Y" maxlength="300"
+          style="width:100%;box-sizing:border-box;padding:10px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:#eef2ff;font-size:0.9rem;font-family:monospace;outline:none;margin-bottom:12px;text-transform:uppercase;">
+        <button onclick="window.createLeague()" style="width:100%;padding:13px;border-radius:12px;border:none;background:linear-gradient(135deg,#f7c74f,#f7714f);color:#07070f;font-size:0.95rem;font-weight:800;cursor:pointer;font-family:inherit;">⚔️ Create League</button>
+      </div>
+
+      <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:18px;padding:16px;margin-top:12px;">
+        <div style="font-size:0.85rem;font-weight:800;color:#eef2ff;margin-bottom:10px;">🔗 Join an Existing League</div>
+        <div style="display:flex;gap:8px;">
+          <input id="join-league-input" placeholder="League ID (e.g. LGAB3XY)" maxlength="12"
+            style="flex:1;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:#eef2ff;font-family:monospace;font-size:0.9rem;outline:none;text-transform:uppercase;">
+          <button onclick="window.joinLeagueById()" style="padding:10px 16px;border-radius:10px;border:none;background:linear-gradient(135deg,#4f8ef7,#9b6dff);color:white;font-weight:700;font-size:0.85rem;cursor:pointer;font-family:inherit;">Join</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderMyLeagueHTML(leagues, myLeagueId, myId) {
+  const league = leagues.find((l) => l.id === myLeagueId);
+  if (!league)
+    return `<div style="color:#5a6a8a;text-align:center;padding:16px;">League not found.</div>`;
+
+  const CHALLENGE_Q = 10;
+  const sorted = [...league.members].sort((a, b) => (b.xp || 0) - (a.xp || 0));
+  const totalQ = league.members.reduce((s, m) => s + (m.questions || 0), 0);
+  const target = league.members.length * CHALLENGE_Q;
+  const pct = Math.min(Math.round((totalQ / target) * 100), 100);
+  const daysLeft = Math.max(
+    0,
+    Math.ceil((league.expiresAt - Date.now()) / 86400000),
+  );
+  const medals = ["🥇", "🥈", "🥉"];
+
+  return `
+    <div style="background:linear-gradient(135deg,rgba(247,199,79,0.1),rgba(247,113,79,0.08));border:1.5px solid rgba(247,199,79,0.25);border-radius:20px;padding:18px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;">
+        <div>
+          <div style="font-size:1rem;font-weight:900;color:#eef2ff;">⚔️ ${escapeHtml(league.name)}</div>
+          <div style="font-size:0.7rem;font-family:monospace;color:#5a6a8a;margin-top:2px;">League ID: ${league.id}</div>
+        </div>
+        <span style="padding:4px 10px;border-radius:20px;background:rgba(247,113,79,0.12);color:#f7714f;font-size:0.72rem;font-weight:700;flex-shrink:0;">⏰ ${daysLeft}d left</span>
+      </div>
+
+      <div style="background:rgba(0,0,0,0.25);border-radius:12px;padding:12px;margin-bottom:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <div style="font-size:0.78rem;font-weight:700;color:#f7c74f;">🎯 Weekly Challenge — ${CHALLENGE_Q} questions each</div>
+          <div style="font-size:0.72rem;color:#5a6a8a;">${pct}%</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.08);border-radius:20px;height:7px;overflow:hidden;">
+          <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#f7c74f,#f7714f);border-radius:20px;transition:width 0.5s;"></div>
+        </div>
+        <div style="font-size:0.72rem;color:#5a6a8a;margin-top:6px;">${totalQ}/${target} questions done · ${pct === 100 ? "🎉 Challenge Complete!" : "Keep going!"}</div>
+      </div>
+
+      <div style="font-size:0.75rem;font-weight:700;color:#7a8aaa;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">Leaderboard</div>
+      ${sorted
+        .map((m, i) => {
+          const isMe = m.id === myId;
+          return `<div style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:10px;background:${isMe ? "rgba(79,142,247,0.12)" : "rgba(255,255,255,0.03)"};border:1px solid ${isMe ? "rgba(79,142,247,0.25)" : "transparent"};margin-bottom:5px;">
+          <div style="font-size:1rem;width:24px;text-align:center;">${medals[i] || i + 1}</div>
+          <div style="flex:1;">
+            <div style="font-size:0.85rem;font-weight:700;color:${isMe ? "#4f8ef7" : "#eef2ff"};">${escapeHtml(m.name)}${isMe ? " (You)" : ""}</div>
+            <div style="font-size:0.7rem;color:#5a6a8a;">${m.questions || 0} questions done</div>
+          </div>
+          <div style="font-size:0.85rem;font-weight:800;color:#f7c74f;">⚡ ${m.xp || 0}</div>
+        </div>`;
+        })
+        .join("")}
+
+      <button onclick="window.leaveLeague()" style="margin-top:12px;width:100%;padding:8px;border-radius:10px;border:1px solid rgba(247,113,79,0.2);background:transparent;color:#f7714f;font-size:0.78rem;font-weight:700;cursor:pointer;font-family:inherit;">Leave League</button>
+    </div>
+  `;
+}
+
+window.copyPlayerId = function () {
+  navigator.clipboard.writeText(getStudentId()).catch(() => {});
+  const btn = event.target;
+  const orig = btn.textContent;
+  btn.textContent = "✅ Copied!";
+  setTimeout(() => {
+    btn.textContent = orig;
+  }, 1500);
+};
+
+window.createLeague = function () {
+  const name = document.getElementById("league-name-input")?.value.trim();
+  if (!name) {
+    alert("Enter a league name");
+    return;
+  }
+  const myId = getStudentId();
+  const myName = localStorage.getItem("stasis_name") || "You";
+  const rawMembers =
+    document.getElementById("league-members-input")?.value || "";
+  const extraIds = rawMembers
+    .split(",")
+    .map((x) => x.trim().toUpperCase())
+    .filter((x) => x.length > 2 && x !== myId);
+
+  const members = [{ id: myId, name: myName, xp: 0, questions: 0 }];
+  extraIds.forEach((id) =>
+    members.push({ id, name: "Player " + id.slice(-3), xp: 0, questions: 0 }),
+  );
+
+  const leagues = getLeagues();
+  const newLeague = {
+    id: "LG" + Math.random().toString(36).slice(2, 7).toUpperCase(),
+    name,
+    members,
+    createdAt: Date.now(),
+    expiresAt: Date.now() + 7 * 86400000,
+  };
+  leagues.push(newLeague);
+  saveLeagues(leagues);
+  localStorage.setItem("stasis_my_league", newLeague.id);
+  navigate("leagues");
+};
+
+window.joinLeagueById = function () {
+  const id = (document.getElementById("join-league-input")?.value || "")
+    .trim()
+    .toUpperCase();
+  if (!id) return;
+  const leagues = getLeagues();
+  const league = leagues.find((l) => l.id === id);
+  if (!league) {
+    alert("League not found. Ask your friend to share their League ID.");
+    return;
+  }
+  const myId = getStudentId();
+  const myName = localStorage.getItem("stasis_name") || "Student";
+  if (!league.members.find((m) => m.id === myId)) {
+    league.members.push({ id: myId, name: myName, xp: 0, questions: 0 });
+    saveLeagues(leagues);
+  }
+  localStorage.setItem("stasis_my_league", id);
+  navigate("leagues");
+};
+
+window.leaveLeague = function () {
+  localStorage.removeItem("stasis_my_league");
+  navigate("leagues");
+};
 
 // ============================================================
 // STASIS AI CHATBOT — uses existing apiPost() helper
