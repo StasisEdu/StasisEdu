@@ -1,11 +1,17 @@
 import { Router, type IRouter } from "express";
 import Groq from "groq-sdk";
+import { createClient } from "@supabase/supabase-js";
 
 const router: IRouter = Router();
 
 const client = new Groq({
   apiKey: process.env.GROQ_API_KEY,
 });
+
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_KEY!,
+);
 
 const MODEL = "llama-3.3-70b-versatile";
 const VISION_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
@@ -1354,103 +1360,142 @@ Make each card concise — front under 15 words, back under 30 words.`;
 });
 
 // ============================================================
-// LEAGUES — server-side shared state (same pattern as ROOMS)
+// LEAGUES — Supabase-backed
 // ============================================================
 
-interface LeagueMember {
-  id: string;
-  name: string;
-  xp: number;
-  questions: number;
-}
-interface League {
-  id: string;
-  name: string;
-  members: LeagueMember[];
-  createdAt: number;
-  expiresAt: number;
-}
-const LEAGUES: Record<string, League> = {};
-
-// Prune expired leagues every hour
-setInterval(
-  () => {
-    const now = Date.now();
-    for (const id of Object.keys(LEAGUES)) {
-      if (LEAGUES[id].expiresAt < now) delete LEAGUES[id];
-    }
-  },
-  60 * 60 * 1000,
-);
-
 // POST /api/league/create
-router.post("/league/create", (req, res) => {
-  const { name, members } = req.body as {
-    name: string;
-    members: LeagueMember[];
-  };
+router.post("/league/create", async (req, res) => {
+  const { name, members } = req.body as { name: string; members: object[] };
   if (!name || !members?.length) {
     res.status(400).json({ error: "Missing fields" });
     return;
   }
-  let id = "LG" + Math.random().toString(36).slice(2, 7).toUpperCase();
-  while (LEAGUES[id])
-    id = "LG" + Math.random().toString(36).slice(2, 7).toUpperCase();
-  LEAGUES[id] = {
-    id,
-    name,
-    members,
-    createdAt: Date.now(),
-    expiresAt: Date.now() + 7 * 86400000,
-  };
-  res.json({ league: LEAGUES[id] });
+  const id = "LG" + Math.random().toString(36).slice(2, 7).toUpperCase();
+  const { data, error } = await supabase
+    .from("leagues")
+    .insert({
+      id,
+      name,
+      members,
+      expires_at: Date.now() + 7 * 86400000,
+    })
+    .select()
+    .single();
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
+  res.json({ league: data });
 });
 
 // POST /api/league/join
-router.post("/league/join", (req, res) => {
+router.post("/league/join", async (req, res) => {
   const { leagueId, member } = req.body as {
     leagueId: string;
-    member: LeagueMember;
+    member: { id: string; name: string };
   };
-  const league = LEAGUES[leagueId?.toUpperCase()];
-  if (!league) {
+  const { data: league, error } = await supabase
+    .from("leagues")
+    .select("*")
+    .eq("id", leagueId.toUpperCase())
+    .single();
+  if (error || !league) {
     res.status(404).json({ error: "League not found" });
     return;
   }
-  if (!league.members.find((m) => m.id === member.id)) {
-    league.members.push({ ...member, xp: 0, questions: 0 });
+  const members = league.members as {
+    id: string;
+    name: string;
+    xp: number;
+    questions: number;
+  }[];
+  if (!members.find((m) => m.id === member.id)) {
+    members.push({ ...member, xp: 0, questions: 0 });
+    await supabase.from("leagues").update({ members }).eq("id", leagueId);
   }
-  res.json({ league });
+  res.json({ league: { ...league, members } });
 });
 
-// POST /api/league/xp — award XP to a member
-router.post("/league/xp", (req, res) => {
+// POST /api/league/xp
+router.post("/league/xp", async (req, res) => {
   const { leagueId, memberId, amount } = req.body as {
     leagueId: string;
     memberId: string;
     amount: number;
   };
-  const league = LEAGUES[leagueId];
+  const { data: league } = await supabase
+    .from("leagues")
+    .select("*")
+    .eq("id", leagueId)
+    .single();
   if (!league) {
     res.status(404).json({ error: "League not found" });
     return;
   }
-  const member = league.members.find((m) => m.id === memberId);
+  const members = league.members as {
+    id: string;
+    xp: number;
+    questions: number;
+  }[];
+  const member = members.find((m) => m.id === memberId);
   if (member) {
     member.xp += amount;
     member.questions += 1;
   }
-  res.json({ league });
+  await supabase.from("leagues").update({ members }).eq("id", leagueId);
+  res.json({ league: { ...league, members } });
 });
 
-// GET /api/league/:id — poll league state
-router.get("/league/:id", (req, res) => {
-  const league = LEAGUES[req.params.id?.toUpperCase()];
-  if (!league) {
+// GET /api/league/:id
+router.get("/league/:id", async (req, res) => {
+  const { data: league, error } = await supabase
+    .from("leagues")
+    .select("*")
+    .eq("id", req.params.id.toUpperCase())
+    .single();
+  if (error || !league) {
     res.status(404).json({ error: "League not found" });
     return;
   }
   res.json({ league });
+});
+
+// POST /api/user/save — save user data to Supabase
+router.post("/user/save", async (req, res) => {
+  const {
+    id,
+    name,
+    xp,
+    streak,
+    class: cls,
+    subject,
+  } = req.body as Record<string, string | number>;
+  if (!id) {
+    res.status(400).json({ error: "Missing id" });
+    return;
+  }
+  const { error } = await supabase
+    .from("users")
+    .upsert({ id, name, xp, streak, class: cls, subject });
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
+  res.json({ ok: true });
+});
+
+// GET /api/user/:id — load user data
+router.get("/user/:id", async (req, res) => {
+  const { data, error } = await supabase
+    .from("users")
+    .select("*")
+    .eq("id", req.params.id)
+    .single();
+  if (error || !data) {
+    res.status(404).json({ error: "User not found" });
+    return;
+  }
+  res.json({ user: data });
 });
 
 export default router;

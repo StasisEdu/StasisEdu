@@ -1096,6 +1096,15 @@ function showNameSplash(onDone) {
         localStorage.setItem("stasis_name", name);
         localStorage.setItem("stasis_lang", chosenLang);
         localStorage.setItem("stasis_signup_class", chosenClass);
+        // Set a unique user ID for Supabase
+        if (!localStorage.getItem("stasis_uid")) {
+          localStorage.setItem(
+            "stasis_uid",
+            "U" +
+              Date.now() +
+              Math.random().toString(36).slice(2, 6).toUpperCase(),
+          );
+        }
         if (S) {
           S.classPreference = chosenClass;
           S.subjectPreference = "Maths";
@@ -1709,6 +1718,22 @@ function addXP(amount, label) {
   const oldLvl = getLevel(S.xp);
   S.xp += amount;
   if (window.awardLeagueXP) window.awardLeagueXP(amount);
+  // Save to Supabase in background
+  const uid = localStorage.getItem("stasis_uid");
+  if (uid) {
+    fetch("/api/user/save", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: uid,
+        name: localStorage.getItem("stasis_name"),
+        xp: S.xp,
+        streak: S.streak,
+        class: S.classPreference,
+        subject: S.subjectPreference,
+      }),
+    }).catch(() => {});
+  }
   const dayIdx = new Date().getDay();
   S.weeklyXP[dayIdx] = (S.weeklyXP[dayIdx] || 0) + amount;
   const today = todayKey();
