@@ -2059,9 +2059,17 @@ function updateHeader() {
 // ROUTING
 // ============================================================
 let currentPage = "home";
+let _leagueRefreshTimer = null;
+function stopLeagueRefresh() {
+  if (_leagueRefreshTimer) {
+    clearInterval(_leagueRefreshTimer);
+    _leagueRefreshTimer = null;
+  }
+}
 
 function navigate(page, extra) {
   currentPage = page;
+  if (page !== "leagues") stopLeagueRefresh();
   const navPage = page === "landing" ? "landing" : page;
   document
     .querySelectorAll(".nav-btn")
@@ -2074,6 +2082,12 @@ function navigate(page, extra) {
     switch (page) {
       case "landing":
         renderLanding();
+        break;
+      case "about":
+        renderAbout();
+        break;
+      case "weaktopics":
+        renderWeakTopics();
         break;
       case "home":
         renderHome();
@@ -2130,7 +2144,10 @@ function navigate(page, extra) {
         renderPomodoro();
         break;
       case "leagues":
-        renderLeagues();
+        stopLeagueRefresh();
+        renderLeagues().then(() => {
+          if (getMyLeagueId()) startLeagueRefresh();
+        });
         break;
     }
   });
@@ -2523,6 +2540,16 @@ function renderLanding() {
           <div style="font-size:0.72rem;color:var(--text-muted);line-height:1.4;">Tap me for homework help, concept explanations, and more.</div>
         </div>
         <div style="font-size:1rem;color:var(--text-muted);flex-shrink:0;">→</div>
+      </div>
+
+      <!-- About + Weak Topics buttons -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
+        <button onclick="navigate('about')" style="padding:14px 10px;border-radius:16px;border:1.5px solid rgba(79,217,179,0.3);background:rgba(79,217,179,0.07);color:#4fd9b3;font-size:0.82rem;font-weight:800;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;">
+          ℹ️ About StasisEdu
+        </button>
+        <button onclick="navigate('weaktopics')" style="padding:14px 10px;border-radius:16px;border:1.5px solid rgba(247,113,79,0.3);background:rgba(247,113,79,0.07);color:#f7714f;font-size:0.82rem;font-weight:800;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;">
+          🎯 My Weak Topics
+        </button>
       </div>
     </div>
   `;
@@ -3603,6 +3630,15 @@ function renderStats() {
       ._hday{width:13px;height:13px;border-radius:3px;transition:transform .15s}
       ._hday:hover{transform:scale(1.4)}
     </style>
+    <!-- WEAK TOPICS + PROGRESS shortcuts -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+      <button onclick="navigate('weaktopics')" style="padding:16px 10px;border-radius:16px;border:1.5px solid rgba(247,113,79,0.3);background:rgba(247,113,79,0.07);color:#f7714f;font-size:0.82rem;font-weight:800;cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:6px;">
+        <span style="font-size:1.5rem;">🎯</span>My Weak Topics
+      </button>
+      <button onclick="navigate('about')" style="padding:16px 10px;border-radius:16px;border:1.5px solid rgba(79,217,179,0.3);background:rgba(79,217,179,0.07);color:#4fd9b3;font-size:0.82rem;font-weight:800;cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:6px;">
+        <span style="font-size:1.5rem;">ℹ️</span>About App
+      </button>
+    </div>
     <!-- HERO PROFILE -->
     <div style="border-radius:20px;overflow:hidden;margin-bottom:14px;border:1.5px solid rgba(155,109,255,0.35);box-shadow:0 0 50px rgba(155,109,255,0.15)">
       <div style="background:linear-gradient(160deg,#0f0c29,#302b63,#24243e);padding:24px 20px;text-align:center;position:relative;overflow:hidden">
@@ -8304,7 +8340,7 @@ function renderNotesTab() {
         Dev: [
           "रीतिकाल के कवि · श्रृंगार रस की प्रधानता",
           "प्रकृति का मानवीकरण — सावन के बादलों से कृष्ण की तुलना",
-          "भाषा: ब्रजभाषा · काव्य में चित्रात्मकता और संगीत {�त्मकता",
+          "भाषा: ब्रजभाषा · काव्य में चित्रात्मकता और संगीतात्मकता",
           "उद्धव-गोपी संवाद — विरह और योग-ज्ञान का विरोध",
         ],
         "Jayashankar Prasad": [
@@ -9250,6 +9286,275 @@ window.pracPwr = async function (type, idx) {
 };
 
 // ============================================================
+// ABOUT PAGE — for judges / new users
+// ============================================================
+function renderAbout() {
+  const app = document.getElementById("app");
+  app.innerHTML = `
+    <div style="padding:16px;max-width:480px;margin:0 auto;">
+      <button onclick="navigate('landing')" style="background:none;border:none;color:#5a6a8a;font-size:0.82rem;cursor:pointer;font-family:inherit;margin-bottom:16px;display:flex;align-items:center;gap:6px;">← Back</button>
+
+      <!-- Hero -->
+      <div style="text-align:center;margin-bottom:24px;">
+        <div style="font-size:3rem;margin-bottom:8px;">⚡</div>
+        <div style="font-size:1.6rem;font-weight:900;background:linear-gradient(135deg,#4f8ef7,#9b6dff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">StasisEducation</div>
+        <div style="font-size:0.88rem;color:#5a6a8a;margin-top:6px;line-height:1.5;">AI-powered personalized CBSE tutor<br>for Classes 6–10</div>
+      </div>
+
+      <!-- Problem -->
+      <div style="background:rgba(247,113,79,0.08);border:1px solid rgba(247,113,79,0.2);border-radius:18px;padding:18px;margin-bottom:12px;">
+        <div style="font-size:0.75rem;font-weight:800;color:#f7714f;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">❌ The Problem</div>
+        <div style="font-size:0.9rem;color:#eef2ff;line-height:1.6;">Students spend hours studying but don't know which topics they're actually weak in. Traditional tuition is expensive, one-size-fits-all, and boring. Most students give up before exams.</div>
+      </div>
+
+      <!-- Solution -->
+      <div style="background:rgba(79,217,179,0.08);border:1px solid rgba(79,217,179,0.2);border-radius:18px;padding:18px;margin-bottom:12px;">
+        <div style="font-size:0.75rem;font-weight:800;color:#4fd9b3;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">✅ Our Solution</div>
+        <div style="font-size:0.9rem;color:#eef2ff;line-height:1.6;">StasisEducation uses AI to identify your weak chapters, generate personalized practice questions, and make studying feel like a game — so students actually want to study.</div>
+      </div>
+
+      <!-- Features -->
+      <div style="font-size:0.85rem;font-weight:800;color:#eef2ff;margin-bottom:10px;">🚀 Key Features</div>
+      ${[
+        [
+          "🤖",
+          "AI Tutor (Nova)",
+          "Ask any CBSE question, get instant explanations",
+        ],
+        [
+          "📝",
+          "Daily Practice",
+          "AI-generated questions tailored to your level",
+        ],
+        [
+          "🎯",
+          "Weak Topic Finder",
+          "Identifies exactly which chapters need more work",
+        ],
+        ["⚔️", "Leagues", "Compete with classmates, earn XP together"],
+        ["🎮", "Classroom Quiz", "Live multiplayer quiz battles with powerups"],
+        [
+          "📊",
+          "Progress Reports",
+          "Visual charts showing your improvement over time",
+        ],
+        [
+          "🏆",
+          "Gamification",
+          "XP, levels, badges, streaks to keep you motivated",
+        ],
+        ["📄", "CBSE Papers", "50+ past year and sample papers in one place"],
+      ]
+        .map(
+          ([icon, title, desc]) => `
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:12px;border-radius:14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);margin-bottom:8px;">
+          <div style="font-size:1.3rem;flex-shrink:0;">${icon}</div>
+          <div>
+            <div style="font-size:0.85rem;font-weight:800;color:#eef2ff;">${title}</div>
+            <div style="font-size:0.76rem;color:#5a6a8a;margin-top:2px;">${desc}</div>
+          </div>
+        </div>`,
+        )
+        .join("")}
+
+      <!-- Tech Stack -->
+      <div style="background:rgba(79,142,247,0.07);border:1px solid rgba(79,142,247,0.18);border-radius:16px;padding:16px;margin-top:4px;">
+        <div style="font-size:0.75rem;font-weight:800;color:#4f8ef7;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;">🛠 Built With</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;">
+          ${["HTML / CSS / JavaScript", "Node.js + Express", "Groq AI (LLaMA 3.3)", "Supabase (PostgreSQL)", "Clerk Auth", "Vite"].map((t) => `<span style="padding:4px 12px;border-radius:20px;background:rgba(79,142,247,0.12);color:#4f8ef7;font-size:0.72rem;font-weight:700;">${t}</span>`).join("")}
+        </div>
+      </div>
+
+      <!-- Theme -->
+      <div style="margin-top:16px;text-align:center;padding:16px;border-radius:16px;background:rgba(155,109,255,0.07);border:1px solid rgba(155,109,255,0.2);">
+        <div style="font-size:0.75rem;font-weight:700;color:#9b6dff;text-transform:uppercase;letter-spacing:0.08em;">Anvesh Bharat 2026 — Future Classroom</div>
+        <div style="font-size:0.82rem;color:#5a6a8a;margin-top:6px;">Technology for a Better Tomorrow</div>
+      </div>
+    </div>
+  `;
+}
+
+// ============================================================
+// WEAK TOPICS — find chapters with low accuracy
+// ============================================================
+function renderWeakTopics() {
+  const app = document.getElementById("app");
+  const history = S.questionHistory || [];
+
+  // Build chapter accuracy map
+  const chapterMap = {};
+  history.forEach((q) => {
+    const key = `${q.subject}||${q.chapter}`;
+    if (!chapterMap[key])
+      chapterMap[key] = {
+        subject: q.subject,
+        chapter: q.chapter,
+        correct: 0,
+        total: 0,
+      };
+    chapterMap[key].total++;
+    if (q.correct) chapterMap[key].correct++;
+  });
+
+  const chapters = Object.values(chapterMap)
+    .filter((c) => c.total >= 2) // need at least 2 attempts
+    .map((c) => ({ ...c, accuracy: Math.round((c.correct / c.total) * 100) }))
+    .sort((a, b) => a.accuracy - b.accuracy); // weakest first
+
+  const weak = chapters.filter((c) => c.accuracy < 60);
+  const ok = chapters.filter((c) => c.accuracy >= 60 && c.accuracy < 80);
+  const strong = chapters.filter((c) => c.accuracy >= 80);
+
+  // Weekly XP chart data (last 7 days)
+  const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const today = new Date().getDay();
+  const weekXP = S.weeklyXP || [0, 0, 0, 0, 0, 0, 0];
+  const maxXP = Math.max(1, ...weekXP);
+
+  app.innerHTML = `
+    <div style="padding:16px;max-width:480px;margin:0 auto;">
+      <button onclick="navigate('landing')" style="background:none;border:none;color:#5a6a8a;font-size:0.82rem;cursor:pointer;font-family:inherit;margin-bottom:16px;display:flex;align-items:center;gap:6px;">← Back</button>
+
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;">
+        <div style="font-size:1.6rem;">🎯</div>
+        <div>
+          <div style="font-size:1.15rem;font-weight:900;color:#eef2ff;">My Weak Topics</div>
+          <div style="font-size:0.78rem;color:#5a6a8a;">Based on your practice history</div>
+        </div>
+      </div>
+
+      <!-- Weekly XP Progress Chart -->
+      <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:18px;padding:16px;margin-bottom:16px;">
+        <div style="font-size:0.82rem;font-weight:800;color:#eef2ff;margin-bottom:14px;">📈 Weekly XP Progress</div>
+        <div style="display:flex;align-items:flex-end;gap:6px;height:80px;">
+          ${weekXP
+            .map((xp, i) => {
+              const isToday = i === today;
+              const h = Math.max(4, Math.round((xp / maxXP) * 70));
+              return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
+              <div style="font-size:0.6rem;color:${xp > 0 ? "#4f8ef7" : "#3a4a62"};">${xp > 0 ? xp : ""}</div>
+              <div style="width:100%;height:${h}px;border-radius:6px 6px 3px 3px;background:${isToday ? "linear-gradient(180deg,#4f8ef7,#9b6dff)" : xp > 0 ? "rgba(79,142,247,0.4)" : "rgba(255,255,255,0.05)"};transition:height 0.5s;"></div>
+              <div style="font-size:0.6rem;color:${isToday ? "#4f8ef7" : "#3a4a62"};font-weight:${isToday ? "800" : "400"};">${days[i]}</div>
+            </div>`;
+            })
+            .join("")}
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:10px;">
+          <div style="font-size:0.72rem;color:#5a6a8a;">Total this week: <span style="color:#4f8ef7;font-weight:700;">${weekXP.reduce((a, b) => a + b, 0)} XP</span></div>
+          <div style="font-size:0.72rem;color:#5a6a8a;">${history.length} questions answered</div>
+        </div>
+      </div>
+
+      <!-- Subject accuracy overview -->
+      <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:18px;padding:16px;margin-bottom:16px;">
+        <div style="font-size:0.82rem;font-weight:800;color:#eef2ff;margin-bottom:12px;">📚 Subject Accuracy</div>
+        ${
+          Object.entries(S.subjectCounts || {})
+            .filter(([, c]) => c > 0)
+            .map(([subj, count]) => {
+              const subjHistory = history.filter((q) => q.subject === subj);
+              const correct = subjHistory.filter((q) => q.correct).length;
+              const acc =
+                subjHistory.length > 0
+                  ? Math.round((correct / subjHistory.length) * 100)
+                  : null;
+              const color =
+                acc === null
+                  ? "#5a6a8a"
+                  : acc >= 80
+                    ? "#4fd9b3"
+                    : acc >= 60
+                      ? "#f7c74f"
+                      : "#f7714f";
+              return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+            <div style="font-size:0.82rem;color:#eef2ff;width:90px;flex-shrink:0;">${subj}</div>
+            <div style="flex:1;background:rgba(255,255,255,0.06);border-radius:20px;height:8px;overflow:hidden;">
+              <div style="height:100%;width:${acc || 0}%;background:${color};border-radius:20px;transition:width 0.6s;"></div>
+            </div>
+            <div style="font-size:0.72rem;font-weight:700;color:${color};width:36px;text-align:right;">${acc !== null ? acc + "%" : "—"}</div>
+          </div>`;
+            })
+            .join("") ||
+          '<div style="color:#3a4a62;text-align:center;font-size:0.82rem;padding:12px;">No data yet — start practicing!</div>'
+        }
+      </div>
+
+      <!-- Weak chapters -->
+      ${
+        weak.length > 0
+          ? `
+        <div style="font-size:0.82rem;font-weight:800;color:#f7714f;margin-bottom:8px;">🔴 Needs Work (below 60%)</div>
+        ${weak.map((c) => chapterCard(c)).join("")}
+      `
+          : ""
+      }
+
+      ${
+        ok.length > 0
+          ? `
+        <div style="font-size:0.82rem;font-weight:800;color:#f7c74f;margin-bottom:8px;margin-top:14px;">🟡 Getting There (60–80%)</div>
+        ${ok.map((c) => chapterCard(c)).join("")}
+      `
+          : ""
+      }
+
+      ${
+        strong.length > 0
+          ? `
+        <div style="font-size:0.82rem;font-weight:800;color:#4fd9b3;margin-bottom:8px;margin-top:14px;">🟢 Strong (above 80%)</div>
+        ${strong.map((c) => chapterCard(c)).join("")}
+      `
+          : ""
+      }
+
+      ${
+        chapters.length === 0
+          ? `
+        <div style="text-align:center;padding:32px 16px;color:#5a6a8a;">
+          <div style="font-size:2rem;margin-bottom:10px;">📝</div>
+          <div style="font-size:0.88rem;">No data yet.<br>Complete some practice questions first!</div>
+          <button onclick="navigate('practice')" style="margin-top:14px;padding:10px 24px;border-radius:12px;border:none;background:linear-gradient(135deg,#4f8ef7,#9b6dff);color:white;font-weight:700;font-size:0.85rem;cursor:pointer;font-family:inherit;">Start Practicing →</button>
+        </div>
+      `
+          : ""
+      }
+    </div>
+  `;
+}
+
+function chapterCard(c) {
+  const color =
+    c.accuracy >= 80 ? "#4fd9b3" : c.accuracy >= 60 ? "#f7c74f" : "#f7714f";
+  const bg =
+    c.accuracy >= 80
+      ? "rgba(79,217,179,0.07)"
+      : c.accuracy >= 60
+        ? "rgba(247,199,79,0.07)"
+        : "rgba(247,113,79,0.07)";
+  const border =
+    c.accuracy >= 80
+      ? "rgba(79,217,179,0.2)"
+      : c.accuracy >= 60
+        ? "rgba(247,199,79,0.2)"
+        : "rgba(247,113,79,0.2)";
+  return `
+    <div style="background:${bg};border:1px solid ${border};border-radius:14px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;">
+      <div style="flex:1;">
+        <div style="font-size:0.85rem;font-weight:700;color:#eef2ff;">${escapeHtml(c.chapter || "General")}</div>
+        <div style="font-size:0.72rem;color:#5a6a8a;margin-top:2px;">${c.subject} · ${c.total} questions attempted</div>
+        <div style="margin-top:6px;background:rgba(255,255,255,0.06);border-radius:20px;height:5px;overflow:hidden;">
+          <div style="height:100%;width:${c.accuracy}%;background:${color};border-radius:20px;"></div>
+        </div>
+      </div>
+      <div style="text-align:center;flex-shrink:0;">
+        <div style="font-size:1.2rem;font-weight:900;color:${color};">${c.accuracy}%</div>
+        <div style="font-size:0.6rem;color:#5a6a8a;">accuracy</div>
+      </div>
+      ${c.accuracy < 60 ? `<button onclick="(()=>{S.subjectPreference='${c.subject}';S.practiceChapter='${c.chapter}';saveState();navigate('practice');})()" style="padding:6px 10px;border-radius:8px;border:none;background:rgba(247,113,79,0.2);color:#f7714f;font-size:0.7rem;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0;">Practice →</button>` : ""}
+    </div>`;
+}
+
+// ============================================================
 // LEAGUES SYSTEM — server-backed
 // ============================================================
 
@@ -9300,6 +9605,29 @@ async function renderLeagues() {
   if (myLeagueId) {
     currentLeague = await fetchLeague(myLeagueId);
     if (!currentLeague) localStorage.removeItem("stasis_my_league");
+  }
+  // Auto-detect: check if this player was added to a league by someone else
+  if (!currentLeague) {
+    try {
+      const res = await fetch(`/api/league/find/${myId}`);
+      const data = await res.json();
+      if (data.league) {
+        currentLeague = data.league;
+        localStorage.setItem("stasis_my_league", data.league.id);
+        // Update name in case stored as "Pending"
+        await fetch("/api/league/join", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            leagueId: data.league.id,
+            member: {
+              id: myId,
+              name: localStorage.getItem("stasis_name") || "Student",
+            },
+          }),
+        });
+      }
+    } catch {}
   }
 
   app.innerHTML = `
@@ -9485,6 +9813,19 @@ window.leaveLeague = function () {
   localStorage.removeItem("stasis_my_league");
   navigate("leagues");
 };
+
+// Auto-refresh league every 15s when on leagues page
+function startLeagueRefresh() {
+  stopLeagueRefresh();
+  _leagueRefreshTimer = setInterval(async () => {
+    const leagueId = getMyLeagueId();
+    if (!leagueId) return;
+    const league = await fetchLeague(leagueId);
+    if (!league) return;
+    const area = document.getElementById("league-main-area");
+    if (area) area.innerHTML = renderMyLeagueHTML(league, getStudentId());
+  }, 15000);
+}
 
 // ============================================================
 // STASIS AI CHATBOT — uses existing apiPost() helper

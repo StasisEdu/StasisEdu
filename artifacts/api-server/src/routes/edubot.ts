@@ -1409,10 +1409,17 @@ router.post("/league/join", async (req, res) => {
     xp: number;
     questions: number;
   }[];
-  if (!members.find((m) => m.id === member.id)) {
+  const existing = members.find((m) => m.id === member.id);
+  if (existing) {
+    // Update their name in case they were added as "Pending"
+    existing.name = member.name;
+  } else {
     members.push({ ...member, xp: 0, questions: 0 });
-    await supabase.from("leagues").update({ members }).eq("id", leagueId);
   }
+  await supabase
+    .from("leagues")
+    .update({ members })
+    .eq("id", leagueId.toUpperCase());
   res.json({ league: { ...league, members } });
 });
 
@@ -1458,6 +1465,23 @@ router.get("/league/:id", async (req, res) => {
     return;
   }
   res.json({ league });
+});
+
+// GET /api/league/find/:playerId — find league by player ID
+router.get("/league/find/:playerId", async (req, res) => {
+  const playerId = req.params.playerId.toUpperCase();
+  const { data: leagues } = await supabase
+    .from("leagues")
+    .select("*")
+    .gt("expires_at", Date.now());
+  if (!leagues) {
+    res.json({ league: null });
+    return;
+  }
+  const found = leagues.find((l) =>
+    (l.members as { id: string }[]).some((m) => m.id === playerId),
+  );
+  res.json({ league: found || null });
 });
 
 // POST /api/user/save — save user data to Supabase
