@@ -9210,19 +9210,9 @@ window.pracPwr = async function (type, idx) {
 };
 
 // ============================================================
-// LEAGUES SYSTEM
+// LEAGUES SYSTEM — server-backed
 // ============================================================
 
-function getLeagues() {
-  try {
-    return JSON.parse(localStorage.getItem("stasis_leagues") || "[]");
-  } catch {
-    return [];
-  }
-}
-function saveLeagues(ls) {
-  localStorage.setItem("stasis_leagues", JSON.stringify(ls));
-}
 function getMyLeagueId() {
   return localStorage.getItem("stasis_my_league") || null;
 }
@@ -9236,26 +9226,41 @@ function getStudentId() {
   return id;
 }
 
-window.awardLeagueXP = function (amount) {
-  const leagues = getLeagues();
-  const myId = getStudentId();
-  const myLeagueId = getMyLeagueId();
-  if (!myLeagueId) return;
-  const league = leagues.find((l) => l.id === myLeagueId);
-  if (!league) return;
-  const member = league.members.find((m) => m.id === myId);
-  if (member) {
-    member.xp = (member.xp || 0) + amount;
-    member.questions = (member.questions || 0) + 1;
+async function fetchLeague(leagueId) {
+  try {
+    const res = await fetch(`/api/league/${leagueId}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.league;
+  } catch {
+    return null;
   }
-  saveLeagues(leagues);
+}
+
+window.awardLeagueXP = async function (amount) {
+  const leagueId = getMyLeagueId();
+  if (!leagueId) return;
+  try {
+    await fetch("/api/league/xp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ leagueId, memberId: getStudentId(), amount }),
+    });
+  } catch {}
 };
 
-function renderLeagues() {
+async function renderLeagues() {
   const app = document.getElementById("app");
-  const leagues = getLeagues();
   const myLeagueId = getMyLeagueId();
   const myId = getStudentId();
+
+  // Fetch live league from server
+  app.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:200px;color:#5a6a8a;">⚔️ Loading league...</div>`;
+  let currentLeague = null;
+  if (myLeagueId) {
+    currentLeague = await fetchLeague(myLeagueId);
+    if (!currentLeague) localStorage.removeItem("stasis_my_league");
+  }
 
   app.innerHTML = `
     <div style="padding:16px;max-width:480px;margin:0 auto;">
@@ -9277,7 +9282,7 @@ function renderLeagues() {
       </div>
 
       <div id="league-main-area">
-        ${myLeagueId ? renderMyLeagueHTML(leagues, myLeagueId, myId) : `<div style="text-align:center;padding:20px 16px;color:#5a6a8a;font-size:0.85rem;">You're not in a league yet.<br>Create one below or ask a friend for their League ID.</div>`}
+        ${currentLeague ? renderMyLeagueHTML(currentLeague, myId) : `<div style="text-align:center;padding:20px 16px;color:#5a6a8a;font-size:0.85rem;">You're not in a league yet.<br>Create one below or ask a friend for their League ID.</div>`}
       </div>
 
       <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:18px;padding:16px;margin-top:16px;">
@@ -9302,8 +9307,7 @@ function renderLeagues() {
   `;
 }
 
-function renderMyLeagueHTML(leagues, myLeagueId, myId) {
-  const league = leagues.find((l) => l.id === myLeagueId);
+function renderMyLeagueHTML(league, myId) {
   if (!league)
     return `<div style="color:#5a6a8a;text-align:center;padding:16px;">League not found.</div>`;
 
@@ -9369,7 +9373,7 @@ window.copyPlayerId = function () {
   }, 1500);
 };
 
-window.createLeague = function () {
+window.createLeague = async function () {
   const name = document.getElementById("league-name-input")?.value.trim();
   if (!name) {
     alert("Enter a league name");
@@ -9389,39 +9393,50 @@ window.createLeague = function () {
     members.push({ id, name: "Player " + id.slice(-3), xp: 0, questions: 0 }),
   );
 
-  const leagues = getLeagues();
-  const newLeague = {
-    id: "LG" + Math.random().toString(36).slice(2, 7).toUpperCase(),
-    name,
-    members,
-    createdAt: Date.now(),
-    expiresAt: Date.now() + 7 * 86400000,
-  };
-  leagues.push(newLeague);
-  saveLeagues(leagues);
-  localStorage.setItem("stasis_my_league", newLeague.id);
-  navigate("leagues");
+  try {
+    const res = await fetch("/api/league/create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, members }),
+    });
+    const data = await res.json();
+    if (!data.league) {
+      alert("Failed to create league");
+      return;
+    }
+    localStorage.setItem("stasis_my_league", data.league.id);
+    navigate("leagues");
+  } catch (e) {
+    alert("Network error — try again");
+  }
 };
 
-window.joinLeagueById = function () {
+window.joinLeagueById = async function () {
   const id = (document.getElementById("join-league-input")?.value || "")
     .trim()
     .toUpperCase();
   if (!id) return;
-  const leagues = getLeagues();
-  const league = leagues.find((l) => l.id === id);
-  if (!league) {
-    alert("League not found. Ask your friend to share their League ID.");
-    return;
-  }
   const myId = getStudentId();
   const myName = localStorage.getItem("stasis_name") || "Student";
-  if (!league.members.find((m) => m.id === myId)) {
-    league.members.push({ id: myId, name: myName, xp: 0, questions: 0 });
-    saveLeagues(leagues);
+  try {
+    const res = await fetch("/api/league/join", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        leagueId: id,
+        member: { id: myId, name: myName, xp: 0, questions: 0 },
+      }),
+    });
+    if (res.status === 404) {
+      alert("League not found. Check the League ID and try again.");
+      return;
+    }
+    const data = await res.json();
+    localStorage.setItem("stasis_my_league", data.league.id);
+    navigate("leagues");
+  } catch (e) {
+    alert("Network error — try again");
   }
-  localStorage.setItem("stasis_my_league", id);
-  navigate("leagues");
 };
 
 window.leaveLeague = function () {

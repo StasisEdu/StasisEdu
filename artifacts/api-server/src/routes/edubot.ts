@@ -1353,4 +1353,104 @@ Make each card concise — front under 15 words, back under 30 words.`;
   }
 });
 
+// ============================================================
+// LEAGUES — server-side shared state (same pattern as ROOMS)
+// ============================================================
+
+interface LeagueMember {
+  id: string;
+  name: string;
+  xp: number;
+  questions: number;
+}
+interface League {
+  id: string;
+  name: string;
+  members: LeagueMember[];
+  createdAt: number;
+  expiresAt: number;
+}
+const LEAGUES: Record<string, League> = {};
+
+// Prune expired leagues every hour
+setInterval(
+  () => {
+    const now = Date.now();
+    for (const id of Object.keys(LEAGUES)) {
+      if (LEAGUES[id].expiresAt < now) delete LEAGUES[id];
+    }
+  },
+  60 * 60 * 1000,
+);
+
+// POST /api/league/create
+router.post("/league/create", (req, res) => {
+  const { name, members } = req.body as {
+    name: string;
+    members: LeagueMember[];
+  };
+  if (!name || !members?.length) {
+    res.status(400).json({ error: "Missing fields" });
+    return;
+  }
+  let id = "LG" + Math.random().toString(36).slice(2, 7).toUpperCase();
+  while (LEAGUES[id])
+    id = "LG" + Math.random().toString(36).slice(2, 7).toUpperCase();
+  LEAGUES[id] = {
+    id,
+    name,
+    members,
+    createdAt: Date.now(),
+    expiresAt: Date.now() + 7 * 86400000,
+  };
+  res.json({ league: LEAGUES[id] });
+});
+
+// POST /api/league/join
+router.post("/league/join", (req, res) => {
+  const { leagueId, member } = req.body as {
+    leagueId: string;
+    member: LeagueMember;
+  };
+  const league = LEAGUES[leagueId?.toUpperCase()];
+  if (!league) {
+    res.status(404).json({ error: "League not found" });
+    return;
+  }
+  if (!league.members.find((m) => m.id === member.id)) {
+    league.members.push({ ...member, xp: 0, questions: 0 });
+  }
+  res.json({ league });
+});
+
+// POST /api/league/xp — award XP to a member
+router.post("/league/xp", (req, res) => {
+  const { leagueId, memberId, amount } = req.body as {
+    leagueId: string;
+    memberId: string;
+    amount: number;
+  };
+  const league = LEAGUES[leagueId];
+  if (!league) {
+    res.status(404).json({ error: "League not found" });
+    return;
+  }
+  const member = league.members.find((m) => m.id === memberId);
+  if (member) {
+    member.xp += amount;
+    member.questions += 1;
+  }
+  res.json({ league });
+});
+
+// GET /api/league/:id — poll league state
+router.get("/league/:id", (req, res) => {
+  const league = LEAGUES[req.params.id?.toUpperCase()];
+  if (!league) {
+    res.status(404).json({ error: "League not found" });
+    return;
+  }
+  res.json({ league });
+});
+
 export default router;
