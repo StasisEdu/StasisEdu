@@ -2510,16 +2510,16 @@ function renderLanding() {
       <!-- ⑤ Secondary feature tiles (2-col) -->
       <div style="margin-bottom:10px;">
         <div style="font-size:0.78rem;font-weight:700;color:var(--text-muted);letter-spacing:0.05em;text-transform:uppercase;margin-bottom:10px;">More tools</div>
-        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
           ${features
             .map(
               (f, i) => `
             <button class="lp-feat-btn lp-pop lp-pop-d${(i % 4) + 1}" onclick="navigate('${f.page}')"
               style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);box-shadow:0 2px 12px rgba(0,0,0,0.2);">
-              <div style="font-size:1.6rem;margin-bottom:8px;filter:drop-shadow(0 0 8px ${f.accent}66);">${f.emoji}</div>
-              <div style="font-size:0.83rem;font-weight:800;color:var(--text);margin-bottom:4px;">${f.title}</div>
-              <div style="font-size:0.7rem;color:var(--text-muted);line-height:1.4;">${f.desc}</div>
-              <div style="margin-top:10px;height:2px;border-radius:99px;background:linear-gradient(90deg,${f.accent},transparent);opacity:0.6;"></div>
+              <div style="font-size:1.4rem;margin-bottom:6px;filter:drop-shadow(0 0 8px ${f.accent}66);">${f.emoji}</div>
+              <div style="font-size:0.75rem;font-weight:800;color:var(--text);margin-bottom:3px;">${f.title}</div>
+              <div style="font-size:0.62rem;color:var(--text-muted);line-height:1.3;">${f.desc}</div>
+              <div style="margin-top:8px;height:2px;border-radius:99px;background:linear-gradient(90deg,${f.accent},transparent);opacity:0.6;"></div>
             </button>`,
             )
             .join("")}
