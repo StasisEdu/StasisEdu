@@ -2700,6 +2700,109 @@ function renderHome() {
 
     <div id="solutionArea"></div>
     <div id="recentSolves"></div>
+
+    <!-- MORE TOOLS 3-col grid -->
+    <div style="margin-top:16px;">
+      <div style="font-size:0.78rem;font-weight:700;color:var(--text-muted);letter-spacing:0.05em;text-transform:uppercase;margin-bottom:10px;">More Tools</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
+        ${[
+          {
+            emoji: "📸",
+            title: "Snap & Solve",
+            desc: "Photo → AI solution",
+            page: "home",
+            accent: "#4f8ef7",
+          },
+          {
+            emoji: "🎙️",
+            title: "Voice Doubt",
+            desc: "Speak, AI answers",
+            page: "voice-doubt",
+            accent: "#ec4899",
+          },
+          {
+            emoji: "📅",
+            title: "Revision Plan",
+            desc: "AI study schedule",
+            page: "revision",
+            accent: "#06b6d4",
+          },
+          {
+            emoji: "📊",
+            title: "PYQ Trends",
+            desc: "Board exam topics",
+            page: "trends",
+            accent: "#f97316",
+          },
+          {
+            emoji: "📝",
+            title: "Mock Test",
+            desc: "Full CBSE test",
+            page: "mock-test",
+            accent: "#f0b429",
+          },
+          {
+            emoji: "🧠",
+            title: "Mind Map",
+            desc: "Visual breakdown",
+            page: "mind-map",
+            accent: "#9b6dff",
+          },
+          {
+            emoji: "🃏",
+            title: "Flashcards",
+            desc: "Spaced repetition",
+            page: "flashcards",
+            accent: "#0fca8c",
+          },
+          {
+            emoji: "📊",
+            title: "Your Stats",
+            desc: "XP & accuracy",
+            page: "stats",
+            accent: "#9b6dff",
+          },
+          {
+            emoji: "🏆",
+            title: "Leaderboard",
+            desc: "Rank #1 globally",
+            page: "leaderboard",
+            accent: "#f0b429",
+          },
+          {
+            emoji: "💾",
+            title: "Saved",
+            desc: "Bookmarked Qs",
+            page: "saved",
+            accent: "#0fca8c",
+          },
+          {
+            emoji: "⏱️",
+            title: "Study Timer",
+            desc: "25 min focus",
+            page: "pomodoro",
+            accent: "#ec4899",
+          },
+          {
+            emoji: "ℹ️",
+            title: "About",
+            desc: "About this app",
+            page: "about",
+            accent: "#4fd9b3",
+          },
+        ]
+          .map(
+            (f) => `
+          <button onclick="navigate('${f.page}')" style="padding:12px 8px;border-radius:14px;border:1px solid rgba(255,255,255,0.07);background:rgba(255,255,255,0.03);cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:5px;text-align:center;">
+            <div style="font-size:1.4rem;filter:drop-shadow(0 0 8px ${f.accent}66);">${f.emoji}</div>
+            <div style="font-size:0.72rem;font-weight:800;color:#eef2ff;">${f.title}</div>
+            <div style="font-size:0.6rem;color:#5a6a8a;line-height:1.3;">${f.desc}</div>
+            <div style="margin-top:6px;height:2px;width:100%;border-radius:99px;background:linear-gradient(90deg,${f.accent},transparent);opacity:0.6;"></div>
+          </button>`,
+          )
+          .join("")}
+      </div>
+    </div>
   `;
 
   renderRecentSolves();
