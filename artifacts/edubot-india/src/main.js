@@ -3236,13 +3236,13 @@ function renderPracticeCards(questions) {
             ? `
           <div id="prac-pwr-bar-${i}" style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
             <button onclick="window.pracPwr('hint',${i})" style="flex:1;min-width:80px;padding:7px 6px;border-radius:11px;border:1.5px solid rgba(247,199,79,0.4);background:rgba(247,199,79,0.08);cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:5px;">
-              <span style="font-size:0.95rem;">💡</span><span style="font-size:0.7rem;font-weight:800;color:#f7c74f;">Hint</span>
+              <span style="font-size:0.95rem;">💡</span><span style="font-size:0.7rem;font-weight:800;color:#f7c74f;">Hint <span style="color:#5a6a8a;font-weight:500;">-20 XP</span></span>
             </button>
             <button onclick="window.pracPwr('eliminate',${i})" style="flex:1;min-width:80px;padding:7px 6px;border-radius:11px;border:1.5px solid rgba(79,217,179,0.4);background:rgba(79,217,179,0.08);cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:5px;">
-              <span style="font-size:0.95rem;">🎯</span><span style="font-size:0.7rem;font-weight:800;color:#4fd9b3;">Key Point</span>
+              <span style="font-size:0.95rem;">🎯</span><span style="font-size:0.7rem;font-weight:800;color:#4fd9b3;">Key Point <span style="color:#5a6a8a;font-weight:500;">-20 XP</span></span>
             </button>
             <button onclick="window.pracPwr('simplify',${i})" style="flex:1;min-width:80px;padding:7px 6px;border-radius:11px;border:1.5px solid rgba(155,109,255,0.4);background:rgba(155,109,255,0.08);cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:5px;">
-              <span style="font-size:0.95rem;">🔍</span><span style="font-size:0.7rem;font-weight:800;color:#9b6dff;">Simplify</span>
+              <span style="font-size:0.95rem;">🔍</span><span style="font-size:0.7rem;font-weight:800;color:#9b6dff;">Simplify <span style="color:#5a6a8a;font-weight:500;">-20 XP</span></span>
             </button>
           </div>
           <div id="prac-pwr-hint-${i}" style="margin-bottom:8px;"></div>
@@ -8304,7 +8304,7 @@ function renderNotesTab() {
         Dev: [
           "रीतिकाल के कवि · श्रृंगार रस की प्रधानता",
           "प्रकृति का मानवीकरण — सावन के बादलों से कृष्ण की तुलना",
-          "भाषा: ब्रजभाषा · काव्य में चित्रात्मकता और संगीतात्मकता",
+          "भाषा: ब्रजभाषा · काव्य में चित्रात्मकता और संगीत {�त्मकता",
           "उद्धव-गोपी संवाद — विरह और योग-ज्ञान का विरोध",
         ],
         "Jayashankar Prasad": [
@@ -9186,12 +9186,22 @@ window.usePwr = function (type) {
   }
 };
 
-// Practice mode powerups (hint/key-point/simplify via AI)
 window.pracPwr = async function (type, idx) {
   const q = S.todayPractice?.[idx];
   if (!q) return;
   const hintEl = document.getElementById(`prac-pwr-hint-${idx}`);
   if (!hintEl) return;
+
+  // ── XP cost: 20 XP per powerup ──
+  const XP_COST = 20;
+  if ((S.xp || 0) < XP_COST) {
+    hintEl.innerHTML = `<div style="font-size:0.78rem;color:#f7714f;padding:8px 10px;border-radius:10px;border:1px solid rgba(247,113,79,0.2);background:rgba(247,113,79,0.07);">❌ Not enough XP! You need ${XP_COST} XP to use a powerup.</div>`;
+    return;
+  }
+  // Deduct XP
+  S.xp -= XP_COST;
+  saveState();
+  updateHeader();
 
   const btn = event.target.closest("button");
   if (btn) {
@@ -9199,7 +9209,7 @@ window.pracPwr = async function (type, idx) {
     btn.style.opacity = "0.5";
   }
 
-  hintEl.innerHTML = `<div style="font-size:0.78rem;color:#5a6a8a;padding:8px 10px;border-radius:10px;border:1px dashed rgba(255,255,255,0.1);">✨ Getting your powerup...</div>`;
+  hintEl.innerHTML = `<div style="font-size:0.78rem;color:#5a6a8a;padding:8px 10px;border-radius:10px;border:1px dashed rgba(255,255,255,0.1);">✨ Using powerup (-${XP_COST} XP)...</div>`;
 
   const prompts = {
     hint: `Give a short helpful HINT (2-3 sentences, no full answer) for this CBSE question: "${q.question}". Subject: ${S.subjectPreference}, Class ${S.classPreference}.`,
@@ -9214,7 +9224,7 @@ window.pracPwr = async function (type, idx) {
   };
 
   try {
-    const res = await fetch("/api/chat", {
+    const res = await fetch("/api/chatbot", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message: prompts[type], history: [] }),
@@ -9223,10 +9233,15 @@ window.pracPwr = async function (type, idx) {
     const text =
       data.reply ||
       data.message ||
+      data.content ||
       "Try breaking the question into parts and recall the chapter.";
     hintEl.innerHTML = `<div style="font-size:0.82rem;line-height:1.55;padding:10px 12px;border-radius:10px;border:1px solid rgba(${type === "hint" ? "247,199,79" : type === "eliminate" ? "79,217,179" : "155,109,255"},0.25);background:rgba(${type === "hint" ? "247,199,79" : type === "eliminate" ? "79,217,179" : "155,109,255"},0.07);color:#eef2ff;margin-bottom:6px;"><span style="font-weight:800;color:${colors[type]}">${labels[type]}: </span>${escapeHtml(text)}</div>`;
   } catch (e) {
     hintEl.innerHTML = `<div style="font-size:0.78rem;color:#f7714f;padding:8px;">Powerup unavailable right now.</div>`;
+    // Refund XP if failed
+    S.xp += XP_COST;
+    saveState();
+    updateHeader();
     if (btn) {
       btn.disabled = false;
       btn.style.opacity = "1";
@@ -9343,7 +9358,9 @@ function renderMyLeagueHTML(league, myId) {
   const pct = Math.min(Math.round((totalQ / target) * 100), 100);
   const daysLeft = Math.max(
     0,
-    Math.ceil((league.expiresAt - Date.now()) / 86400000),
+    Math.ceil(
+      ((league.expires_at || league.expiresAt || 0) - Date.now()) / 86400000,
+    ),
   );
   const medals = ["🥇", "🥈", "🥉"];
 
@@ -9415,7 +9432,7 @@ window.createLeague = async function () {
 
   const members = [{ id: myId, name: myName, xp: 0, questions: 0 }];
   extraIds.forEach((id) =>
-    members.push({ id, name: "Player " + id.slice(-3), xp: 0, questions: 0 }),
+    members.push({ id, name: "Pending " + id, xp: 0, questions: 0 }),
   );
 
   try {
