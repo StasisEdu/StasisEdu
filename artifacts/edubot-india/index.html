@@ -6,13 +6,13 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1"
     />
-    <title>StasisEducation ⚡</title>
+    <title>StasisEducation</title>
     <meta
       name="description"
       content="StasisEducation — AI-powered CBSE tutor for Classes 6-10. Level up your learning with gamified practice."
     />
     <meta name="robots" content="index, follow" />
-    <meta property="og:title" content="StasisEducation ⚡" />
+    <meta property="og:title" content="StasisEducation" />
     <meta
       property="og:description"
       content="AI-powered CBSE tutor for Classes 6-10."
@@ -42,33 +42,45 @@
         z-index: -1;
       "
     ></canvas>
+
     <!-- Header -->
     <header id="header">
       <div class="header-left">
-        <span class="logo">StasisEducation ⚡</span>
+        <span class="logo">
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+          </svg>
+          StasisEducation
+        </span>
       </div>
       <div class="header-right">
         <div class="level-pill" id="levelPill">🌱 Rookie</div>
         <div class="xp-bar-wrap">
           <div class="xp-bar" id="xpBar" style="width: 0%"></div>
         </div>
-        <div class="streak-wrap" id="streakWrap">
-          🔥 <span id="streakCount">0</span>
-        </div>
+        <div class="streak-wrap">🔥 <span id="streakCount">0</span></div>
         <div class="gems-wrap">💎 <span id="gemsCount">0</span></div>
         <button
           id="themeToggle"
           class="theme-toggle"
-          title="Toggle light/dark mode"
+          title="Toggle theme"
           onclick="toggleTheme()"
         >
           🌙
         </button>
       </div>
     </header>
-    <!-- Main Content -->
-    <main id="app"></main>
-    <!-- Bottom Nav -->
+
+    <!-- Sidebar Nav -->
     <nav id="bottomNav">
       <button
         class="nav-btn active"
@@ -119,6 +131,10 @@
         <span>Leagues</span>
       </button>
     </nav>
+
+    <!-- Main Content -->
+    <main id="app"></main>
+
     <!-- Level Up Overlay -->
     <div id="levelUpOverlay" class="hidden">
       <div class="levelup-content">
@@ -128,6 +144,7 @@
       </div>
       <canvas id="confettiCanvas"></canvas>
     </div>
+
     <!-- Badge Toast -->
     <div id="badgeToast" class="hidden">
       <div class="badge-toast-inner">
@@ -138,11 +155,12 @@
         </div>
       </div>
     </div>
+
     <!-- XP Float -->
     <div id="xpFloat" class="hidden"></div>
+
     <script type="module" src="/src/main.js"></script>
     <script>
-      // Theme cycle: dark → light → eye (warm) → dark
       const THEMES = ["dark", "light", "eye"];
       const ICONS = { dark: "🌙", light: "☀️", eye: "🌿" };
       (function () {
@@ -157,23 +175,10 @@
         if (next !== "dark") html.classList.add(next);
         localStorage.setItem("stasis_theme", next);
         document.getElementById("themeToggle").textContent = ICONS[next];
-        document.getElementById("themeToggle").title =
-          next === "dark"
-            ? "Dark mode"
-            : next === "light"
-              ? "Light mode"
-              : "Eye comfort mode";
       }
       window.addEventListener("DOMContentLoaded", function () {
         const cur = localStorage.getItem("stasis_theme") || "dark";
-        const btn = document.getElementById("themeToggle");
-        btn.textContent = ICONS[cur];
-        btn.title =
-          cur === "dark"
-            ? "Dark mode"
-            : cur === "light"
-              ? "Light mode"
-              : "Eye comfort mode";
+        document.getElementById("themeToggle").textContent = ICONS[cur];
       });
     </script>
   </body>
