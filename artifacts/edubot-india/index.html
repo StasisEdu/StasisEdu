@@ -56,6 +56,14 @@
           🔥 <span id="streakCount">0</span>
         </div>
         <div class="gems-wrap">💎 <span id="gemsCount">0</span></div>
+        <button
+          id="themeToggle"
+          class="theme-toggle"
+          title="Toggle light/dark mode"
+          onclick="toggleTheme()"
+        >
+          🌙
+        </button>
       </div>
     </header>
     <!-- Main Content -->
@@ -133,5 +141,40 @@
     <!-- XP Float -->
     <div id="xpFloat" class="hidden"></div>
     <script type="module" src="/src/main.js"></script>
+    <script>
+      // Theme cycle: dark → light → eye (warm) → dark
+      const THEMES = ["dark", "light", "eye"];
+      const ICONS = { dark: "🌙", light: "☀️", eye: "🌿" };
+      (function () {
+        const saved = localStorage.getItem("stasis_theme") || "dark";
+        if (saved !== "dark") document.documentElement.classList.add(saved);
+      })();
+      function toggleTheme() {
+        const html = document.documentElement;
+        const cur = localStorage.getItem("stasis_theme") || "dark";
+        const next = THEMES[(THEMES.indexOf(cur) + 1) % THEMES.length];
+        html.classList.remove("light", "eye");
+        if (next !== "dark") html.classList.add(next);
+        localStorage.setItem("stasis_theme", next);
+        document.getElementById("themeToggle").textContent = ICONS[next];
+        document.getElementById("themeToggle").title =
+          next === "dark"
+            ? "Dark mode"
+            : next === "light"
+              ? "Light mode"
+              : "Eye comfort mode";
+      }
+      window.addEventListener("DOMContentLoaded", function () {
+        const cur = localStorage.getItem("stasis_theme") || "dark";
+        const btn = document.getElementById("themeToggle");
+        btn.textContent = ICONS[cur];
+        btn.title =
+          cur === "dark"
+            ? "Dark mode"
+            : cur === "light"
+              ? "Light mode"
+              : "Eye comfort mode";
+      });
+    </script>
   </body>
 </html>
