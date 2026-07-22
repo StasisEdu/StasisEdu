@@ -130,7 +130,90 @@
         <span class="nav-icon">⚔️</span>
         <span>Leagues</span>
       </button>
+
+      <!-- Features collapsible section -->
+      <div
+        style="
+          margin-top: 8px;
+          border-top: 1px solid rgba(255, 255, 255, 0.06);
+          padding-top: 8px;
+        "
+      >
+        <button
+          id="featuresToggleBtn"
+          onclick="toggleFeaturesNav()"
+          style="
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 0.82rem;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            padding: 10px 12px;
+            border-radius: 10px;
+            transition: all 0.18s;
+          "
+          onmouseover="this.style.background='var(--surface-hover)';this.style.color='var(--text)'"
+          onmouseout="this.style.background='none';this.style.color='var(--text-muted)'"
+        >
+          <span style="display: flex; align-items: center; gap: 10px">
+            <span style="font-size: 1.05rem; width: 20px; text-align: center"
+              >🚀</span
+            >
+            <span>Features</span>
+          </span>
+          <span
+            id="featuresChevron"
+            style="font-size: 0.7rem; transition: transform 0.22s"
+            >▼</span
+          >
+        </button>
+        <div id="featuresNavList" style="display: none; padding-left: 4px">
+          <button class="nav-btn" onclick="navigate('voice-doubt')">
+            <span class="nav-icon">🎙️</span><span>Voice Doubt</span>
+          </button>
+          <button class="nav-btn" onclick="navigate('revision')">
+            <span class="nav-icon">📅</span><span>Revision Plan</span>
+          </button>
+          <button class="nav-btn" onclick="navigate('trends')">
+            <span class="nav-icon">📊</span><span>PYQ Trends</span>
+          </button>
+          <button class="nav-btn" onclick="navigate('mock-test')">
+            <span class="nav-icon">📝</span><span>Mock Test</span>
+          </button>
+          <button class="nav-btn" onclick="navigate('mind-map')">
+            <span class="nav-icon">🧠</span><span>Mind Map</span>
+          </button>
+          <button class="nav-btn" onclick="navigate('flashcards')">
+            <span class="nav-icon">🃏</span><span>Flashcards</span>
+          </button>
+          <button class="nav-btn" onclick="navigate('pomodoro')">
+            <span class="nav-icon">⏱️</span><span>Study Timer</span>
+          </button>
+          <button class="nav-btn" onclick="navigate('home')">
+            <span class="nav-icon">📸</span><span>Snap & Solve</span>
+          </button>
+          <button class="nav-btn" onclick="navigate('weaktopics')">
+            <span class="nav-icon">🎯</span><span>Weak Topics</span>
+          </button>
+        </div>
+      </div>
     </nav>
+
+    <script>
+      function toggleFeaturesNav() {
+        const list = document.getElementById("featuresNavList");
+        const chevron = document.getElementById("featuresChevron");
+        const isOpen = list.style.display !== "none";
+        list.style.display = isOpen ? "none" : "block";
+        chevron.style.transform = isOpen ? "" : "rotate(180deg)";
+      }
+    </script>
 
     <!-- Main Content -->
     <main id="app"></main>
