@@ -727,30 +727,30 @@ let _gameConfig = {
   subject: "Maths",
   chapter: "",
   difficulty: "easy",
-  count: 3,
+  count: 15,
 };
 
 const COUNT_CONFIG = {
-  3: {
-    xp: 10,
+  15: {
+    xp: 30,
     difficulty: "easy",
     label: "Easy",
     emoji: "🟢",
-    desc: "10 XP · 30s each",
+    desc: "30 XP · 30s each",
   },
-  5: {
-    xp: 20,
+  20: {
+    xp: 60,
     difficulty: "hard",
     label: "Hard",
     emoji: "🔴",
-    desc: "20 XP · 30s each",
+    desc: "60 XP · 30s each",
   },
-  7: {
-    xp: 30,
+  25: {
+    xp: 100,
     difficulty: "very hard",
     label: "Very Hard",
     emoji: "💀",
-    desc: "30 XP · 30s each",
+    desc: "100 XP · 30s each",
   },
 };
 
@@ -768,7 +768,7 @@ function renderDifficultyPicker({ title, color, backFn, onConfirm }) {
       <div style="font-size:1.3rem;font-weight:900;color:#fff;margin-bottom:4px">${title}</div>
       <div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:28px">Pick your challenge level</div>
       <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:28px">
-        ${[3, 5, 7]
+        ${[15, 20, 25]
           .map((n) => {
             const cfg = COUNT_CONFIG[n];
             const sel = _gameConfig.count === n;
@@ -1346,6 +1346,7 @@ function loadState() {
     xp: 0,
     level: 0,
     gems: 0,
+    correctAnswerCount: 0,
     badges: {},
     savedAnswers: [],
     streak: 0,
@@ -1746,7 +1747,18 @@ function addXP(amount, label) {
   checkBadges();
 }
 
+function awardGemForCorrect() {
+  S.correctAnswerCount = (S.correctAnswerCount || 0) + 1;
+  if (S.correctAnswerCount % 10 === 0) {
+    S.gems = (S.gems || 0) + 1;
+    saveState();
+    updateHeader();
+    showXPFloat("💎 +1 Gem!");
+  }
+}
+
 function logQuestion({ subject, chapter, correct, source }) {
+  if (correct) awardGemForCorrect();
   S.questionHistory = S.questionHistory || [];
   S.questionHistory.unshift({
     date: new Date().toISOString(),
@@ -3126,7 +3138,7 @@ function renderPractice() {
     return;
   }
 
-  const practiceCount = S._practiceCount || 3;
+  const practiceCount = S._practiceCount || 15;
   const _pct = Math.round((done / practiceCount) * 100);
   const _doneColor =
     done === practiceCount
@@ -3311,7 +3323,7 @@ async function loadPracticeQuestions() {
 async function doLoadPracticeQuestions() {
   const cardsEl = document.getElementById("practiceCards");
   if (!cardsEl) return;
-  const count = S._practiceCount || 3;
+  const count = S._practiceCount || 15;
   cardsEl.innerHTML = Array(Math.min(count, 3)).fill(skeletonCard()).join("");
   try {
     const data = await apiPost("/practice", {
@@ -3365,13 +3377,13 @@ function renderPracticeCards(questions) {
           !q.done
             ? `
           <div id="prac-pwr-bar-${i}" style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
-            <button onclick="window.pracPwr('hint',${i})" style="flex:1;min-width:80px;padding:7px 6px;border-radius:11px;border:1.5px solid rgba(247,199,79,0.4);background:rgba(247,199,79,0.08);cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:5px;">
+            <button onclick="window.pracPwr('hint',${i},this)" style="flex:1;min-width:80px;padding:7px 6px;border-radius:11px;border:1.5px solid rgba(247,199,79,0.4);background:rgba(247,199,79,0.08);cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:5px;">
               <span style="font-size:0.95rem;">💡</span><span style="font-size:0.7rem;font-weight:800;color:#f7c74f;">Hint <span style="color:#5a6a8a;font-weight:500;">-20 XP</span></span>
             </button>
-            <button onclick="window.pracPwr('eliminate',${i})" style="flex:1;min-width:80px;padding:7px 6px;border-radius:11px;border:1.5px solid rgba(79,217,179,0.4);background:rgba(79,217,179,0.08);cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:5px;">
+            <button onclick="window.pracPwr('eliminate',${i},this)" style="flex:1;min-width:80px;padding:7px 6px;border-radius:11px;border:1.5px solid rgba(79,217,179,0.4);background:rgba(79,217,179,0.08);cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:5px;">
               <span style="font-size:0.95rem;">🎯</span><span style="font-size:0.7rem;font-weight:800;color:#4fd9b3;">Key Point <span style="color:#5a6a8a;font-weight:500;">-20 XP</span></span>
             </button>
-            <button onclick="window.pracPwr('simplify',${i})" style="flex:1;min-width:80px;padding:7px 6px;border-radius:11px;border:1.5px solid rgba(155,109,255,0.4);background:rgba(155,109,255,0.08);cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:5px;">
+            <button onclick="window.pracPwr('simplify',${i},this)" style="flex:1;min-width:80px;padding:7px 6px;border-radius:11px;border:1.5px solid rgba(155,109,255,0.4);background:rgba(155,109,255,0.08);cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:5px;">
               <span style="font-size:0.95rem;">🔍</span><span style="font-size:0.7rem;font-weight:800;color:#9b6dff;">Simplify <span style="color:#5a6a8a;font-weight:500;">-20 XP</span></span>
             </button>
           </div>
@@ -3420,8 +3432,8 @@ window.submitPractice = async (i) => {
     S.totalPracticed += 1;
     addXP(
       data.correct
-        ? COUNT_CONFIG[S._practiceCount || 3]?.xp || 10
-        : Math.round((COUNT_CONFIG[S._practiceCount || 3]?.xp || 10) * 0.5),
+        ? COUNT_CONFIG[S._practiceCount || 15]?.xp || 10
+        : Math.round((COUNT_CONFIG[S._practiceCount || 15]?.xp || 10) * 0.5),
       "practice",
     );
     logQuestion({
@@ -3985,7 +3997,7 @@ let _crTimedOut = {}; // qIndex -> true
 let _crMyLevel = null; // player's own level string
 
 // ── POWERUPS state ──
-const _PWR_DEFAULT = { fiftyFifty: 2, extraTime: 2, skip: 1, shield: 1 };
+const _PWR_DEFAULT = { fiftyFifty: 0, extraTime: 0, skip: 0, shield: 0 };
 let _pwrUps = { ..._PWR_DEFAULT };
 let _pwrShieldActive = false;
 function stopCrTimer() {
@@ -4071,18 +4083,21 @@ function renderCrQuestion() {
       <div id="cr-options">
         ${q.options.map((opt) => `<button class="_cropt" onclick="selectCrOption(this,'${opt.replace(/'/g, "\\'").replace(/"/g, "&quot;")}')">${escapeHtml(opt)}</button>`).join("")}
       </div>
-      <div id="pwr-bar" style="display:flex;gap:8px;margin:14px 0;flex-wrap:wrap;">
-        <button id="pwr-5050" onclick="window.usePwr('fiftyFifty')" class="_pwrbtn" style="flex:1;min-width:70px;padding:8px 6px;border-radius:12px;border:1.5px solid rgba(247,199,79,0.4);background:rgba(247,199,79,0.1);cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:3px;${_pwrUps.fiftyFifty === 0 ? "opacity:0.35;pointer-events:none;" : ""}">
-          <span style="font-size:1.2rem;">⚡</span><span style="font-size:0.6rem;font-weight:800;color:#f7c74f;">50/50</span><span style="font-size:0.58rem;color:#5a6a8a;font-weight:600;">${_pwrUps.fiftyFifty}x left</span>
+      <div id="pwr-bar" style="display:flex;gap:6px;margin:14px 0;flex-wrap:wrap;align-items:center;">
+        <button id="pwr-5050" onclick="window.usePwr('fiftyFifty')" class="_pwrbtn" style="flex:1;min-width:65px;padding:8px 6px;border-radius:12px;border:1.5px solid rgba(247,199,79,0.4);background:rgba(247,199,79,0.1);cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:3px;${_pwrUps.fiftyFifty === 0 ? "opacity:0.35;pointer-events:none;" : ""}">
+          <span style="font-size:1.2rem;">⚡</span><span style="font-size:0.6rem;font-weight:800;color:#f7c74f;">Eliminator</span><span style="font-size:0.58rem;color:#5a6a8a;font-weight:600;">${_pwrUps.fiftyFifty}x left</span>
         </button>
-        <button id="pwr-time" onclick="window.usePwr('extraTime')" class="_pwrbtn" style="flex:1;min-width:70px;padding:8px 6px;border-radius:12px;border:1.5px solid rgba(79,217,179,0.4);background:rgba(79,217,179,0.1);cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:3px;${_pwrUps.extraTime === 0 ? "opacity:0.35;pointer-events:none;" : ""}">
-          <span style="font-size:1.2rem;">⏰</span><span style="font-size:0.6rem;font-weight:800;color:#4fd9b3;">+15s</span><span style="font-size:0.58rem;color:#5a6a8a;font-weight:600;">${_pwrUps.extraTime}x left</span>
+        <button id="pwr-time" onclick="window.usePwr('extraTime')" class="_pwrbtn" style="flex:1;min-width:65px;padding:8px 6px;border-radius:12px;border:1.5px solid rgba(79,217,179,0.4);background:rgba(79,217,179,0.1);cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:3px;${_pwrUps.extraTime === 0 ? "opacity:0.35;pointer-events:none;" : ""}">
+          <span style="font-size:1.2rem;">⏰</span><span style="font-size:0.6rem;font-weight:800;color:#4fd9b3;">Time Warp</span><span style="font-size:0.58rem;color:#5a6a8a;font-weight:600;">${_pwrUps.extraTime}x left</span>
         </button>
-        <button id="pwr-skip" onclick="window.usePwr('skip')" class="_pwrbtn" style="flex:1;min-width:70px;padding:8px 6px;border-radius:12px;border:1.5px solid rgba(155,109,255,0.4);background:rgba(155,109,255,0.1);cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:3px;${_pwrUps.skip === 0 ? "opacity:0.35;pointer-events:none;" : ""}">
-          <span style="font-size:1.2rem;">⏭</span><span style="font-size:0.6rem;font-weight:800;color:#9b6dff;">Skip</span><span style="font-size:0.58rem;color:#5a6a8a;font-weight:600;">${_pwrUps.skip}x left</span>
+        <button id="pwr-skip" onclick="window.usePwr('skip')" class="_pwrbtn" style="flex:1;min-width:65px;padding:8px 6px;border-radius:12px;border:1.5px solid rgba(155,109,255,0.4);background:rgba(155,109,255,0.1);cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:3px;${_pwrUps.skip === 0 ? "opacity:0.35;pointer-events:none;" : ""}">
+          <span style="font-size:1.2rem;">🔮</span><span style="font-size:0.6rem;font-weight:800;color:#9b6dff;">Oracle</span><span style="font-size:0.58rem;color:#5a6a8a;font-weight:600;">${_pwrUps.skip}x left</span>
         </button>
-        <button id="pwr-shield" onclick="window.usePwr('shield')" class="_pwrbtn" style="flex:1;min-width:70px;padding:8px 6px;border-radius:12px;border:1.5px solid rgba(247,113,79,0.4);background:${_pwrShieldActive ? "rgba(247,113,79,0.25)" : "rgba(247,113,79,0.1)"};cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:3px;${_pwrUps.shield === 0 && !_pwrShieldActive ? "opacity:0.35;pointer-events:none;" : ""}">
-          <span style="font-size:1.2rem;">🛡️</span><span style="font-size:0.6rem;font-weight:800;color:#f7714f;">Shield</span><span style="font-size:0.58rem;color:#5a6a8a;font-weight:600;">${_pwrShieldActive ? "ACTIVE" : _pwrUps.shield + "x left"}</span>
+        <button id="pwr-shield" onclick="window.usePwr('shield')" class="_pwrbtn" style="flex:1;min-width:65px;padding:8px 6px;border-radius:12px;border:1.5px solid rgba(247,113,79,0.4);background:${_pwrShieldActive ? "rgba(247,113,79,0.25)" : "rgba(247,113,79,0.1)"};cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:3px;${_pwrUps.shield === 0 && !_pwrShieldActive ? "opacity:0.35;pointer-events:none;" : ""}">
+          <span style="font-size:1.2rem;">🧭</span><span style="font-size:0.6rem;font-weight:800;color:#f7714f;">Compass</span><span style="font-size:0.58rem;color:#5a6a8a;font-weight:600;">${_pwrShieldActive ? "ACTIVE" : _pwrUps.shield + "x left"}</span>
+        </button>
+        <button onclick="window.openGemShop()" style="padding:8px 10px;border-radius:12px;border:1.5px solid rgba(150,120,255,0.5);background:rgba(150,120,255,0.12);cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:3px;">
+          <span style="font-size:1.2rem;">💎</span><span style="font-size:0.6rem;font-weight:800;color:#c084fc;">Shop</span><span id="gem-shop-count" style="font-size:0.58rem;color:#5a6a8a;font-weight:600;">${S.gems || 0} gems</span>
         </button>
       </div>
       <div id="pwr-toast" style="height:28px;"></div>
@@ -4210,7 +4225,7 @@ window.submitCrAnswer = async (qIndex, chosen) => {
   // Deactivate shield after use on this answer
   if (hadShield) {
     _pwrShieldActive = false;
-    showPwrToast("🛡️ Shield absorbed any penalty!", "#f7714f");
+    showPwrToast("🧭 Compass absorbed any penalty!", "#f7714f");
   }
   if (answered < total) {
     fb.innerHTML = `<button onclick="goNextCrQ()" class="btn btn-primary" style="width:100%;padding:13px;font-size:0.95rem;background:linear-gradient(135deg,#4f8ef7,#9b6dff);border:none">Next Question →</button>`;
@@ -6685,6 +6700,24 @@ function renderLeaderboard() {
   allPlayers.forEach((p, i) => {
     if (p.isMe) myRank = i + 1;
   });
+  // Award gems for top-3 finish (once per week per rank)
+  if (myRank >= 1 && myRank <= 3) {
+    const weekKey = `gem_league_${new Date().toISOString().slice(0, 10).slice(0, 7)}_r${myRank}`;
+    if (!localStorage.getItem(weekKey)) {
+      localStorage.setItem(weekKey, "1");
+      const gemReward = 4 - myRank; // rank1=3, rank2=2, rank3=1
+      S.gems = (S.gems || 0) + gemReward;
+      saveState();
+      updateHeader();
+      setTimeout(
+        () =>
+          showXPFloat(
+            `💎 +${gemReward} Gem${gemReward > 1 ? "s" : ""}! Top ${myRank}!`,
+          ),
+        600,
+      );
+    }
+  }
   const top3 = players.slice(0, 3);
   const crowns = ["👑", "🥈", "🥉"];
   const avatars = ["🎯", "⭐", "🌟", "💫", "✨", "🌙", "☀️", "🔥", "⚡", "🎖"];
@@ -9240,6 +9273,133 @@ function showPwrToast(msg, color) {
   document.head.appendChild(s);
 })();
 
+// ── Gem Shop for Classroom Powerups ──
+const _GEM_SHOP = [
+  {
+    id: "fiftyFifty",
+    name: "Eliminator",
+    emoji: "⚡",
+    desc: "Remove 2 wrong options from MCQ",
+    cost: 2,
+    color: "#f7c74f",
+  },
+  {
+    id: "extraTime",
+    name: "Time Warp",
+    emoji: "⏰",
+    desc: "+15 seconds on the timer",
+    cost: 1,
+    color: "#4fd9b3",
+  },
+  {
+    id: "shield",
+    name: "Compass",
+    emoji: "🧭",
+    desc: "Hint toward the correct answer",
+    cost: 3,
+    color: "#f7714f",
+  },
+  {
+    id: "skip",
+    name: "Oracle",
+    emoji: "🔮",
+    desc: "Skip & reveal answer + explanation",
+    cost: 5,
+    color: "#9b6dff",
+  },
+];
+
+window.openGemShop = function () {
+  const existing = document.getElementById("_gem-shop-overlay");
+  if (existing) {
+    existing.remove();
+    return;
+  }
+  const overlay = document.createElement("div");
+  overlay.id = "_gem-shop-overlay";
+  overlay.style.cssText =
+    "position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px)";
+  overlay.innerHTML = `
+    <div style="width:100%;max-width:480px;background:#0f1623;border-radius:24px 24px 0 0;padding:24px 20px 32px;border-top:1px solid rgba(255,255,255,0.1);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <div style="font-size:1.1rem;font-weight:900;color:#fff">💎 Gem Shop <span style="font-size:0.8rem;color:#c084fc;font-weight:700">${S.gems || 0} gems</span></div>
+        <button onclick="document.getElementById('_gem-shop-overlay').remove()" style="background:rgba(255,255,255,0.08);border:none;color:#fff;border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;font-family:inherit">×</button>
+      </div>
+      <div style="font-size:0.72rem;color:#5a6a8a;margin-bottom:16px">Earn gems: 10 correct answers = 1 💎 · Top 3 league = 3 💎 · Complete weekly mission = 2 💎</div>
+      <div style="display:flex;flex-direction:column;gap:10px" id="_gs-items">
+        ${_GEM_SHOP
+          .map(
+            (p) => `
+          <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;border:1.5px solid ${p.color}33;background:${p.color}0d">
+            <span style="font-size:1.8rem">${p.emoji}</span>
+            <div style="flex:1">
+              <div style="font-size:0.9rem;font-weight:900;color:#fff">${p.name}</div>
+              <div style="font-size:0.72rem;color:#5a6a8a">${p.desc}</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:0.7rem;color:#c084fc;font-weight:800;margin-bottom:4px">${p.cost} 💎</div>
+              <button onclick="window.buyPwr('${p.id}',${p.cost})" id="gs-buy-${p.id}" style="padding:5px 12px;border-radius:8px;border:none;background:${(S.gems || 0) >= p.cost ? p.color : "rgba(255,255,255,0.07)"};color:${(S.gems || 0) >= p.cost ? "#000" : "#5a6a8a"};font-size:0.72rem;font-weight:800;cursor:${(S.gems || 0) >= p.cost ? "pointer" : "not-allowed"};font-family:inherit;transition:all .2s">${(S.gems || 0) >= p.cost ? "Buy" : "Need " + p.cost + "💎"}</button>
+            </div>
+          </div>`,
+          )
+          .join("")}
+      </div>
+    </div>`;
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) overlay.remove();
+  });
+  document.body.appendChild(overlay);
+};
+
+window.buyPwr = function (type, cost) {
+  if ((S.gems || 0) < cost) return;
+  S.gems -= cost;
+  saveState();
+  updateHeader();
+  _pwrUps[type] = (_pwrUps[type] || 0) + 1;
+  // Refresh shop gem count + button states
+  const shopGem = document.querySelector("#_gem-shop-overlay .shopgems");
+  _GEM_SHOP.forEach((p) => {
+    const btn = document.getElementById(`gs-buy-${p.id}`);
+    if (btn) {
+      const canAfford = (S.gems || 0) >= p.cost;
+      btn.style.background = canAfford ? p.color : "rgba(255,255,255,0.07)";
+      btn.style.color = canAfford ? "#000" : "#5a6a8a";
+      btn.style.cursor = canAfford ? "pointer" : "not-allowed";
+      btn.textContent = canAfford ? "Buy" : `Need ${p.cost}💎`;
+    }
+  });
+  // Update gem count in shop header
+  const shopHeader = document.querySelector(
+    "#_gem-shop-overlay div div:first-child",
+  );
+  if (shopHeader)
+    shopHeader.innerHTML = `💎 Gem Shop <span style="font-size:0.8rem;color:#c084fc;font-weight:700">${S.gems || 0} gems</span>`;
+  // Re-enable the powerup button in the game bar
+  const barBtn = document.getElementById(
+    type === "fiftyFifty"
+      ? "pwr-5050"
+      : type === "extraTime"
+        ? "pwr-time"
+        : type === "skip"
+          ? "pwr-skip"
+          : "pwr-shield",
+  );
+  if (barBtn) {
+    barBtn.style.opacity = "1";
+    barBtn.style.pointerEvents = "auto";
+    const last = barBtn.querySelector("span:last-child");
+    if (last) last.textContent = _pwrUps[type] + "x left";
+  }
+  // Update gem count on shop button
+  const shopCountEl = document.getElementById("gem-shop-count");
+  if (shopCountEl) shopCountEl.textContent = (S.gems || 0) + " gems";
+  showPwrToast(
+    `${_GEM_SHOP.find((p) => p.id === type)?.emoji} ${_GEM_SHOP.find((p) => p.id === type)?.name} purchased!`,
+    "#c084fc",
+  );
+};
+
 window.usePwr = function (type) {
   if (_pwrUps[type] <= 0 && !(type === "shield" && _pwrShieldActive)) return;
 
@@ -9260,7 +9420,7 @@ window.usePwr = function (type) {
       }
     });
     _pwrUps.fiftyFifty--;
-    showPwrToast("⚡ 50/50 — two wrong options removed!", "#f7c74f");
+    showPwrToast("⚡ Eliminator — two wrong options removed!", "#f7c74f");
     document
       .getElementById("pwr-5050")
       .querySelector("span:last-child").textContent =
@@ -9281,7 +9441,7 @@ window.usePwr = function (type) {
       }, 1500);
     }
     _pwrUps.extraTime--;
-    showPwrToast("⏰ +15 seconds added!", "#4fd9b3");
+    showPwrToast("⏰ Time Warp — +15 seconds added!", "#4fd9b3");
     document
       .getElementById("pwr-time")
       .querySelector("span:last-child").textContent =
@@ -9294,9 +9454,16 @@ window.usePwr = function (type) {
   } else if (type === "skip") {
     // Auto-submit a SKIP and move to next question
     _pwrUps.skip--;
-    showPwrToast("⏭ Question skipped! No penalty.", "#9b6dff");
+    const skipQ = _crState?.questions?.[_crCurrentQ];
+    const skipAns = skipQ?.answer || "—";
+    const skipExp = skipQ?.explanation || skipQ?.exp || "";
+    showPwrToast("🔮 Oracle activated!", "#9b6dff");
     stopCrTimer();
     _crAnswered[_crCurrentQ] = "SKIP";
+    // Show answer + explanation before advancing
+    const toast = document.getElementById("pwr-toast");
+    if (toast)
+      toast.innerHTML = `<div style="font-size:0.78rem;padding:8px 10px;border-radius:10px;border:1px solid rgba(155,109,255,0.3);background:rgba(155,109,255,0.1);color:#eef2ff;margin-bottom:4px;line-height:1.5"><span style="font-weight:800;color:#9b6dff;">🔮 Oracle: </span><b>Answer: ${escapeHtml(skipAns)}</b>${skipExp ? `<br><span style="color:#a0aec0">${escapeHtml(skipExp)}</span>` : ""}</div>`;
     setTimeout(() => {
       const total = _crState?.questions?.length || 1;
       if (_crCurrentQ + 1 < total) {
@@ -9304,7 +9471,7 @@ window.usePwr = function (type) {
       } else {
         showCrAllDone();
       }
-    }, 800);
+    }, 3000);
     const b = document.getElementById("pwr-skip");
     if (b) {
       b.style.opacity = "0.35";
@@ -9315,7 +9482,7 @@ window.usePwr = function (type) {
     if (_pwrShieldActive) return; // already on
     _pwrShieldActive = true;
     _pwrUps.shield = Math.max(0, _pwrUps.shield - 1);
-    showPwrToast("🛡️ Shield ON — next wrong answer absorbed!", "#f7714f");
+    showPwrToast("🧭 Compass ON — next wrong answer absorbed!", "#f7714f");
     const b = document.getElementById("pwr-shield");
     if (b) {
       b.style.background = "rgba(247,113,79,0.25)";
@@ -9325,11 +9492,14 @@ window.usePwr = function (type) {
   }
 };
 
-window.pracPwr = async function (type, idx) {
+window.pracPwr = async function (type, idx, btn) {
   const q = S.todayPractice?.[idx];
   if (!q) return;
   const hintEl = document.getElementById(`prac-pwr-hint-${idx}`);
   if (!hintEl) return;
+
+  // Prevent double-click
+  if (btn && btn.disabled) return;
 
   // ── XP cost: 20 XP per powerup ──
   const XP_COST = 20;
@@ -9337,16 +9507,17 @@ window.pracPwr = async function (type, idx) {
     hintEl.innerHTML = `<div style="font-size:0.78rem;color:#f7714f;padding:8px 10px;border-radius:10px;border:1px solid rgba(247,113,79,0.2);background:rgba(247,113,79,0.07);">❌ Not enough XP! You need ${XP_COST} XP to use a powerup.</div>`;
     return;
   }
-  // Deduct XP
-  S.xp -= XP_COST;
-  saveState();
-  updateHeader();
 
-  const btn = event.target.closest("button");
+  // Disable btn immediately to prevent re-entry
   if (btn) {
     btn.disabled = true;
     btn.style.opacity = "0.5";
   }
+
+  // Deduct XP
+  S.xp -= XP_COST;
+  saveState();
+  updateHeader();
 
   hintEl.innerHTML = `<div style="font-size:0.78rem;color:#5a6a8a;padding:8px 10px;border-radius:10px;border:1px dashed rgba(255,255,255,0.1);">✨ Using powerup (-${XP_COST} XP)...</div>`;
 
