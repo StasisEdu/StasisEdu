@@ -2155,6 +2155,9 @@ function navigate(page, extra) {
       case "pomodoro":
         renderPomodoro();
         break;
+      case "settings":
+        renderSettings();
+        break;
       case "leagues":
         stopLeagueRefresh();
         renderLeagues().then(() => {
@@ -2991,6 +2994,8 @@ function renderHome() {
             chapter,
             level: getPerf().level,
             language: getLanguage(),
+            marks: window._selectedMarks,
+            depth: window._selectedDepth,
           }
         : {
             question: q,
@@ -2999,12 +3004,19 @@ function renderHome() {
             chapter,
             level: getPerf().level,
             language: getLanguage(),
+            marks: window._selectedMarks,
+            depth: window._selectedDepth,
           };
 
       const data = await apiPost(endpoint, body);
       const steps = data.steps || [];
       const solution = data.solution || "";
       const memoryTrick = data.memoryTrick || "";
+      const nutshell = data.nutshell || "";
+      const keyPoint = data.keyPoint || "";
+      const examTip = data.examTip || "";
+      const commonMistake = data.commonMistake || "";
+      const quickQuiz = data.quickQuiz || null;
 
       window._lastSolution = {
         q: q || "📷 Photo question",
@@ -3016,30 +3028,186 @@ function renderHome() {
         classNum: S.classPreference,
       };
 
-      area.innerHTML = `
-        <div class="glass solution-card slide-up">
-          <div class="flex items-center justify-between mb-3" style="flex-wrap:wrap;gap:6px">
-            ${subjectTag(subject)}
-            ${chapterTag(chapter)}
-            <span class="xp-badge">+20 XP ✨</span>
+      // ── detect marks from question ──
+      const markMatch = (q || "").match(/\b(\d)\s*[-–]?\s*marks?\b/i);
+      const detectedMarks = markMatch ? parseInt(markMatch[1]) : null;
+      // Persist marks/depth across solves; only reset if user hasn't changed them
+      if (window._selectedMarks === undefined)
+        window._selectedMarks = detectedMarks || "auto";
+      if (window._selectedDepth === undefined)
+        window._selectedDepth = "moderate";
+      let _selectedMarks = window._selectedMarks;
+      let _selectedDepth = window._selectedDepth;
+
+      function _buildSolutionHTML() {
+        const depthLabels = ["Simple", "Moderate", "Intermediate", "Advanced"];
+        const markOpts = ["auto", "2M", "3M", "5M"];
+        return `
+        <div class="glass solution-card slide-up" style="padding:0;overflow:hidden;margin-bottom:14px;">
+          <!-- ANSWER FORMAT BAR -->
+          <div style="padding:12px 16px 10px;border-bottom:1px solid rgba(255,255,255,0.07);background:rgba(255,255,255,0.02)">
+            <div style="font-size:0.6rem;font-weight:900;letter-spacing:0.1em;color:var(--text-muted);text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:6px">🎓 Answer Format</div>
+            <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                <span style="font-size:0.65rem;font-weight:700;color:var(--text-muted);text-transform:uppercase">Marks</span>
+                ${markOpts.map((m) => `<button onclick="window._solveSetMarks('${m}')" id="sm-${m}" style="padding:3px 10px;border-radius:20px;font-size:0.7rem;font-weight:800;border:1.5px solid ${_selectedMarks == m ? "#4f8ef7" : "rgba(255,255,255,0.15)"};background:${_selectedMarks == m ? "rgba(79,142,247,0.18)" : "transparent"};color:${_selectedMarks == m ? "#4f8ef7" : "var(--text-muted)"};cursor:pointer;font-family:inherit;transition:all .15s">${m === "auto" ? "Auto-" + (detectedMarks || 2) + "M" : m}</button>`).join("")}
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                <span style="font-size:0.65rem;font-weight:700;color:var(--text-muted);text-transform:uppercase">Depth</span>
+                ${depthLabels.map((d) => `<button onclick="window._solveSetDepth('${d.toLowerCase()}')" id="sd-${d.toLowerCase()}" style="padding:3px 10px;border-radius:20px;font-size:0.7rem;font-weight:800;border:1.5px solid ${_selectedDepth === d.toLowerCase() ? "#4f8ef7" : "rgba(255,255,255,0.15)"};background:${_selectedDepth === d.toLowerCase() ? "rgba(79,142,247,0.18)" : "transparent"};color:${_selectedDepth === d.toLowerCase() ? "#4f8ef7" : "var(--text-muted)"};cursor:pointer;font-family:inherit;transition:all .15s">${d}</button>`).join("")}
+              </div>
+            </div>
           </div>
+
+          <!-- EXAM-READY ANSWER -->
+          <div style="padding:16px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+              <div style="font-size:0.88rem;font-weight:900;color:#fff;display:flex;align-items:center;gap:7px">🎓 Exam-Ready Answer</div>
+              <div style="display:flex;gap:8px">
+                <button onclick="saveAnswer()" id="saveAnswerBtn" title="Save" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:5px 8px;cursor:pointer;font-size:0.8rem;color:var(--text-muted)">🔖</button>
+                <button onclick="navigator.clipboard&&navigator.clipboard.writeText(document.getElementById('_solve-main-text')?.innerText||'')" title="Copy" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:5px 8px;cursor:pointer;font-size:0.8rem;color:var(--text-muted)">📋</button>
+              </div>
+            </div>
+            <div id="_solve-main-text" style="font-size:0.9rem;line-height:1.75;color:var(--text)">
+              ${
+                steps.length > 0
+                  ? steps
+                      .map(
+                        (s, i) =>
+                          `<div class="solution-step"><div class="step-num">${i + 1}</div><div class="step-text">${renderStep(s)}</div></div>`,
+                      )
+                      .join("")
+                  : `<div>${escapeHtml(solution)}</div>`
+              }
+            </div>
+          </div>
+
+          <!-- IN A NUTSHELL -->
           ${
-            steps.length > 0
-              ? steps
-                  .map(
-                    (step, i) =>
-                      `<div class="solution-step"><div class="step-num">${i + 1}</div><div class="step-text">${renderStep(step)}</div></div>`,
-                  )
-                  .join("")
-              : `<div style="line-height:1.7;font-size:0.9rem">${escapeHtml(solution)}</div>`
+            nutshell
+              ? `
+          <div style="margin:0 16px 16px;padding:12px 14px;border-radius:12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);display:flex;gap:10px;align-items:flex-start">
+            <span style="font-size:1.2rem;margin-top:1px">⚙️</span>
+            <div>
+              <div style="font-size:0.6rem;font-weight:900;letter-spacing:0.1em;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px">In a Nutshell</div>
+              <div style="font-size:0.82rem;line-height:1.6;color:var(--text-secondary)">${escapeHtml(nutshell)}</div>
+            </div>
+          </div>`
+              : ""
           }
-          ${memoryTrick ? `<div class="glass" style="margin-top:14px;padding:12px 14px;border-left:3px solid var(--purple);background:rgba(139,92,246,0.08)"><span style="font-size:1rem">🧠</span><span style="font-size:0.85rem;color:var(--text-muted);margin-left:6px;font-style:italic">${escapeHtml(memoryTrick)}</span></div>` : ""}
-          <div class="flex gap-2 mt-4" style="flex-wrap:wrap">
-            <button class="btn btn-secondary btn-sm" id="saveAnswerBtn" onclick="saveAnswer()">${t("save_answer")}</button>
-            <button class="btn btn-secondary btn-sm" onclick="document.getElementById('questionInput').value='';document.getElementById('solutionArea').innerHTML='';document.getElementById('charCount').textContent='0';window.removeImage&&removeImage()">${t("ask_another")}</button>
+
+          <!-- 4 INFO CARDS -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 16px 16px;">
+            ${keyPoint ? `<div style="padding:10px 12px;border-radius:12px;background:rgba(79,142,247,0.07);border:1px solid rgba(79,142,247,0.18)"><div style="font-size:0.6rem;font-weight:900;color:#4f8ef7;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Key Concept</div><div style="font-size:0.78rem;color:var(--text-secondary);line-height:1.5">${escapeHtml(keyPoint)}</div></div>` : ""}
+            ${examTip ? `<div style="padding:10px 12px;border-radius:12px;background:rgba(240,180,41,0.07);border:1px solid rgba(240,180,41,0.18)"><div style="font-size:0.6rem;font-weight:900;color:#f0b429;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Exam Tip</div><div style="font-size:0.78rem;color:var(--text-secondary);line-height:1.5">${escapeHtml(examTip)}</div></div>` : ""}
+            ${commonMistake ? `<div style="padding:10px 12px;border-radius:12px;background:rgba(247,113,79,0.07);border:1px solid rgba(247,113,79,0.18)"><div style="font-size:0.6rem;font-weight:900;color:#f7714f;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Common Mistake</div><div style="font-size:0.78rem;color:var(--text-secondary);line-height:1.5">${escapeHtml(commonMistake)}</div></div>` : ""}
+            ${memoryTrick ? `<div style="padding:10px 12px;border-radius:12px;background:rgba(15,202,140,0.07);border:1px solid rgba(15,202,140,0.18)"><div style="font-size:0.6rem;font-weight:900;color:#0fca8c;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Memory Trick</div><div style="font-size:0.78rem;color:var(--text-secondary);line-height:1.5">${escapeHtml(memoryTrick)}</div></div>` : ""}
+          </div>
+
+          <!-- ASK MORE CHIPS -->
+          <div style="padding:0 16px 14px">
+            <div style="font-size:0.6rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:7px">Ask More</div>
+            <div style="display:flex;gap:7px;flex-wrap:wrap">
+              ${["Simpler explanation", "Real-life example", "Common mistakes", "Exam questions"].map((chip) => `<button onclick="window._solveAskMore('${chip}')" style="padding:5px 12px;border-radius:20px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.04);color:var(--text-muted);font-size:0.72rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s" onmouseover="this.style.borderColor='rgba(79,142,247,0.5)';this.style.color='#4f8ef7'" onmouseout="this.style.borderColor='rgba(255,255,255,0.15)';this.style.color='var(--text-muted)'">${chip}</button>`).join("")}
+            </div>
           </div>
         </div>
-      `;
+
+        <!-- STEP BY STEP -->
+        ${
+          steps.length > 0
+            ? `
+        <div class="glass solution-card slide-up" style="margin-bottom:14px;">
+          <div style="font-size:0.88rem;font-weight:900;color:#fff;margin-bottom:14px">Step-by-Step Breakdown</div>
+          ${steps.map((s, i) => `<div style="display:flex;gap:12px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05)"><div style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,0.07);border:1.5px solid rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:900;color:var(--text-muted);flex-shrink:0">${i + 1}</div><div style="font-size:0.85rem;line-height:1.65;color:var(--text-secondary);padding-top:3px">${renderStep(s)}</div></div>`).join("")}
+        </div>`
+            : ""
+        }
+
+        <!-- QUICK QUIZ -->
+        ${
+          quickQuiz
+            ? `
+        <div class="glass solution-card slide-up" style="margin-bottom:14px;" id="_qq-card">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+            <span style="font-size:0.88rem;font-weight:900;color:#fff">Quick Quiz</span>
+            <span style="padding:2px 9px;border-radius:20px;background:rgba(79,142,247,0.18);border:1px solid rgba(79,142,247,0.3);font-size:0.65rem;font-weight:800;color:#4f8ef7">+50 XP</span>
+          </div>
+          <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:14px">Test your understanding</div>
+          <div style="font-size:0.88rem;font-weight:600;color:var(--text);margin-bottom:12px">${escapeHtml(quickQuiz.question)}</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            ${(quickQuiz.options || []).map((opt, i) => `<button onclick="window._qqAnswer('${opt[0]}')" id="_qq-opt-${opt[0]}" style="text-align:left;padding:11px 14px;border-radius:10px;border:1.5px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.03);color:var(--text);font-size:0.83rem;cursor:pointer;font-family:inherit;transition:all .2s">${escapeHtml(opt)}</button>`).join("")}
+          </div>
+          <div id="_qq-result" style="margin-top:10px;font-size:0.8rem;"></div>
+        </div>`
+            : ""
+        }
+
+        <!-- ACTIONS -->
+        <div class="flex gap-2" style="flex-wrap:wrap;margin-bottom:8px">
+          <button class="btn btn-secondary btn-sm" onclick="document.getElementById('questionInput').value='';document.getElementById('solutionArea').innerHTML='';document.getElementById('charCount').textContent='0';window.removeImage&&removeImage()">${t("ask_another")}</button>
+        </div>
+        `;
+      }
+
+      area.innerHTML = _buildSolutionHTML();
+
+      // ── Quick Quiz answer handler ──
+      window._qqAnswer = function (chosen) {
+        const correct = quickQuiz?.answer;
+        const opts = document.querySelectorAll('[id^="_qq-opt-"]');
+        opts.forEach((btn) => {
+          btn.disabled = true;
+          const letter = btn.id.slice(-1);
+          if (letter === correct)
+            ((btn.style.background = "rgba(15,202,140,0.18)"),
+              (btn.style.borderColor = "#0fca8c"),
+              (btn.style.color = "#0fca8c"));
+          else if (letter === chosen)
+            ((btn.style.background = "rgba(247,113,79,0.15)"),
+              (btn.style.borderColor = "#f7714f"),
+              (btn.style.color = "#f7714f"));
+        });
+        const res = document.getElementById("_qq-result");
+        if (res) {
+          const isCorrect = chosen === correct;
+          res.innerHTML = `<div style="padding:8px 12px;border-radius:10px;background:${isCorrect ? "rgba(15,202,140,0.1)" : "rgba(247,113,79,0.1)"};border:1px solid ${isCorrect ? "rgba(15,202,140,0.3)" : "rgba(247,113,79,0.3)"}"><span style="font-weight:800;color:${isCorrect ? "#0fca8c" : "#f7714f"}">${isCorrect ? "✅ Correct!" : "❌ Incorrect"}</span> ${escapeHtml(quickQuiz?.explanation || "")}</div>`;
+          if (isCorrect) {
+            addXP(50, "quickquiz");
+            awardGemForCorrect();
+          }
+        }
+      };
+
+      // ── Ask More chip handler ──
+      window._solveAskMore = async function (chip) {
+        const moreArea = document.getElementById("solutionArea");
+        const followUp = chip + " for: " + (q || solution);
+        document.getElementById("questionInput").value = followUp;
+        solveQuestion();
+      };
+
+      // ── Marks / Depth toggle (cosmetic — re-request on change) ──
+      window._solveSetMarks = function (m) {
+        _selectedMarks = m;
+        window._selectedMarks = m;
+        document.querySelectorAll('[id^="sm-"]').forEach((b) => {
+          const active = b.id === "sm-" + m;
+          b.style.borderColor = active ? "#4f8ef7" : "rgba(255,255,255,0.15)";
+          b.style.background = active ? "rgba(79,142,247,0.18)" : "transparent";
+          b.style.color = active ? "#4f8ef7" : "var(--text-muted)";
+        });
+      };
+      window._solveSetDepth = function (d) {
+        _selectedDepth = d;
+        window._selectedDepth = d;
+        document.querySelectorAll('[id^="sd-"]').forEach((b) => {
+          const active = b.id === "sd-" + d;
+          b.style.borderColor = active ? "#4f8ef7" : "rgba(255,255,255,0.15)";
+          b.style.background = active ? "rgba(79,142,247,0.18)" : "transparent";
+          b.style.color = active ? "#4f8ef7" : "var(--text-muted)";
+        });
+      };
 
       S.totalSolved += 1;
       S.sessionSolves += 1;
@@ -5000,6 +5168,84 @@ function renderRevisionSchedule() {
       </div>
     </div>
 
+    <!-- STEP 4: Study Filter -->
+    <div style="background:rgba(240,180,41,0.07);border:1.5px solid rgba(240,180,41,0.2);border-radius:16px;padding:16px;margin-bottom:20px">
+      <div style="font-size:0.68rem;font-weight:900;letter-spacing:0.1em;color:#f0b429;text-transform:uppercase;margin-bottom:12px">🎯 Step 4 — Question Scope <span style="font-size:0.65rem;font-weight:600;color:var(--text-muted);text-transform:none;letter-spacing:0">(optional — shapes what the AI prioritises)</span></div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+
+        <div>
+          <div style="font-size:0.72rem;font-weight:700;color:var(--text-muted);margin-bottom:7px">Difficulty focus</div>
+          <div style="display:flex;gap:7px;flex-wrap:wrap" id="rs-diff">
+            ${["All", "Easy", "Medium", "Hard"].map((d, i) => `<button data-v="${d.toLowerCase()}" onclick="rsChip('rs-diff',this,'#f0b429')" style="padding:5px 13px;border-radius:20px;border:1.5px solid ${i === 0 ? "rgba(240,180,41,0.6)" : "rgba(255,255,255,0.1)"};background:${i === 0 ? "rgba(240,180,41,0.13)" : "transparent"};color:${i === 0 ? "#f0b429" : "var(--text-muted)"};font-size:0.72rem;font-weight:800;cursor:pointer;font-family:inherit;transition:all .15s" ${i === 0 ? 'data-active="true"' : ""}>${d}</button>`).join("")}
+          </div>
+        </div>
+
+        <div>
+          <div style="font-size:0.72rem;font-weight:700;color:var(--text-muted);margin-bottom:7px">Question type</div>
+          <div style="display:flex;gap:7px;flex-wrap:wrap" id="rs-qtype">
+            ${["All", "MCQ", "Short Ans", "Long Ans", "A&R", "Case-based"].map((d, i) => `<button data-v="${d.toLowerCase().replace(/ /g, "-")}" onclick="rsChip('rs-qtype',this,'#f0b429')" style="padding:5px 13px;border-radius:20px;border:1.5px solid ${i === 0 ? "rgba(240,180,41,0.6)" : "rgba(255,255,255,0.1)"};background:${i === 0 ? "rgba(240,180,41,0.13)" : "transparent"};color:${i === 0 ? "#f0b429" : "var(--text-muted)"};font-size:0.72rem;font-weight:800;cursor:pointer;font-family:inherit;transition:all .15s" ${i === 0 ? 'data-active="true"' : ""}>${d}</button>`).join("")}
+          </div>
+        </div>
+
+        <div>
+          <div style="font-size:0.72rem;font-weight:700;color:var(--text-muted);margin-bottom:7px">Marks per question</div>
+          <div style="display:flex;gap:7px;flex-wrap:wrap" id="rs-marks">
+            ${["All", "1M", "2M", "3M", "5M"].map((d, i) => `<button data-v="${d.toLowerCase()}" onclick="rsChip('rs-marks',this,'#f0b429')" style="padding:5px 13px;border-radius:20px;border:1.5px solid ${i === 0 ? "rgba(240,180,41,0.6)" : "rgba(255,255,255,0.1)"};background:${i === 0 ? "rgba(240,180,41,0.13)" : "transparent"};color:${i === 0 ? "#f0b429" : "var(--text-muted)"};font-size:0.72rem;font-weight:800;cursor:pointer;font-family:inherit;transition:all .15s" ${i === 0 ? 'data-active="true"' : ""}>${d}</button>`).join("")}
+          </div>
+        </div>
+
+        <div>
+          <div style="font-size:0.72rem;font-weight:700;color:var(--text-muted);margin-bottom:7px">Exam type</div>
+          <div style="display:flex;gap:7px;flex-wrap:wrap" id="rs-examtype">
+            ${["All", "Board", "School Test", "Mock", "Practice"].map((d, i) => `<button data-v="${d.toLowerCase().replace(/ /g, "-")}" onclick="rsChip('rs-examtype',this,'#f0b429')" style="padding:5px 13px;border-radius:20px;border:1.5px solid ${i === 0 ? "rgba(240,180,41,0.6)" : "rgba(255,255,255,0.1)"};background:${i === 0 ? "rgba(240,180,41,0.13)" : "transparent"};color:${i === 0 ? "#f0b429" : "var(--text-muted)"};font-size:0.72rem;font-weight:800;cursor:pointer;font-family:inherit;transition:all .15s" ${i === 0 ? 'data-active="true"' : ""}>${d}</button>`).join("")}
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div>
+            <div style="font-size:0.72rem;font-weight:700;color:var(--text-muted);margin-bottom:5px">Board</div>
+            <select id="rs-board" style="width:100%;padding:7px 10px;border-radius:9px;border:1px solid rgba(255,255,255,0.12);background:rgba(30,30,50,0.9);color:var(--text);font-size:0.8rem;font-weight:600;font-family:inherit">
+              <option value="CBSE">CBSE</option>
+              <option value="ICSE">ICSE</option>
+              <option value="State">State Board</option>
+            </select>
+          </div>
+          <div>
+            <div style="font-size:0.72rem;font-weight:700;color:var(--text-muted);margin-bottom:5px">Language</div>
+            <select id="rs-lang" style="width:100%;padding:7px 10px;border-radius:9px;border:1px solid rgba(255,255,255,0.12);background:rgba(30,30,50,0.9);color:var(--text);font-size:0.8rem;font-weight:600;font-family:inherit">
+              <option value="all">Both</option>
+              <option value="en">English</option>
+              <option value="hi">Hindi</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <div style="font-size:0.72rem;font-weight:700;color:var(--text-muted);margin-bottom:7px">PYQ year range</div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <input type="number" id="rs-year-from" value="2018" min="2010" max="2025" style="width:80px;padding:6px 10px;border-radius:9px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);color:var(--text);font-size:0.82rem;font-weight:700;font-family:inherit;text-align:center">
+            <span style="color:var(--text-muted);font-size:0.8rem">to</span>
+            <input type="number" id="rs-year-to" value="2025" min="2010" max="2025" style="width:80px;padding:6px 10px;border-radius:9px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);color:var(--text);font-size:0.82rem;font-weight:700;font-family:inherit;text-align:center">
+          </div>
+        </div>
+
+        <div>
+          <div style="font-size:0.72rem;font-weight:700;color:var(--text-muted);margin-bottom:7px">Chapter priority</div>
+          <div style="display:flex;gap:7px;flex-wrap:wrap" id="rs-chaprio">
+            ${["Balanced", "Weak first", "Strong first", "Exam-weight"].map((d, i) => `<button data-v="${d.toLowerCase().replace(/ /g, "-")}" onclick="rsChip('rs-chaprio',this,'#f0b429')" style="padding:5px 13px;border-radius:20px;border:1.5px solid ${i === 0 ? "rgba(240,180,41,0.6)" : "rgba(255,255,255,0.1)"};background:${i === 0 ? "rgba(240,180,41,0.13)" : "transparent"};color:${i === 0 ? "#f0b429" : "var(--text-muted)"};font-size:0.72rem;font-weight:800;cursor:pointer;font-family:inherit;transition:all .15s" ${i === 0 ? 'data-active="true"' : ""}>${d}</button>`).join("")}
+          </div>
+        </div>
+
+        <div>
+          <div style="font-size:0.72rem;font-weight:700;color:var(--text-muted);margin-bottom:7px">Session style</div>
+          <div style="display:flex;gap:7px;flex-wrap:wrap" id="rs-style">
+            ${["Mixed", "One subject/day", "One chapter/session", "Interleaved"].map((d, i) => `<button data-v="${d.toLowerCase().replace(/ /g, "-")}" onclick="rsChip('rs-style',this,'#f0b429')" style="padding:5px 13px;border-radius:20px;border:1.5px solid ${i === 0 ? "rgba(240,180,41,0.6)" : "rgba(255,255,255,0.1)"};background:${i === 0 ? "rgba(240,180,41,0.13)" : "transparent"};color:${i === 0 ? "#f0b429" : "var(--text-muted)"};font-size:0.72rem;font-weight:800;cursor:pointer;font-family:inherit;transition:all .15s" ${i === 0 ? 'data-active="true"' : ""}>${d}</button>`).join("")}
+          </div>
+        </div>
+
+      </div>
+    </div>
+
     <button onclick="generateRevisionSchedule()" class="btn btn-primary" style="width:100%;padding:14px;font-size:1rem;font-weight:900;background:linear-gradient(135deg,#06b6d4,#4f8ef7);border:none;box-shadow:0 4px 20px rgba(6,182,212,0.4)">Generate My Plan →</button>
     <div id="rs-err" style="color:var(--red);font-size:0.82rem;margin-top:10px;text-align:center"></div>
   `;
@@ -5039,6 +5285,22 @@ function renderRevisionSchedule() {
       btn.querySelector("span:last-child").style.color = "#9b6dff";
       btn.querySelector("span:last-child").textContent = "✓ ON";
     }
+  };
+  // Chip selector for study filter rows
+  window.rsChip = (groupId, btn, color) => {
+    const group = document.getElementById(groupId);
+    if (!group) return;
+    group.querySelectorAll("button").forEach((b) => {
+      const active = b === btn;
+      b.dataset.active = active ? "true" : "false";
+      b.style.borderColor = active
+        ? color.replace(")", ",0.6)").replace("rgb", "rgba")
+        : "rgba(255,255,255,0.1)";
+      b.style.background = active
+        ? color.replace(")", ",0.13)").replace("rgb", "rgba")
+        : "transparent";
+      b.style.color = active ? color : "var(--text-muted)";
+    });
   };
 }
 
@@ -5085,6 +5347,23 @@ window.generateRevisionSchedule = async () => {
     subjects.forEach((s) => {
       chapterMap[s] = getChapters(classNum, s);
     });
+    // Read study filter values
+    const getChip = (id) => {
+      const a = document.querySelector(`#${id} [data-active="true"]`);
+      return a ? a.dataset.v : "all";
+    };
+    const studyFilter = {
+      difficulty: getChip("rs-diff"),
+      questionType: getChip("rs-qtype"),
+      marks: getChip("rs-marks"),
+      examType: getChip("rs-examtype"),
+      board: document.getElementById("rs-board")?.value || "CBSE",
+      language: document.getElementById("rs-lang")?.value || "all",
+      yearFrom: Number(document.getElementById("rs-year-from")?.value || 2018),
+      yearTo: Number(document.getElementById("rs-year-to")?.value || 2025),
+      chapterPriority: getChip("rs-chaprio"),
+      sessionStyle: getChip("rs-style"),
+    };
     const data = await apiPost("/revision-schedule", {
       classNum,
       subjects,
@@ -5097,6 +5376,7 @@ window.generateRevisionSchedule = async () => {
       schoolEnd,
       studySlots: slots,
       chapterMap,
+      studyFilter,
     });
     S.revisionSchedule = {
       ...data,
@@ -10946,3 +11226,428 @@ function renderPomodoro() {
   render();
 }
 window.renderPomodoro = renderPomodoro;
+// ============================================================
+// SETTINGS PAGE
+// ============================================================
+function renderSettings() {
+  const app = document.getElementById("app");
+
+  // Defaults for settings keys
+  const cfg = {
+    pomodoroFocus: S.pomodoroFocus ?? 25,
+    pomodoroShort: S.pomodoroShort ?? 5,
+    pomodoroLong: S.pomodoroLong ?? 15,
+    pomodoroLongAfter: S.pomodoroLongAfter ?? 4,
+    autoStartBreaks: S.autoStartBreaks ?? false,
+    autoStartFocus: S.autoStartFocus ?? false,
+    dailyGoal: S.dailyGoal ?? 120,
+    weeklyGoal: S.weeklyGoal ?? 600,
+    sessionSound: S.sessionSound ?? true,
+    soundVolume: S.soundVolume ?? 70,
+    ambientVolume: S.ambientVolume ?? 30,
+    // Study filter
+    filterDifficulty: S.filterDifficulty ?? "all", // easy|medium|hard|all
+    filterType: S.filterType ?? "all", // mcq|short|long|all
+    filterSubject: S.filterSubject ?? "all",
+    filterChapter: S.filterChapter ?? "all",
+    filterMarks: S.filterMarks ?? "all", // 1|2|3|5|all
+    filterYearFrom: S.filterYearFrom ?? 2018,
+    filterYearTo: S.filterYearTo ?? 2025,
+    filterBoard: S.filterBoard ?? "CBSE",
+    filterExamType: S.filterExamType ?? "all", // board|school|practice|all
+    filterLanguage: S.filterLanguage ?? "all",
+    // Eye comfort
+    eyeBrightness: S.eyeBrightness ?? 100,
+    eyeWarmth: S.eyeWarmth ?? 0,
+    eyeContrast: S.eyeContrast ?? 100,
+    eyeBlueLight: S.eyeBlueLight ?? false,
+    eyeAutoNight: S.eyeAutoNight ?? false,
+  };
+
+  const subjects = [
+    "all",
+    "Maths",
+    "Science",
+    "Social Science",
+    "English",
+    "Hindi",
+  ];
+  const theme = localStorage.getItem("stasis_theme") || "dark";
+
+  function sect(icon, title, content) {
+    return `<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:18px;padding:20px;margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:9px;margin-bottom:18px">
+        <span style="font-size:1.1rem">${icon}</span>
+        <span style="font-size:0.85rem;font-weight:900;letter-spacing:.06em;color:var(--text);text-transform:uppercase">${title}</span>
+      </div>
+      ${content}
+    </div>`;
+  }
+
+  function row(label, sub, control) {
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05)">
+      <div>
+        <div style="font-size:0.83rem;font-weight:600;color:var(--text)">${label}</div>
+        ${sub ? `<div style="font-size:0.72rem;color:var(--text-muted);margin-top:2px">${sub}</div>` : ""}
+      </div>
+      ${control}
+    </div>`;
+  }
+
+  function numInput(id, val, min, max) {
+    return `<input id="s_${id}" type="number" value="${val}" min="${min}" max="${max}" style="width:70px;padding:6px 10px;border-radius:9px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);color:var(--text);font-size:0.85rem;font-weight:700;font-family:inherit;text-align:center">`;
+  }
+
+  function toggle(id, val) {
+    return `<label style="position:relative;display:inline-block;width:42px;height:24px;cursor:pointer">
+      <input type="checkbox" id="s_${id}" ${val ? "checked" : ""} onchange="window._sCfg('${id}',this.checked)" style="opacity:0;width:0;height:0">
+      <span style="position:absolute;inset:0;border-radius:24px;background:${val ? "#4f8ef7" : "rgba(255,255,255,0.12)"};transition:.2s" id="s_${id}_track">
+        <span style="position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;top:3px;left:${val ? "21px" : "3px"};transition:.2s"></span>
+      </span>
+    </label>`;
+  }
+
+  function chip(id, opts, val) {
+    return `<div style="display:flex;gap:6px;flex-wrap:wrap">${opts.map((o) => `<button onclick="window._sChip('${id}','${o.v}')" id="s_chip_${id}_${o.v}" style="padding:4px 12px;border-radius:20px;border:1.5px solid ${val === o.v ? "#4f8ef7" : "rgba(255,255,255,0.12)"};background:${val === o.v ? "rgba(79,142,247,0.15)" : "transparent"};color:${val === o.v ? "#4f8ef7" : "var(--text-muted)"};font-size:0.72rem;font-weight:800;cursor:pointer;font-family:inherit;transition:all .15s">${o.l}</button>`).join("")}</div>`;
+  }
+
+  function slider(id, val, min, max, unit) {
+    return `<div style="display:flex;align-items:center;gap:10px">
+      <input type="range" id="s_${id}" min="${min}" max="${max}" value="${val}" oninput="window._sSlider('${id}',this.value)" style="width:120px;accent-color:#4f8ef7">
+      <span id="s_${id}_lbl" style="font-size:0.78rem;font-weight:700;color:var(--text);min-width:36px">${val}${unit}</span>
+    </div>`;
+  }
+
+  function sel(id, opts, val) {
+    return `<select id="s_${id}" onchange="window._sCfg('${id}',this.value)" style="padding:6px 10px;border-radius:9px;border:1px solid rgba(255,255,255,0.12);background:rgba(30,30,50,0.9);color:var(--text);font-size:0.8rem;font-weight:600;font-family:inherit">${opts.map((o) => `<option value="${o.v}" ${val === o.v ? "selected" : ""}>${o.l}</option>`).join("")}</select>`;
+  }
+
+  // Eye comfort filter CSS (applied live)
+  function applyEyeFilter() {
+    const b = S.eyeBrightness ?? 100,
+      w = S.eyeWarmth ?? 0,
+      c = S.eyeContrast ?? 100;
+    const sepia = Math.round(w * 0.4);
+    const hue = w > 0 ? `-${Math.round(w * 0.1)}deg` : "0deg";
+    document.documentElement.style.filter = `brightness(${b}%) contrast(${c}%) sepia(${sepia}%) hue-rotate(${hue})`;
+  }
+
+  // Preset timer chips
+  const timerPresets = [
+    { v: "classic", l: "Classic · 25/5" },
+    { v: "deep", l: "Deep · 50/10" },
+    { v: "sprint", l: "Sprint · 15/3" },
+    { v: "long", l: "Long · 90/20" },
+  ];
+
+  const diffOpts = [
+    { v: "all", l: "All" },
+    { v: "easy", l: "Easy" },
+    { v: "medium", l: "Medium" },
+    { v: "hard", l: "Hard" },
+  ];
+  const typeOpts = [
+    { v: "all", l: "All" },
+    { v: "mcq", l: "MCQ" },
+    { v: "short", l: "Short Ans" },
+    { v: "long", l: "Long Ans" },
+    { v: "assertion", l: "A&R" },
+    { v: "casebased", l: "Case-based" },
+  ];
+  const marksOpts = [
+    { v: "all", l: "All" },
+    { v: "1", l: "1M" },
+    { v: "2", l: "2M" },
+    { v: "3", l: "3M" },
+    { v: "5", l: "5M" },
+  ];
+  const examOpts = [
+    { v: "all", l: "All" },
+    { v: "board", l: "Board" },
+    { v: "school", l: "School Test" },
+    { v: "practice", l: "Practice" },
+    { v: "mock", l: "Mock" },
+  ];
+  const boardOpts = [
+    { v: "CBSE", l: "CBSE" },
+    { v: "ICSE", l: "ICSE" },
+    { v: "State", l: "State Board" },
+  ];
+  const langOpts = [
+    { v: "all", l: "All" },
+    { v: "en", l: "English" },
+    { v: "hi", l: "Hindi" },
+  ];
+
+  const curThemeName =
+    theme === "dark"
+      ? "🌙 Dark"
+      : theme === "light"
+        ? "☀️ Light"
+        : "🌿 Eye Comfort";
+
+  app.innerHTML = `
+    <button onclick="navigate('home')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.85rem;padding:0;font-family:inherit;margin-bottom:18px;display:block">‹ Back</button>
+    <div style="font-size:1.3rem;font-weight:900;background:linear-gradient(135deg,#4f8ef7,#9b6dff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:4px">⚙️ Settings</div>
+    <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:24px">Tune your timer, goals, filters and appearance</div>
+
+    ${sect(
+      "⏱️",
+      "Focus Timer",
+      `<div style="margin-bottom:14px">${chip("timerPreset", timerPresets, cfg.pomodoroFocus === 25 && cfg.pomodoroShort === 5 ? "classic" : cfg.pomodoroFocus === 50 ? "deep" : cfg.pomodoroFocus === 15 ? "sprint" : cfg.pomodoroFocus === 90 ? "long" : "custom")}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><div style="font-size:0.7rem;font-weight:700;color:var(--text-muted);margin-bottom:5px">Focus (min)</div>${numInput("pomodoroFocus", cfg.pomodoroFocus, 5, 120)}</div>
+        <div><div style="font-size:0.7rem;font-weight:700;color:var(--text-muted);margin-bottom:5px">Short break (min)</div>${numInput("pomodoroShort", cfg.pomodoroShort, 1, 30)}</div>
+        <div><div style="font-size:0.7rem;font-weight:700;color:var(--text-muted);margin-bottom:5px">Long break (min)</div>${numInput("pomodoroLong", cfg.pomodoroLong, 5, 60)}</div>
+        <div><div style="font-size:0.7rem;font-weight:700;color:var(--text-muted);margin-bottom:5px">Long break after</div>${numInput("pomodoroLongAfter", cfg.pomodoroLongAfter, 2, 8)}</div>
+      </div>
+      ${row("Auto-start breaks", "Break timer starts when focus ends", toggle("autoStartBreaks", cfg.autoStartBreaks))}
+      ${row("Auto-start focus", "Next focus when break ends", toggle("autoStartFocus", cfg.autoStartFocus))}`,
+    )}
+
+    ${sect(
+      "📚",
+      "Study Filter",
+      row(
+        "Difficulty",
+        "Filter questions by difficulty",
+        chip("filterDifficulty", diffOpts, cfg.filterDifficulty),
+      ) +
+        row(
+          "Question type",
+          "Format of the question",
+          chip("filterType", typeOpts, cfg.filterType),
+        ) +
+        row(
+          "Marks",
+          "Filter by question marks",
+          chip("filterMarks", marksOpts, cfg.filterMarks),
+        ) +
+        row(
+          "Exam type",
+          "Source of the question",
+          chip("filterExamType", examOpts, cfg.filterExamType),
+        ) +
+        row(
+          "Subject",
+          "Narrow to one subject",
+          sel(
+            "filterSubject",
+            subjects.map((s) => ({
+              v: s,
+              l: s === "all" ? "All Subjects" : s,
+            })),
+            cfg.filterSubject,
+          ),
+        ) +
+        row(
+          "Board",
+          "Curriculum board",
+          chip(
+            "filterBoard",
+            [
+              { v: "CBSE", l: "CBSE" },
+              { v: "ICSE", l: "ICSE" },
+              { v: "State", l: "State" },
+            ],
+            cfg.filterBoard,
+          ),
+        ) +
+        row(
+          "Language",
+          "Question language",
+          chip("filterLanguage", langOpts, cfg.filterLanguage),
+        ) +
+        `<div style="padding:10px 0">
+        <div style="font-size:0.83rem;font-weight:600;color:var(--text);margin-bottom:8px">Year range</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          ${numInput("filterYearFrom", cfg.filterYearFrom, 2010, 2025)}
+          <span style="color:var(--text-muted);font-size:0.8rem">to</span>
+          ${numInput("filterYearTo", cfg.filterYearTo, 2010, 2025)}
+        </div>
+      </div>`,
+    )}
+
+    ${sect(
+      "🎯",
+      "Goals",
+      row(
+        "Daily focus goal",
+        "Target study minutes per day",
+        numInput("dailyGoal", cfg.dailyGoal, 10, 480),
+      ) +
+        row(
+          "Weekly focus goal",
+          "Target study minutes per week",
+          numInput("weeklyGoal", cfg.weeklyGoal, 60, 3360),
+        ),
+    )}
+
+    ${sect(
+      "🔊",
+      "Sound",
+      row(
+        "End-of-session sound",
+        "Chime when a session finishes",
+        toggle("sessionSound", cfg.sessionSound),
+      ) +
+        row(
+          "Sound volume",
+          "",
+          slider("soundVolume", cfg.soundVolume, 0, 100, "%"),
+        ) +
+        row(
+          "Ambient volume",
+          "Background sound default",
+          slider("ambientVolume", cfg.ambientVolume, 0, 100, "%"),
+        ),
+    )}
+
+    ${sect(
+      "🌙",
+      "Appearance",
+      row(
+        "Theme",
+        "Current: <b>${curThemeName}</b>",
+        `<button onclick="toggleTheme();renderSettings()" style="padding:6px 14px;border-radius:20px;border:1.5px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.06);color:var(--text);font-size:0.78rem;font-weight:700;cursor:pointer;font-family:inherit">Switch →</button>`,
+      ),
+    )}
+
+    ${sect(
+      "👁️",
+      "Eye Comfort",
+      `<div style="background:rgba(15,202,140,0.06);border:1px solid rgba(15,202,140,0.15);border-radius:12px;padding:10px 14px;margin-bottom:14px;font-size:0.75rem;color:#0fca8c">Works in all themes — adjusts screen filter independently of dark/light mode.</div>` +
+        row(
+          "Brightness",
+          "",
+          slider("eyeBrightness", cfg.eyeBrightness, 50, 100, "%"),
+        ) +
+        row(
+          "Contrast",
+          "",
+          slider("eyeContrast", cfg.eyeContrast, 70, 120, "%"),
+        ) +
+        row(
+          "Warmth",
+          "Reduces cool blue tones",
+          slider("eyeWarmth", cfg.eyeWarmth, 0, 100, "%"),
+        ) +
+        row(
+          "Blue-light filter",
+          "Applies warm sepia overlay",
+          toggle("eyeBlueLight", cfg.eyeBlueLight),
+        ) +
+        row(
+          "Auto night mode",
+          "Increase warmth after 8 PM",
+          toggle("eyeAutoNight", cfg.eyeAutoNight),
+        ) +
+        `<button onclick="window._sResetEye()" style="margin-top:10px;padding:6px 16px;border-radius:20px;border:1.5px solid rgba(255,255,255,0.12);background:transparent;color:var(--text-muted);font-size:0.75rem;font-weight:700;cursor:pointer;font-family:inherit">Reset eye comfort</button>`,
+    )}
+
+    <button onclick="window._sSave()" style="width:100%;padding:14px;border-radius:14px;border:none;background:linear-gradient(135deg,#4f8ef7,#9b6dff);color:#fff;font-size:0.9rem;font-weight:900;cursor:pointer;font-family:inherit;margin-top:4px;margin-bottom:32px">Save Settings</button>
+  `;
+
+  // ── Handlers ──
+  window._sCfg = (id, val) => {
+    S[id] = val;
+    // live toggle visual
+    const track = document.getElementById(`s_${id}_track`);
+    if (track) {
+      track.style.background = val ? "#4f8ef7" : "rgba(255,255,255,0.12)";
+      const knob = track.querySelector("span");
+      if (knob) knob.style.left = val ? "21px" : "3px";
+    }
+    if (id === "eyeBlueLight") {
+      S.eyeWarmth = val ? 60 : 0;
+      S.eyeBrightness = val ? 90 : 100;
+      applyEyeFilter();
+    }
+    if (id === "eyeAutoNight") {
+      const h = new Date().getHours();
+      if (val && (h >= 20 || h < 6)) {
+        S.eyeWarmth = 50;
+        applyEyeFilter();
+      }
+    }
+  };
+
+  window._sChip = (id, val) => {
+    S[id] = val;
+    document.querySelectorAll(`[id^="s_chip_${id}_"]`).forEach((b) => {
+      const active = b.id === `s_chip_${id}_${val}`;
+      b.style.borderColor = active ? "#4f8ef7" : "rgba(255,255,255,0.12)";
+      b.style.background = active ? "rgba(79,142,247,0.15)" : "transparent";
+      b.style.color = active ? "#4f8ef7" : "var(--text-muted)";
+    });
+    // Apply timer preset
+    if (id === "timerPreset") {
+      const presets = {
+        classic: [25, 5, 15, 4],
+        deep: [50, 10, 25, 3],
+        sprint: [15, 3, 10, 4],
+        long: [90, 20, 30, 2],
+      };
+      const p = presets[val];
+      if (p) {
+        [
+          "pomodoroFocus",
+          "pomodoroShort",
+          "pomodoroLong",
+          "pomodoroLongAfter",
+        ].forEach((k, i) => {
+          S[k] = p[i];
+          const el = document.getElementById(`s_${k}`);
+          if (el) el.value = p[i];
+        });
+      }
+    }
+  };
+
+  window._sSlider = (id, val) => {
+    S[id] = Number(val);
+    const lbl = document.getElementById(`s_${id}_lbl`);
+    if (lbl) lbl.textContent = val + (id.includes("Volume") ? "%" : "%");
+    if (id.startsWith("eye")) applyEyeFilter();
+  };
+
+  window._sResetEye = () => {
+    ["eyeBrightness", "eyeContrast", "eyeWarmth"].forEach((k) => {
+      S[k] = k === "eyeBrightness" ? 100 : k === "eyeContrast" ? 100 : 0;
+    });
+    S.eyeBlueLight = false;
+    S.eyeAutoNight = false;
+    document.documentElement.style.filter = "";
+    renderSettings();
+  };
+
+  window._sSave = () => {
+    // Read all number inputs back
+    [
+      "pomodoroFocus",
+      "pomodoroShort",
+      "pomodoroLong",
+      "pomodoroLongAfter",
+      "dailyGoal",
+      "weeklyGoal",
+      "filterYearFrom",
+      "filterYearTo",
+    ].forEach((k) => {
+      const el = document.getElementById(`s_${k}`);
+      if (el) S[k] = Number(el.value);
+    });
+    saveState();
+    // Flash button
+    const btn = event.target;
+    btn.textContent = "✅ Saved!";
+    btn.style.background = "linear-gradient(135deg,#0fca8c,#4f8ef7)";
+    setTimeout(() => {
+      btn.textContent = "Save Settings";
+      btn.style.background = "linear-gradient(135deg,#4f8ef7,#9b6dff)";
+    }, 1800);
+  };
+
+  // Apply eye comfort on load
+  applyEyeFilter();
+}
+window.renderSettings = renderSettings;

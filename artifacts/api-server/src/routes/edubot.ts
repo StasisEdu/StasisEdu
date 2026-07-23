@@ -112,13 +112,23 @@ router.post("/solve", async (req, res) => {
   const invalidClause = ` IMPORTANT: If the question is random gibberish, not in English/Hindi, or completely unrelated to ${subject}, respond with: {"solution":"Please ask a valid ${subject} question.","steps":["That doesn't seem to be a ${subject} question.","Try asking about a concept, formula, or topic from your chapter.","Example: What is photosynthesis? or Solve 2x+3=7."],"memoryTrick":""}`;
   try {
     const text = await ask(
-      `${systemPrompt}${chapterClause}${langClause}${depthClause}${invalidClause}\nClass ${classNum} ${subject} question: ${trimmedQ}\nReturn ONLY valid JSON: {"solution": "one-line summary of the answer", "steps": ["detailed step 1", "detailed step 2", "..."], "memoryTrick": "a short fun trick to remember this concept"${challengeField}}`,
-      1600,
+      `${systemPrompt}${chapterClause}${langClause}${depthClause}${invalidClause}\nClass ${classNum} ${subject} question: ${trimmedQ}\nReturn ONLY valid JSON (no markdown): {"solution":"one-line summary answer","steps":["step 1","step 2"],"nutshell":"1-2 sentence plain summary","keyPoint":"single key concept","examTip":"specific CBSE exam tip","commonMistake":"most common mistake students make","memoryTrick":"short fun memory trick"${challengeField},"quickQuiz":{"question":"MCQ testing this concept","options":["A. ...","B. ...","C. ...","D. ..."],"answer":"B","explanation":"brief reason"}}`,
+      2200,
     );
     const parsed = safeJson(text) as {
       solution?: string;
       steps?: string[];
+      nutshell?: string;
+      keyPoint?: string;
+      examTip?: string;
+      commonMistake?: string;
       memoryTrick?: string;
+      quickQuiz?: {
+        question: string;
+        options: string[];
+        answer: string;
+        explanation: string;
+      };
     } | null;
     if (parsed && (parsed.solution || parsed.steps)) {
       res.json(parsed);
