@@ -1177,30 +1177,14 @@ router.post("/autopilot", async (req, res) => {
     let response;
 
     if (pdfBase64) {
-      // PDF: use Groq vision with document type
-      response = await client.chat.completions.create({
-        model: VISION_MODEL,
-        max_tokens: 3000,
-        messages: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: systemPrompt,
-              },
-              {
-                type: "image_url",
-                image_url: {
-                  url: `data:${mimeType};base64,${pdfBase64}`,
-                },
-              },
-            ],
-          },
-        ],
-      });
+      return res
+        .status(422)
+        .json({
+          error:
+            "PDF upload is not supported yet. Please take a photo of your question paper and upload that instead.",
+        });
     } else {
-      // Image: existing vision path
+      // Image: use vision model
       response = await client.chat.completions.create({
         model: VISION_MODEL,
         max_tokens: 3000,
@@ -1208,15 +1192,10 @@ router.post("/autopilot", async (req, res) => {
           {
             role: "user",
             content: [
-              {
-                type: "text",
-                text: systemPrompt,
-              },
+              { type: "text", text: systemPrompt },
               {
                 type: "image_url",
-                image_url: {
-                  url: `data:${mimeType};base64,${imageBase64}`,
-                },
+                image_url: { url: `data:${mimeType};base64,${imageBase64}` },
               },
             ],
           },

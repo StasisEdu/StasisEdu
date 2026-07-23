@@ -2243,18 +2243,21 @@ function renderLanding() {
   const xp = S.xp || 0;
   const streak = S.streak || 0;
   const solved = S.totalSolved || 0;
+  const gems = S.gems || 0;
+  const bestStreak = S.bestStreak || 0;
+  const accuracy =
+    solved > 0 ? Math.round(((S.correctAnswerCount || 0) / solved) * 100) : 0;
 
-  // Time-based greeting
   const hour = new Date().getHours();
   const timeGreet =
     hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
   const firstName = name.split(" ")[0];
   const greetLine = firstName
-    ? `${timeGreet}, ${escapeHtml(firstName)} 👋`
-    : "Welcome back 👋";
+    ? `${timeGreet}, ${escapeHtml(firstName)}`
+    : "Welcome back";
 
-  // XP to next level
-  const LEVELS_XP = [0, 150, 400, 900, 1800, 3500];
+  // XP levels
+  const LEVELS_XP = [0, 150, 400, 900, 1800, 3500, 6000, 9500];
   const LEVEL_NAMES = [
     "🌱 Rookie",
     "📖 Scholar",
@@ -2262,6 +2265,8 @@ function renderLanding() {
     "🧠 Genius",
     "⚔️ Champion",
     "🏆 Legend",
+    "👑 Master",
+    "⚡ Apex",
   ];
   function getLvlIdx(x) {
     let i = 0;
@@ -2270,316 +2275,388 @@ function renderLanding() {
   }
   const lvlIdx = getLvlIdx(xp);
   const lvlName = LEVEL_NAMES[lvlIdx];
+  const lvlEmoji = lvlName.split(" ")[0];
+  const lvlLabel = lvlName.substring(lvlName.indexOf(" ") + 1);
   const nextXP = LEVELS_XP[lvlIdx + 1] || LEVELS_XP[LEVELS_XP.length - 1];
   const prevXP = LEVELS_XP[lvlIdx];
   const xpPct =
     lvlIdx >= LEVEL_NAMES.length - 1
       ? 100
       : Math.min(100, Math.round(((xp - prevXP) / (nextXP - prevXP)) * 100));
+  const xpToNext = Math.max(0, nextXP - xp);
 
-  // Motivational micro-copy based on streak
-  const motivations =
-    streak >= 7
-      ? [
-          "You're on 🔥 fire! Keep the streak alive!",
-          "Legend behaviour right here 🏆",
-        ]
-      : streak >= 3
-        ? [
-            "3+ day streak — you're building momentum!",
-            "Consistency is your superpower ⚡",
-          ]
-        : [
-            "Every champion started at day 1 🌱",
-            "Today's a great day to level up 📈",
-          ];
-  const motiveTip = motivations[Math.floor(Math.random() * motivations.length)];
+  // Top subject
+  const subjectCounts = S.subjectCounts || {};
+  const topSubject = Object.entries(subjectCounts).sort(
+    (a, b) => b[1] - a[1],
+  )[0];
+  const weakSubject = Object.entries(subjectCounts)
+    .filter(([, v]) => v > 0)
+    .sort((a, b) => a[1] - b[1])[0];
 
-  // Quick action shortcuts
-  const quickActions = [
-    {
-      emoji: "🤖",
-      label: "Ask a Doubt",
-      sub: "AI explains it",
-      page: "home",
-      grad: "linear-gradient(135deg,#4f8ef7,#6366f1)",
-      glow: "rgba(79,142,247,0.45)",
-    },
-    {
-      emoji: "📝",
-      label: "Practice",
-      sub: "Adaptive MCQs",
-      page: "practice",
-      grad: "linear-gradient(135deg,#9b6dff,#c026d3)",
-      glow: "rgba(155,109,255,0.4)",
-    },
-    {
-      emoji: "🎮",
-      label: "Games",
-      sub: "Learn by playing",
-      page: "games",
-      grad: "linear-gradient(135deg,#0fca8c,#06b6d4)",
-      glow: "rgba(15,202,140,0.4)",
-    },
-    {
-      emoji: "📄",
-      label: "Papers",
-      sub: "PYQs & samples",
-      page: "resources",
-      grad: "linear-gradient(135deg,#f0b429,#f97316)",
-      glow: "rgba(240,180,41,0.4)",
-    },
-  ];
+  // Revision schedule info
+  const rev = S.revisionSchedule;
+  const hasRevPlan = rev && rev.examDate;
+  let daysToExam = null;
+  let examLabel = "";
+  if (hasRevPlan) {
+    daysToExam = Math.max(
+      0,
+      Math.round((new Date(rev.examDate) - Date.now()) / 86400000),
+    );
+    examLabel = rev.examDate;
+  }
 
-  // Feature showcase cards
-  const features = [
-    {
-      emoji: "📸",
-      title: "Snap & Solve",
-      desc: "Photo → instant AI solution",
-      page: "home",
-      accent: "#4f8ef7",
-    },
-    {
-      emoji: "🎙️",
-      title: "Voice Doubt",
-      desc: "Speak your question, AI answers",
-      page: "voice-doubt",
-      accent: "#ec4899",
-    },
-    {
-      emoji: "📅",
-      title: "Revision Plan",
-      desc: "AI study schedule to exam day",
-      page: "revision",
-      accent: "#06b6d4",
-    },
-    {
-      emoji: "📊",
-      title: "PYQ Trends",
-      desc: "Which topics appear most in boards",
-      page: "trends",
-      accent: "#f97316",
-    },
-    {
-      emoji: "📝",
-      title: "Mock Test",
-      desc: "Full CBSE test · AI graded",
-      page: "mock-test",
-      accent: "#f0b429",
-    },
-    {
-      emoji: "🧠",
-      title: "Mind Map",
-      desc: "Visual topic breakdown",
-      page: "mind-map",
-      accent: "#9b6dff",
-    },
-    {
-      emoji: "🃏",
-      title: "Flashcards",
-      desc: "Spaced repetition learning",
-      page: "flashcards",
-      accent: "#0fca8c",
-    },
-    {
-      emoji: "📊",
-      title: "Your Stats",
-      desc: "Track accuracy & XP trends",
-      page: "stats",
-      accent: "#9b6dff",
-    },
-    {
-      emoji: "🏆",
-      title: "Leaderboard",
-      desc: "Compete globally for rank #1",
-      page: "leaderboard",
-      accent: "#f0b429",
-    },
-    {
-      emoji: "💾",
-      title: "Saved",
-      desc: "Revisit bookmarked questions",
-      page: "saved",
-      accent: "#0fca8c",
-    },
-    {
-      emoji: "⏱️",
-      title: "Study Timer",
-      desc: "Pomodoro · 25 min focus sessions",
-      page: "pomodoro",
-      accent: "#ec4899",
-    },
-    {
-      emoji: "📸",
-      title: "Paper Autopilot",
-      desc: "Upload a PYQ → AI builds your revision plan",
-      page: "autopilot",
-      accent: "#f0b429",
-    },
-  ];
+  // Today's activity
+  const today = new Date().toISOString().split("T")[0];
+  const todayXP = (S.weeklyXP || [])[new Date().getDay()] || 0;
+  const todayLog = (S.dailySubjectLog || {})[today] || {};
+  const todaySubjects = Object.keys(todayLog);
+
+  // Streak message
+  const streakMsg =
+    streak >= 14
+      ? "Unstoppable! 🔥"
+      : streak >= 7
+        ? "On fire! Keep it up 🔥"
+        : streak >= 3
+          ? "Building momentum ⚡"
+          : streak >= 1
+            ? "Good start! 🌱"
+            : "Start your streak today";
+
+  // Weekly XP chart data
+  const weeklyXP = S.weeklyXP || Array(7).fill(0);
+  const days7 = ["S", "M", "T", "W", "T", "F", "S"];
+  const maxWXP = Math.max(...weeklyXP, 1);
+  const todayDayIdx = new Date().getDay();
 
   app.innerHTML = `
     <style>
-      @keyframes lp-float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
-      @keyframes lp-pop { 0%{transform:scale(0.92);opacity:0} 100%{transform:scale(1);opacity:1} }
-      @keyframes lp-shimmer { 0%{left:-60%} 100%{left:160%} }
-      @keyframes lp-pulse-ring { 0%{transform:scale(1);opacity:0.6} 100%{transform:scale(1.5);opacity:0} }
-      @keyframes lp-xp-fill { from{width:0%} to{width:${xpPct}%} }
-      .lp-pop { animation: lp-pop 0.38s cubic-bezier(.34,1.56,.64,1) both; }
-      .lp-pop-d1 { animation-delay:0.04s; }
-      .lp-pop-d2 { animation-delay:0.08s; }
-      .lp-pop-d3 { animation-delay:0.12s; }
-      .lp-pop-d4 { animation-delay:0.16s; }
-      .lp-qa-btn {
-        display:flex;flex-direction:column;align-items:center;gap:7px;
-        border:none;border-radius:20px;padding:16px 10px;cursor:pointer;
-        font-family:inherit;position:relative;overflow:hidden;
-        transition:transform 0.18s cubic-bezier(.34,1.56,.64,1), box-shadow 0.18s;
+      @keyframes hp-float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
+      @keyframes hp-pop { 0%{transform:scale(0.88);opacity:0} 100%{transform:scale(1);opacity:1} }
+      @keyframes hp-xp-fill { from{width:0%} to{width:${xpPct}%} }
+      @keyframes hp-pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+      @keyframes hp-shimmer { 0%{left:-80%} 100%{left:160%} }
+      @keyframes hp-bar-grow { from{height:0} to{height:var(--bar-h)} }
+
+      .hp-card {
+        background:rgba(255,255,255,0.035);
+        border:1px solid rgba(255,255,255,0.08);
+        border-radius:20px;
+        padding:16px;
+        animation: hp-pop 0.35s cubic-bezier(.34,1.56,.64,1) both;
       }
-      .lp-qa-btn:active{transform:scale(0.94)!important;}
-      .lp-qa-btn::before{
-        content:'';position:absolute;top:-50%;left:-60%;
-        width:28%;height:200%;background:rgba(255,255,255,0.22);
-        transform:skewX(-20deg);animation:lp-shimmer 3.2s infinite;
-      }
-      .lp-feat-btn {
-        text-align:left;border:none;border-radius:18px;padding:16px 14px;
+      .hp-action-btn {
+        display:flex;align-items:center;gap:12px;
+        border:none;border-radius:16px;padding:13px 14px;
         cursor:pointer;font-family:inherit;width:100%;
-        transition:transform 0.18s cubic-bezier(.34,1.56,.64,1),box-shadow 0.18s;
+        text-align:left;position:relative;overflow:hidden;
+        transition:transform 0.17s cubic-bezier(.34,1.56,.64,1), box-shadow 0.17s;
       }
-      .lp-feat-btn:active{transform:scale(0.96)!important;}
-      .lp-feat-btn:hover{transform:translateY(-3px);}
-      .lp-xp-bar-fill {
+      .hp-action-btn:hover { transform:translateY(-2px); }
+      .hp-action-btn:active { transform:scale(0.97)!important; }
+      .hp-action-btn::after {
+        content:'';position:absolute;top:-50%;left:-80%;
+        width:30%;height:200%;background:rgba(255,255,255,0.15);
+        transform:skewX(-20deg);
+        transition:left 0.4s;pointer-events:none;
+      }
+      .hp-action-btn:hover::after { left:160%; }
+      .hp-pill-btn {
+        border:none;border-radius:12px;padding:9px 14px;
+        cursor:pointer;font-family:inherit;font-size:0.78rem;font-weight:700;
+        transition:transform 0.15s,opacity 0.15s;
+      }
+      .hp-pill-btn:hover { transform:translateY(-1px);opacity:0.9; }
+      .hp-pill-btn:active { transform:scale(0.96); }
+      .hp-xp-fill {
         height:100%;border-radius:99px;
         background:linear-gradient(90deg,#4f8ef7,#9b6dff,#f0b429);
-        width:0%;animation:lp-xp-fill 1s 0.5s cubic-bezier(.22,1,.36,1) forwards;
-        box-shadow:0 0 8px rgba(79,142,247,0.6);
+        width:0%;
+        animation:hp-xp-fill 1.1s 0.3s cubic-bezier(.22,1,.36,1) forwards;
+        box-shadow:0 0 10px rgba(79,142,247,0.5);
         position:relative;
       }
-      .lp-xp-bar-fill::after{
+      .hp-xp-fill::after {
         content:'';position:absolute;right:0;top:50%;transform:translateY(-50%);
-        width:8px;height:8px;border-radius:50%;background:white;
-        box-shadow:0 0 6px rgba(255,255,255,0.8);
+        width:7px;height:7px;border-radius:50%;background:#fff;
+        box-shadow:0 0 6px #fff;
       }
-      .lp-streak-ring {
-        position:relative;display:inline-flex;align-items:center;justify-content:center;
+      .hp-stat-num {
+        font-size:1.6rem;font-weight:900;
+        background:linear-gradient(135deg,var(--c1),var(--c2));
+        -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+        line-height:1;margin-bottom:2px;
       }
-      .lp-streak-ring::before {
-        content:'';position:absolute;inset:-4px;border-radius:50%;
-        border:2px solid #f0b429;
-        animation:lp-pulse-ring 2s ease-out infinite;
+      .hp-section-label {
+        font-size:0.68rem;font-weight:800;letter-spacing:0.08em;
+        text-transform:uppercase;color:var(--text-muted);
+        margin-bottom:10px;
       }
     </style>
 
-    <!-- ① Hero greeting -->
-    <div style="padding-top:18px;padding-bottom:4px;">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;">
+    <!-- ━━━ HERO ━━━ -->
+    <div style="padding-top:16px;">
+
+      <!-- Greeting row -->
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;">
         <div>
-          <div style="font-size:0.75rem;font-weight:700;color:var(--text-muted);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">StasisEducation ⚡ · Class ${cls}</div>
-          <h1 class="section-heading gradient-heading" style="margin-bottom:2px;font-size:1.55rem;">${greetLine}</h1>
-          <p style="font-size:0.8rem;color:var(--text-muted);margin:0;">${motiveTip}</p>
+          <div style="font-size:0.7rem;font-weight:700;color:var(--text-muted);letter-spacing:0.07em;text-transform:uppercase;margin-bottom:3px;">
+            CBSE Class ${cls} · StasisEdu ⚡
+          </div>
+          <div style="font-size:1.5rem;font-weight:900;color:var(--text);line-height:1.1;margin-bottom:3px;">${greetLine} 👋</div>
+          <div style="font-size:0.78rem;color:var(--text-muted);">${streakMsg}</div>
         </div>
-        <div class="lp-streak-ring" onclick="navigate('stats')" style="cursor:pointer;flex-shrink:0;margin-left:12px;margin-top:4px;">
-          <div style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,rgba(240,180,41,0.18),rgba(240,86,74,0.18));border:1px solid rgba(240,180,41,0.35);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;">
-            <div style="font-size:1.3rem;line-height:1;">🔥</div>
-            <div style="font-size:0.72rem;font-weight:900;color:#f0b429;line-height:1.2;">${streak}</div>
+        <!-- Avatar / streak orb -->
+        <div onclick="navigate('stats')" style="cursor:pointer;flex-shrink:0;margin-left:10px;margin-top:2px;">
+          <div style="width:54px;height:54px;border-radius:50%;
+            background:linear-gradient(135deg,rgba(240,180,41,0.2),rgba(247,113,79,0.2));
+            border:1.5px solid rgba(240,180,41,0.4);
+            display:flex;flex-direction:column;align-items:center;justify-content:center;
+            box-shadow:0 0 18px rgba(240,180,41,0.2);">
+            <div style="font-size:1.3rem;line-height:1">🔥</div>
+            <div style="font-size:0.78rem;font-weight:900;color:#f0b429;line-height:1.3">${streak}</div>
           </div>
         </div>
       </div>
 
-      <!-- ② XP Progress bar -->
-      <div class="glass lp-pop" style="padding:14px 16px;margin-bottom:14px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-          <div style="display:flex;align-items:center;gap:8px;">
-            <span style="font-size:1rem;">${lvlName.split(" ")[0]}</span>
-            <span style="font-size:0.82rem;font-weight:800;color:var(--text);">${lvlName.substring(lvlName.indexOf(" ") + 1)}</span>
+      <!-- ━━━ LEVEL + XP BAR ━━━ -->
+      <div class="hp-card" style="margin-bottom:12px;background:linear-gradient(135deg,rgba(79,142,247,0.07),rgba(155,109,255,0.07));border-color:rgba(79,142,247,0.18);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div style="display:flex;align-items:center;gap:9px;">
+            <div style="font-size:1.5rem;animation:hp-float 3s ease-in-out infinite;">${lvlEmoji}</div>
+            <div>
+              <div style="font-size:0.65rem;font-weight:700;color:#9b6dff;letter-spacing:0.06em;text-transform:uppercase;">Current Level</div>
+              <div style="font-size:0.95rem;font-weight:900;color:var(--text);">${lvlLabel}</div>
+            </div>
           </div>
-          <div style="font-size:0.75rem;font-weight:700;color:var(--text-muted);">${xp} <span style="color:var(--text-muted);font-weight:500;">/ ${nextXP} XP</span></div>
+          <div style="text-align:right;">
+            <div style="font-size:1rem;font-weight:900;color:var(--text);">${xp.toLocaleString()} XP</div>
+            <div style="font-size:0.68rem;color:var(--text-muted);">${xpToNext > 0 ? `${xpToNext} to next level` : "Max level!"}</div>
+          </div>
         </div>
-        <div style="height:7px;border-radius:99px;background:rgba(255,255,255,0.07);overflow:hidden;position:relative;">
-          <div class="lp-xp-bar-fill"></div>
+        <div style="height:6px;border-radius:99px;background:rgba(255,255,255,0.07);overflow:hidden;">
+          <div class="hp-xp-fill"></div>
         </div>
-        <div style="display:flex;justify-content:space-between;margin-top:8px;">
-          <div style="font-size:0.7rem;color:var(--text-muted);">${xpPct}% to next level</div>
-          <div style="font-size:0.7rem;color:var(--text-muted);">🎯 ${solved} solved</div>
+        <div style="display:flex;justify-content:space-between;margin-top:7px;">
+          <div style="font-size:0.65rem;color:var(--text-muted);">${xpPct}% complete</div>
+          <div style="font-size:0.65rem;color:var(--text-muted);">🎯 ${solved} solved · 💎 ${gems} gems</div>
         </div>
       </div>
 
-      <!-- ③ Quick Action Buttons (2×2 grid) -->
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:16px;">
-        ${quickActions
+      <!-- ━━━ STAT CARDS ROW ━━━ -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:12px;">
+        <div class="hp-card" style="text-align:center;padding:13px 8px;animation-delay:0.05s;">
+          <div class="hp-stat-num" style="--c1:#f0b429;--c2:#f97316;">${streak}</div>
+          <div style="font-size:0.65rem;color:var(--text-muted);font-weight:700;">Day Streak</div>
+          <div style="font-size:0.6rem;color:var(--text-muted);margin-top:2px;">Best: ${bestStreak}</div>
+        </div>
+        <div class="hp-card" style="text-align:center;padding:13px 8px;animation-delay:0.1s;">
+          <div class="hp-stat-num" style="--c1:#0fca8c;--c2:#06b6d4;">${accuracy}%</div>
+          <div style="font-size:0.65rem;color:var(--text-muted);font-weight:700;">Accuracy</div>
+          <div style="font-size:0.6rem;color:var(--text-muted);margin-top:2px;">${solved} solved</div>
+        </div>
+        <div class="hp-card" style="text-align:center;padding:13px 8px;animation-delay:0.15s;">
+          <div class="hp-stat-num" style="--c1:#9b6dff;--c2:#ec4899;">${todayXP}</div>
+          <div style="font-size:0.65rem;color:var(--text-muted);font-weight:700;">XP Today</div>
+          <div style="font-size:0.6rem;color:var(--text-muted);margin-top:2px;">${todaySubjects.length > 0 ? todaySubjects.slice(0, 2).join(", ") : "Nothing yet"}</div>
+        </div>
+      </div>
+
+      <!-- ━━━ EXAM COUNTDOWN (if set) ━━━ -->
+      ${
+        hasRevPlan
+          ? `
+      <div class="hp-card" onclick="navigate('revision')" style="cursor:pointer;margin-bottom:12px;animation-delay:0.1s;
+        background:linear-gradient(135deg,rgba(240,180,41,0.08),rgba(247,113,79,0.06));
+        border-color:rgba(240,180,41,0.22);display:flex;align-items:center;gap:14px;">
+        <div style="font-size:2rem;animation:hp-float 2.5s ease-in-out infinite;flex-shrink:0;">📅</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:0.65rem;font-weight:800;color:#f0b429;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:2px;">Exam Countdown</div>
+          <div style="font-size:1.1rem;font-weight:900;color:var(--text);">${daysToExam === 0 ? "Exam is today! 🎯" : `${daysToExam} days left`}</div>
+          <div style="font-size:0.7rem;color:var(--text-muted);">${examLabel} · Tap to view revision plan</div>
+        </div>
+        <div style="flex-shrink:0;font-size:1.2rem;color:var(--text-muted);">›</div>
+      </div>`
+          : `
+      <div class="hp-card" onclick="navigate('autopilot')" style="cursor:pointer;margin-bottom:12px;animation-delay:0.1s;
+        border:1.5px dashed rgba(240,180,41,0.3);background:rgba(240,180,41,0.04);
+        display:flex;align-items:center;gap:12px;">
+        <div style="font-size:1.8rem;flex-shrink:0;">📸</div>
+        <div style="flex:1;">
+          <div style="font-size:0.82rem;font-weight:800;color:var(--text);margin-bottom:2px;">Set up your exam plan</div>
+          <div style="font-size:0.72rem;color:var(--text-muted);">Upload a PYQ → AI builds your full revision schedule</div>
+        </div>
+        <div style="font-size:1.1rem;color:#f0b429;">›</div>
+      </div>`
+      }
+
+      <!-- ━━━ QUICK ACTIONS ━━━ -->
+      <div class="hp-section-label">Quick Actions</div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
+        <button class="hp-action-btn" onclick="navigate('home')"
+          style="background:linear-gradient(135deg,#4f8ef7,#6366f1);box-shadow:0 4px 20px rgba(79,142,247,0.35);">
+          <div style="font-size:1.5rem;animation:hp-float 2.2s ease-in-out infinite;">🤖</div>
+          <div style="flex:1;">
+            <div style="font-size:0.88rem;font-weight:800;color:#fff;">Ask Nova a Doubt</div>
+            <div style="font-size:0.7rem;color:rgba(255,255,255,0.75);">AI explains any CBSE concept instantly</div>
+          </div>
+          <div style="color:rgba(255,255,255,0.6);font-size:1rem;">›</div>
+        </button>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <button class="hp-action-btn" onclick="navigate('practice')"
+            style="background:linear-gradient(135deg,#9b6dff,#c026d3);box-shadow:0 4px 16px rgba(155,109,255,0.3);">
+            <div style="font-size:1.3rem;">📝</div>
+            <div>
+              <div style="font-size:0.82rem;font-weight:800;color:#fff;">Practice</div>
+              <div style="font-size:0.65rem;color:rgba(255,255,255,0.7);">Adaptive MCQs</div>
+            </div>
+          </button>
+          <button class="hp-action-btn" onclick="navigate('mock-test')"
+            style="background:linear-gradient(135deg,#f0b429,#f97316);box-shadow:0 4px 16px rgba(240,180,41,0.3);">
+            <div style="font-size:1.3rem;">📋</div>
+            <div>
+              <div style="font-size:0.82rem;font-weight:800;color:#fff;">Mock Test</div>
+              <div style="font-size:0.65rem;color:rgba(255,255,255,0.7);">Full CBSE paper</div>
+            </div>
+          </button>
+          <button class="hp-action-btn" onclick="navigate('games')"
+            style="background:linear-gradient(135deg,#0fca8c,#06b6d4);box-shadow:0 4px 16px rgba(15,202,140,0.3);">
+            <div style="font-size:1.3rem;">🎮</div>
+            <div>
+              <div style="font-size:0.82rem;font-weight:800;color:#fff;">Games</div>
+              <div style="font-size:0.65rem;color:rgba(255,255,255,0.7);">Learn by playing</div>
+            </div>
+          </button>
+          <button class="hp-action-btn" onclick="navigate('resources')"
+            style="background:linear-gradient(135deg,#ec4899,#f97316);box-shadow:0 4px 16px rgba(236,72,153,0.3);">
+            <div style="font-size:1.3rem;">📄</div>
+            <div>
+              <div style="font-size:0.82rem;font-weight:800;color:#fff;">Papers</div>
+              <div style="font-size:0.65rem;color:rgba(255,255,255,0.7);">PYQs & samples</div>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <!-- ━━━ WEEKLY XP CHART ━━━ -->
+      <div class="hp-section-label">This Week</div>
+      <div class="hp-card" style="margin-bottom:12px;animation-delay:0.12s;">
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;height:64px;gap:4px;margin-bottom:8px;">
+          ${weeklyXP
+            .map((v, i) => {
+              const pct = Math.round((v / maxWXP) * 100);
+              const isToday = i === todayDayIdx;
+              const col = isToday
+                ? "linear-gradient(180deg,#4f8ef7,#9b6dff)"
+                : "rgba(255,255,255,0.12)";
+              const h = Math.max(4, Math.round((pct / 100) * 56));
+              return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;">
+              <div style="width:100%;height:${h}px;border-radius:5px 5px 3px 3px;
+                background:${col};
+                box-shadow:${isToday ? "0 0 10px rgba(79,142,247,0.5)" : "none"};
+                transition:height 0.6s cubic-bezier(.22,1,.36,1);"></div>
+              <div style="font-size:0.6rem;color:${isToday ? "#4f8ef7" : "var(--text-muted)"};font-weight:${isToday ? "800" : "600"};">${days7[i]}</div>
+            </div>`;
+            })
+            .join("")}
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div style="font-size:0.7rem;color:var(--text-muted);">Weekly total: <span style="color:var(--text);font-weight:800;">${weeklyXP.reduce((a, b) => a + b, 0)} XP</span></div>
+          <button onclick="navigate('stats')" style="background:none;border:none;font-size:0.7rem;color:#4f8ef7;font-weight:700;cursor:pointer;padding:0;font-family:inherit;">Full stats →</button>
+        </div>
+      </div>
+
+      <!-- ━━━ SUBJECT INSIGHTS ━━━ -->
+      ${
+        topSubject || weakSubject
+          ? `
+      <div class="hp-section-label">Subject Insights</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:12px;">
+        ${
+          topSubject
+            ? `
+        <div class="hp-card" style="animation-delay:0.14s;background:rgba(15,202,140,0.06);border-color:rgba(15,202,140,0.18);">
+          <div style="font-size:0.65rem;font-weight:800;color:#0fca8c;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:6px;">Strongest</div>
+          <div style="font-size:1rem;font-weight:900;color:var(--text);margin-bottom:2px;">💪 ${topSubject[0]}</div>
+          <div style="font-size:0.68rem;color:var(--text-muted);">${topSubject[1]} questions done</div>
+        </div>`
+            : ""
+        }
+        ${
+          weakSubject
+            ? `
+        <div class="hp-card" onclick="navigate('weaktopics')" style="cursor:pointer;animation-delay:0.18s;background:rgba(247,113,79,0.06);border-color:rgba(247,113,79,0.18);">
+          <div style="font-size:0.65rem;font-weight:800;color:#f7714f;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:6px;">Needs Work</div>
+          <div style="font-size:1rem;font-weight:900;color:var(--text);margin-bottom:2px;">🎯 ${weakSubject[0]}</div>
+          <div style="font-size:0.68rem;color:var(--text-muted);">Tap to focus here</div>
+        </div>`
+            : ""
+        }
+      </div>`
+          : ""
+      }
+
+      <!-- ━━━ ALL TOOLS ━━━ -->
+      <div class="hp-section-label">All Tools</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:12px;">
+        ${[
+          { e: "📸", t: "Snap & Solve", p: "home", c: "#4f8ef7" },
+          { e: "🎙️", t: "Voice Doubt", p: "voice-doubt", c: "#ec4899" },
+          { e: "📅", t: "Revision Plan", p: "revision", c: "#06b6d4" },
+          { e: "📊", t: "PYQ Trends", p: "trends", c: "#f97316" },
+          { e: "🧠", t: "Mind Map", p: "mind-map", c: "#9b6dff" },
+          { e: "🃏", t: "Flashcards", p: "flashcards", c: "#0fca8c" },
+          { e: "⏱️", t: "Study Timer", p: "pomodoro", c: "#ec4899" },
+          { e: "🎯", t: "Weak Topics", p: "weaktopics", c: "#f7714f" },
+          { e: "📸", t: "Paper Autopilot", p: "autopilot", c: "#f0b429" },
+          { e: "⚔️", t: "Leagues", p: "leagues", c: "#f0b429" },
+          { e: "🏆", t: "Leaderboard", p: "leaderboard", c: "#f0b429" },
+          { e: "💾", t: "Saved", p: "saved", c: "#0fca8c" },
+        ]
           .map(
-            (q, i) => `
-          <button class="lp-qa-btn lp-pop lp-pop-d${i + 1}" onclick="navigate('${q.page}')"
-            style="background:${q.grad};box-shadow:0 4px 18px ${q.glow};">
-            <div style="font-size:1.7rem;filter:drop-shadow(0 2px 6px rgba(0,0,0,0.3));animation:lp-float ${2.2 + i * 0.3}s ease-in-out infinite;">${q.emoji}</div>
-            <div style="font-size:0.75rem;font-weight:800;color:#fff;text-align:center;line-height:1.2;">${q.label}</div>
-            <div style="font-size:0.63rem;color:rgba(255,255,255,0.7);text-align:center;line-height:1.2;">${q.sub}</div>
+            (f) => `
+          <button onclick="navigate('${f.p}')" style="
+            background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);
+            border-radius:16px;padding:13px 10px;cursor:pointer;font-family:inherit;
+            text-align:center;transition:transform 0.17s cubic-bezier(.34,1.56,.64,1),box-shadow 0.17s;
+            animation:hp-pop 0.35s cubic-bezier(.34,1.56,.64,1) both;"
+            onmouseover="this.style.transform='translateY(-3px)';this.style.borderColor='${f.c}44'"
+            onmouseout="this.style.transform='';this.style.borderColor='rgba(255,255,255,0.07)'">
+            <div style="font-size:1.4rem;margin-bottom:5px;filter:drop-shadow(0 0 7px ${f.c}88);">${f.e}</div>
+            <div style="font-size:0.72rem;font-weight:800;color:var(--text);line-height:1.2;">${f.t}</div>
+            <div style="margin-top:7px;height:2px;border-radius:99px;background:linear-gradient(90deg,${f.c},transparent);opacity:0.5;"></div>
           </button>`,
           )
           .join("")}
       </div>
 
-      <!-- ④ Level badge + perf card -->
-      <div class="glass lp-pop lp-pop-d2" onclick="window.updateMyLevel && window.updateMyLevel()" style="cursor:pointer;padding:16px 18px;margin-bottom:14px;display:flex;align-items:center;gap:14px;background:linear-gradient(135deg,rgba(155,109,255,0.08),rgba(79,142,247,0.06));border-color:rgba(155,109,255,0.2);">
-        <div style="font-size:2.4rem;animation:lp-float 3s ease-in-out infinite;filter:drop-shadow(0 0 12px rgba(155,109,255,0.5));">${perfDef ? perfDef.emoji : "📚"}</div>
+      <!-- ━━━ NOVA BANNER ━━━ -->
+      <div class="hp-card" onclick="document.getElementById('nova-fab') && document.getElementById('nova-fab').click()"
+        style="cursor:pointer;margin-bottom:4px;animation-delay:0.2s;
+          background:linear-gradient(135deg,rgba(79,142,247,0.07),rgba(155,109,255,0.09));
+          border-color:rgba(79,142,247,0.2);display:flex;align-items:center;gap:12px;">
+        <div style="width:42px;height:42px;flex-shrink:0;border-radius:50%;
+          background:linear-gradient(135deg,#4f8ef7,#9b6dff);
+          display:flex;align-items:center;justify-content:center;font-size:1.1rem;
+          box-shadow:0 0 14px rgba(79,142,247,0.5);animation:hp-float 2.8s ease-in-out infinite;">✨</div>
         <div style="flex:1;">
-          <div style="font-size:0.68rem;font-weight:700;color:#9b6dff;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:3px;">Your Level</div>
-          <div style="font-size:1rem;font-weight:900;color:var(--text);margin-bottom:3px;">${perfDef ? perfDef.name : "Getting started"}</div>
-          <div style="font-size:0.73rem;color:var(--text-muted);line-height:1.4;">${perfDef ? perfDef.message : "Complete onboarding to personalise"}</div>
+          <div style="font-size:0.82rem;font-weight:800;color:#4f8ef7;margin-bottom:2px;">Nova AI · Your study buddy</div>
+          <div style="font-size:0.7rem;color:var(--text-muted);">Ask any CBSE doubt, get instant step-by-step help</div>
         </div>
-        <div style="font-size:0.75rem;color:var(--text-muted);flex-shrink:0;">✏️</div>
+        <div style="color:var(--text-muted);font-size:1rem;">›</div>
       </div>
 
-      <!-- ⑤ Secondary feature tiles (2-col) -->
-      <div style="margin-bottom:10px;">
-        <div style="font-size:0.78rem;font-weight:700;color:var(--text-muted);letter-spacing:0.05em;text-transform:uppercase;margin-bottom:10px;">More tools</div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
-          ${features
-            .map(
-              (f, i) => `
-            <button class="lp-feat-btn lp-pop lp-pop-d${(i % 4) + 1}" onclick="navigate('${f.page}')"
-              style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);box-shadow:0 2px 12px rgba(0,0,0,0.2);">
-              <div style="font-size:1.4rem;margin-bottom:6px;filter:drop-shadow(0 0 8px ${f.accent}66);">${f.emoji}</div>
-              <div style="font-size:0.75rem;font-weight:800;color:var(--text);margin-bottom:3px;">${f.title}</div>
-              <div style="font-size:0.62rem;color:var(--text-muted);line-height:1.3;">${f.desc}</div>
-              <div style="margin-top:8px;height:2px;border-radius:99px;background:linear-gradient(90deg,${f.accent},transparent);opacity:0.6;"></div>
-            </button>`,
-            )
-            .join("")}
-        </div>
-      </div>
-
-      <!-- ⑥ Stasis AI banner -->
-      <div class="glass lp-pop" onclick="document.getElementById('nova-fab') && document.getElementById('nova-fab').click()"
-        style="cursor:pointer;padding:14px 16px;margin-top:14px;margin-bottom:4px;
-               background:linear-gradient(135deg,rgba(79,142,247,0.07),rgba(155,109,255,0.09));
-               border-color:rgba(79,142,247,0.22);display:flex;align-items:center;gap:12px;">
-        <div style="width:40px;height:40px;flex-shrink:0;border-radius:50%;
-                    background:linear-gradient(135deg,#4f8ef7,#9b6dff);
-                    display:flex;align-items:center;justify-content:center;font-size:1.15rem;
-                    box-shadow:0 0 16px rgba(79,142,247,0.5);animation:lp-float 2.8s ease-in-out infinite;">✨</div>
-        <div style="flex:1;">
-          <div style="font-size:0.82rem;font-weight:800;color:#4f8ef7;margin-bottom:2px;">Stasis AI — your study buddy</div>
-          <div style="font-size:0.72rem;color:var(--text-muted);line-height:1.4;">Tap me for homework help, concept explanations, and more.</div>
-        </div>
-        <div style="font-size:1rem;color:var(--text-muted);flex-shrink:0;">→</div>
-      </div>
-
-      <!-- About + Weak Topics buttons -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
-        <button onclick="navigate('about')" style="padding:14px 10px;border-radius:16px;border:1.5px solid rgba(79,217,179,0.3);background:rgba(79,217,179,0.07);color:#4fd9b3;font-size:0.82rem;font-weight:800;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;">
-          ℹ️ About StasisEdu
-        </button>
-        <button onclick="navigate('weaktopics')" style="padding:14px 10px;border-radius:16px;border:1.5px solid rgba(247,113,79,0.3);background:rgba(247,113,79,0.07);color:#f7714f;font-size:0.82rem;font-weight:800;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;">
-          🎯 My Weak Topics
-        </button>
+      <!-- Bottom links -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:10px;">
+        <button onclick="navigate('about')" style="padding:13px;border-radius:14px;border:1.5px solid rgba(79,217,179,0.25);background:rgba(79,217,179,0.06);color:#4fd9b3;font-size:0.78rem;font-weight:800;cursor:pointer;font-family:inherit;">ℹ️ About StasisEdu</button>
+        <button onclick="navigate('settings')" style="padding:13px;border-radius:14px;border:1.5px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.03);color:var(--text-muted);font-size:0.78rem;font-weight:800;cursor:pointer;font-family:inherit;">⚙️ Settings</button>
       </div>
     </div>
   `;
 }
-
 // ============================================================
 // HOME PAGE
 // ============================================================
@@ -6384,7 +6461,7 @@ function renderMindMapSVG(tree, chapter, subject) {
     </linearGradient>
   </defs>`;
 
-  // ── EDGES ────────────────────────────────────────────────────────────────
+  // ── EDGES ───────────────────────────l<�────────────────────────────────────
   const edgeSVG = edges
     .map((e, i) => {
       const ci = COLORS.indexOf(e.color);
@@ -8802,7 +8879,7 @@ function renderNotesTab() {
           "भाषा: सरल खड़ी बोली · स्त्री-विमर्श की दृष्टि महत्त्वपूर्ण",
         ],
         "Manglesh Dabral": [
-          "समकालीन हिंदी कवि · सामाजिक-राजनीतWaWa�क चेतना",
+          "समकालीन हिंदी कवि · सामाजिक-राजनीतWa�क चेतना",
           "पाठ 'संगतकार' — गायक के साथ गाने वाला संगतकार मुख्य कलाकार की प्रसिद्धि में सहायक",
           "संगतकार अपनी आवाज़ जानबूझकर धीमी रखता है — विनम्रता और समर्पण",
           "थीम: सहयोगी की भूमिका, अहंकारहीनता, साथ देने का महत्त्व",
@@ -11696,8 +11773,8 @@ function renderAutopilot() {
       onmouseout="this.style.borderColor='rgba(240,180,41,0.35)';this.style.background='rgba(240,180,41,0.04)'">
       <div style="font-size:2.5rem;margin-bottom:10px">📄</div>
       <div style="font-size:0.9rem;font-weight:800;color:var(--text);margin-bottom:4px">Tap to upload sample or past year paper</div>
-      <div style="font-size:0.75rem;color:var(--text-muted)">📷 Photo or 📄 PDF supported</div>
-      <input type="file" id="ap-file-input" accept="image/*,application/pdf" style="display:none" onchange="apOnImage(this)">
+      <div style="font-size:0.75rem;color:var(--text-muted)">JPG or PNG · Photo your paper</div>
+      <input type="file" id="ap-file-input" accept="image/*" style="display:none" onchange="apOnImage(this)">
     </div>
 
     <!-- Preview (hidden until upload) -->
@@ -11764,6 +11841,8 @@ function renderAutopilot() {
     if (!file) return;
 
     if (file.type === "application/pdf") {
+      // Reject PDFs over 400KB (base64 would exceed API limit)
+
       // PDF path — read as base64 and show a styled preview card
       const reader = new FileReader();
       reader.onload = (ev) => {
@@ -12012,7 +12091,16 @@ function renderAutopilot() {
       btn.style.background = "linear-gradient(135deg,#0fca8c,#4f8ef7)";
     } catch (e) {
       clearInterval(stepAnim);
-      err.textContent = "Could not analyse paper: " + e.message;
+      const msg = e.message || "";
+      if (msg.includes("413")) {
+        err.textContent =
+          "PDF too large for analysis. Try a smaller PDF or upload a photo instead.";
+      } else if (msg.includes("422")) {
+        err.textContent =
+          "Couldn't read text from this PDF. Try uploading a photo of the paper.";
+      } else {
+        err.textContent = "Could not analyse paper. Please try again.";
+      }
       btn.disabled = false;
       btn.style.opacity = "1";
       btn.textContent = "🚀 Analyse Paper & Build Plan";
