@@ -1127,6 +1127,163 @@ Dates in order: ${dateList.join(", ")}. dayType: revision | practice | mock-test
 });
 
 // ============================================================
+// EXAM PAPER AUTOPILOT
+// ============================================================
+router.post("/autopilot", async (req, res) => {
+  const {
+    imageBase64,
+    pdfBase64,
+    mimeType,
+    classNum,
+    examDate,
+    dailyHours,
+    daysLeft,
+    focus,
+    weakContext,
+    subjectCounts,
+  } = req.body as {
+    imageBase64?: string;
+    pdfBase64?: string;
+    mimeType: string;
+    classNum: string;
+    examDate: string;
+    dailyHours: number;
+    daysLeft: number;
+    focus: string;
+    weakContext: string;
+    subjectCounts: Record<string, number>;
+  };
+
+  if (!imageBase64 && !pdfBase64) {
+    return res.status(400).json({ error: "No file provided" });
+  }
+
+  const days = Math.min(Math.max(1, daysLeft), 14);
+  const dateList = Array.from({ length: days }, (_, i) => {
+    const d = new Date(Date.now() + i * 86400000);
+    return d.toISOString().split("T")[0];
+  });
+
+  const focusLabel: Record<string, string> = {
+    "weak-first": "prioritise weak/low-scoring topics first",
+    "paper-order": "follow the order topics appear in the paper",
+    "high-marks": "prioritise highest-mark topics first",
+    balanced: "cover all topics evenly",
+  };
+
+  const systemPrompt = `You are an expert CBSE Class ${classNum} exam planner. Analyse the uploaded question paper (which is a sample paper, past year paper, or mock test — NOT a live exam paper). Extract every topic/concept asked, then build a ${days}-day revision schedule for a student with ${dailyHours} hrs/day until exam on ${examDate}. Focus strategy: ${focusLabel[focus] || "balanced"}. Student weak areas (lower count = weaker): ${weakContext || "none"}. Dates: ${dateList.join(", ")}.\n\nReturn ONLY valid JSON with no markdown:\n{\n  "topics": [{"topic": "string", "subject": "string", "marks": number, "frequency": "high|medium|low"}],\n  "subjects": ["string"],\n  "schedule": [\n    {\n      "date": "YYYY-MM-DD",\n      "dayType": "revision|practice|mock-test|rest",\n      "tasks": [\n        {"subject": "string", "chapter": "string", "task": "string", "duration": "string", "emoji": "string", "priority": "high|medium|low"}\n      ]\n    }\n  ],\n  "tips": ["string"],\n  "paperSummary": "one sentence describing what type of paper this is and what subjects/topics it covers"\n}`;
+
+  try {
+    let response;
+
+    if (pdfBase64) {
+      // PDF: use Groq vision with document type
+      response = await client.chat.completions.create({
+        model: VISION_MODEL,
+        max_tokens: 3000,
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: systemPrompt,
+              },
+              {
+                type: "image_url",
+                image_url: {
+                  url: `data:${mimeType};base64,${pdfBase64}`,
+                },
+              },
+            ],
+          },
+        ],
+      });
+    } else {
+      // Image: existing vision path
+      response = await client.chat.completions.create({
+        model: VISION_MODEL,
+        max_tokens: 3000,
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: systemPrompt,
+              },
+              {
+                type: "image_url",
+                image_url: {
+                  url: `data:${mimeType};base64,${imageBase64}`,
+                },
+              },
+            ],
+          },
+        ],
+      });
+    }
+
+    const text = response.choices[0].message.content ?? "";
+    const parsed = safeJson(text) as {
+      topics?: unknown[];
+      subjects?: string[];
+      schedule?: unknown[];
+      tips?: string[];
+      paperSummary?: string;
+    } | null;
+
+    if (parsed?.schedule) {
+      return res.json({
+        topics: parsed.topics || [],
+        subjects: parsed.subjects || [],
+        days: parsed.schedule,
+        tips: parsed.tips || [],
+        paperSummary: parsed.paperSummary || "",
+        examDate,
+        dailyHours,
+      });
+    }
+
+    // Fallback if AI doesn't return proper structure
+    return res.json({
+      topics: [],
+      subjects: ["Maths", "Science", "Social Science", "English", "Hindi"],
+      days: dateList.map((date, i) => ({
+        date,
+        dayType: i % 7 === 6 ? "rest" : "revision",
+        tasks: [
+          {
+            subject: "Revision",
+            chapter: "Key Topics",
+            task:
+              i % 7 === 6
+                ? "Light revision + rest"
+                : "Revise key concepts from paper + practice questions",
+            duration: `${dailyHours} hrs`,
+            emoji: "📖",
+            priority: "medium",
+          },
+        ],
+      })),
+      tips: [
+        "Focus on topics that appeared multiple times in the paper",
+        "Solve at least 2 PYQs per chapter",
+        "Take a full mock test 3 days before the exam",
+        "Revise formulas and definitions daily",
+        "Sleep well the night before — it improves recall",
+      ],
+      paperSummary: "Sample paper uploaded — revision plan generated.",
+      examDate,
+      dailyHours,
+    });
+  } catch (e) {
+    req.log.error({ err: e }, "autopilot error");
+    res.status(500).json({ error: "AI error" });
+  }
+});
+
+// ============================================================
 // MOCK TEST
 // ============================================================
 router.post("/mock-test/generate", async (req, res) => {

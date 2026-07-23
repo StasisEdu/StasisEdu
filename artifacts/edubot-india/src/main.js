@@ -2158,6 +2158,9 @@ function navigate(page, extra) {
       case "settings":
         renderSettings();
         break;
+      case "autopilot":
+        renderAutopilot();
+        break;
       case "leagues":
         stopLeagueRefresh();
         renderLeagues().then(() => {
@@ -2406,6 +2409,13 @@ function renderLanding() {
       desc: "Pomodoro · 25 min focus sessions",
       page: "pomodoro",
       accent: "#ec4899",
+    },
+    {
+      emoji: "📸",
+      title: "Paper Autopilot",
+      desc: "Upload a PYQ → AI builds your revision plan",
+      page: "autopilot",
+      accent: "#f0b429",
     },
   ];
 
@@ -8792,7 +8802,7 @@ function renderNotesTab() {
           "भाषा: सरल खड़ी बोली · स्त्री-विमर्श की दृष्टि महत्त्वपूर्ण",
         ],
         "Manglesh Dabral": [
-          "समकालीन हिंदी कवि · सामाजिक-राजनीतिक चेतना",
+          "समकालीन हिंदी कवि · सामाजिक-राजनीतWaWa�क चेतना",
           "पाठ 'संगतकार' — गायक के साथ गाने वाला संगतकार मुख्य कलाकार की प्रसिद्धि में सहायक",
           "संगतकार अपनी आवाज़ जानबूझकर धीमी रखता है — विनम्रता और समर्पण",
           "थीम: सहयोगी की भूमिका, अहंकारहीनता, साथ देने का महत्त्व",
@@ -11407,7 +11417,7 @@ function renderSettings() {
 
     ${sect(
       "📚",
-      "Study Filter",
+      "Question Scope",
       row(
         "Difficulty",
         "Filter questions by difficulty",
@@ -11651,3 +11661,363 @@ function renderSettings() {
   applyEyeFilter();
 }
 window.renderSettings = renderSettings;
+
+// ============================================================
+// EXAM PAPER AUTOPILOT
+// ============================================================
+function renderAutopilot() {
+  const app = document.getElementById("app");
+  app.innerHTML = `
+    <button onclick="navigate('home')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.85rem;padding:0;font-family:inherit;margin-bottom:18px;display:block">‹ Back</button>
+    <div style="font-size:1.3rem;font-weight:900;background:linear-gradient(135deg,#f0b429,#f7714f);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:4px">📸 Exam Paper Autopilot</div>
+    <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:20px">Upload a PYQ or sample paper → AI reads every topic → auto-schedules your full revision plan</div>
+
+    <!-- How it works -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:20px">
+      ${[
+        ["📸", "Upload your paper", "PYQ, sample, or mock test"],
+        ["🧠", "AI scans topics", "Finds every concept asked"],
+        ["📅", "Plan generated", "Full revision schedule built"],
+      ]
+        .map(
+          ([e, t, s]) => `
+        <div style="background:rgba(240,180,41,0.06);border:1px solid rgba(240,180,41,0.15);border-radius:14px;padding:12px;text-align:center">
+          <div style="font-size:1.4rem;margin-bottom:6px">${e}</div>
+          <div style="font-size:0.72rem;font-weight:800;color:var(--text);margin-bottom:3px">${t}</div>
+          <div style="font-size:0.65rem;color:var(--text-muted)">${s}</div>
+        </div>`,
+        )
+        .join("")}
+    </div>
+
+    <!-- Upload area -->
+    <div id="ap-upload-area" onclick="document.getElementById('ap-file-input').click()" style="border:2px dashed rgba(240,180,41,0.35);border-radius:18px;padding:36px 20px;text-align:center;cursor:pointer;background:rgba(240,180,41,0.04);transition:all .2s;margin-bottom:16px"
+      onmouseover="this.style.borderColor='rgba(240,180,41,0.7)';this.style.background='rgba(240,180,41,0.08)'"
+      onmouseout="this.style.borderColor='rgba(240,180,41,0.35)';this.style.background='rgba(240,180,41,0.04)'">
+      <div style="font-size:2.5rem;margin-bottom:10px">📄</div>
+      <div style="font-size:0.9rem;font-weight:800;color:var(--text);margin-bottom:4px">Tap to upload sample or past year paper</div>
+      <div style="font-size:0.75rem;color:var(--text-muted)">📷 Photo or 📄 PDF supported</div>
+      <input type="file" id="ap-file-input" accept="image/*,application/pdf" style="display:none" onchange="apOnImage(this)">
+    </div>
+
+    <!-- Preview (hidden until upload) -->
+    <div id="ap-preview-wrap" style="display:none;margin-bottom:16px;position:relative">
+      <img id="ap-preview" style="width:100%;border-radius:14px;border:1px solid rgba(255,255,255,0.1)">
+      <button onclick="apRemoveImage()" style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.6);border:none;color:#fff;border-radius:50%;width:28px;height:28px;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
+    </div>
+
+    <!-- Options -->
+    <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:14px;margin-bottom:16px">
+      <div style="font-size:0.7rem;font-weight:900;letter-spacing:.08em;color:var(--text-muted);text-transform:uppercase;margin-bottom:12px">Plan Options</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div>
+          <div style="font-size:0.72rem;font-weight:700;color:var(--text-muted);margin-bottom:5px">Exam date</div>
+          <input type="date" id="ap-exam-date" style="width:100%;padding:7px 10px;border-radius:9px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);color:var(--text);font-size:0.8rem;font-family:inherit" value="${new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0]}" min="${new Date().toISOString().split("T")[0]}">
+        </div>
+        <div>
+          <div style="font-size:0.72rem;font-weight:700;color:var(--text-muted);margin-bottom:5px">Class</div>
+          <select id="ap-class" style="width:100%;padding:7px 10px;border-radius:9px;border:1px solid rgba(255,255,255,0.12);background:rgba(30,30,50,0.9);color:var(--text);font-size:0.8rem;font-family:inherit">
+            ${["6", "7", "8", "9", "10"].map((c) => `<option value="${c}" ${(S.classPreference || "10") === c ? "selected" : ""}>${c}</option>`).join("")}
+          </select>
+        </div>
+        <div>
+          <div style="font-size:0.72rem;font-weight:700;color:var(--text-muted);margin-bottom:5px">Daily study time</div>
+          <select id="ap-daily" style="width:100%;padding:7px 10px;border-radius:9px;border:1px solid rgba(255,255,255,0.12);background:rgba(30,30,50,0.9);color:var(--text);font-size:0.8rem;font-family:inherit">
+            ${[
+              ["1h", "1"],
+              ["2h", "2"],
+              ["3h", "3"],
+              ["4h", "4"],
+            ]
+              .map(
+                ([l, v]) =>
+                  `<option value="${v}" ${v === "2" ? "selected" : ""}>${l}</option>`,
+              )
+              .join("")}
+          </select>
+        </div>
+        <div>
+          <div style="font-size:0.72rem;font-weight:700;color:var(--text-muted);margin-bottom:5px">Focus</div>
+          <select id="ap-focus" style="width:100%;padding:7px 10px;border-radius:9px;border:1px solid rgba(255,255,255,0.12);background:rgba(30,30,50,0.9);color:var(--text);font-size:0.8rem;font-family:inherit">
+            <option value="weak-first">Weak topics first</option>
+            <option value="paper-order">Paper order</option>
+            <option value="high-marks">High marks first</option>
+            <option value="balanced">Balanced</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div id="ap-err" style="color:#f7714f;font-size:0.82rem;margin-bottom:10px;text-align:center;min-height:18px"></div>
+    <button id="ap-btn" onclick="apRun()" style="width:100%;padding:14px;border-radius:14px;border:none;background:linear-gradient(135deg,#f0b429,#f7714f);color:#fff;font-size:0.9rem;font-weight:900;cursor:pointer;font-family:inherit;opacity:0.5" disabled>
+      Upload a paper to continue
+    </button>
+
+    <!-- Results area -->
+    <div id="ap-results" style="margin-top:24px"></div>
+  `;
+
+  let _apImgData = null;
+
+  window.apOnImage = (input) => {
+    const file = input.files[0];
+    if (!file) return;
+
+    if (file.type === "application/pdf") {
+      // PDF path — read as base64 and show a styled preview card
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        _apImgData = {
+          pdfBase64: ev.target.result.split(",")[1],
+          mimeType: "application/pdf",
+        };
+        document.getElementById("ap-preview-wrap").style.display = "block";
+        document.getElementById("ap-preview-wrap").innerHTML = `
+          <div style="background:rgba(240,180,41,0.08);border:1px solid rgba(240,180,41,0.25);border-radius:14px;padding:20px;text-align:center;position:relative">
+            <div style="font-size:2.5rem">📄</div>
+            <div style="font-size:0.85rem;font-weight:800;color:var(--text);margin-top:6px">${file.name}</div>
+            <div style="font-size:0.72rem;color:var(--text-muted);margin-top:2px">${(file.size / 1024).toFixed(0)} KB • PDF</div>
+            <button onclick="apRemoveImage()" style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.6);border:none;color:#fff;border-radius:50%;width:28px;height:28px;font-size:1rem;cursor:pointer">✕</button>
+          </div>`;
+        document.getElementById("ap-upload-area").style.display = "none";
+        const btn = document.getElementById("ap-btn");
+        btn.disabled = false;
+        btn.style.opacity = "1";
+        btn.textContent = "🚀 Analyse Paper & Build Plan";
+      };
+      reader.readAsDataURL(file);
+      return;
+    }
+
+    // Image path (existing logic)
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const MAX = 1200;
+        let w = img.width,
+          h = img.height;
+        if (w > MAX || h > MAX) {
+          if (w > h) {
+            h = Math.round((h * MAX) / w);
+            w = MAX;
+          } else {
+            w = Math.round((w * MAX) / h);
+            h = MAX;
+          }
+        }
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+        const compressed = canvas.toDataURL("image/jpeg", 0.85);
+        _apImgData = {
+          imageBase64: compressed.split(",")[1],
+          mimeType: "image/jpeg",
+        };
+        document.getElementById("ap-preview").src = compressed;
+        document.getElementById("ap-preview-wrap").style.display = "block";
+        document.getElementById("ap-upload-area").style.display = "none";
+        const btn = document.getElementById("ap-btn");
+        btn.disabled = false;
+        btn.style.opacity = "1";
+        btn.textContent = "🚀 Analyse Paper & Build Plan";
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  window.apRemoveImage = () => {
+    _apImgData = null;
+    document.getElementById("ap-file-input").value = "";
+    document.getElementById("ap-preview-wrap").style.display = "none";
+    document.getElementById("ap-upload-area").style.display = "block";
+    const btn = document.getElementById("ap-btn");
+    btn.disabled = true;
+    btn.style.opacity = "0.5";
+    btn.textContent = "Upload a paper to continue";
+    document.getElementById("ap-results").innerHTML = "";
+  };
+
+  window.apRun = async () => {
+    if (!_apImgData) return;
+    const examDate = document.getElementById("ap-exam-date").value;
+    const classNum = document.getElementById("ap-class").value;
+    const dailyHours = Number(document.getElementById("ap-daily").value);
+    const focus = document.getElementById("ap-focus").value;
+    const err = document.getElementById("ap-err");
+    const btn = document.getElementById("ap-btn");
+    const results = document.getElementById("ap-results");
+    err.textContent = "";
+
+    btn.disabled = true;
+    btn.innerHTML = `<span style="display:inline-flex;align-items:center;gap:8px">${typingLoader()} Scanning paper...</span>`;
+
+    results.innerHTML = `
+      <div style="background:rgba(240,180,41,0.06);border:1px solid rgba(240,180,41,0.15);border-radius:14px;padding:16px;text-align:center">
+        <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:8px">Reading your sample paper...</div>
+        <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+          ${[
+            "Detecting subjects",
+            "Extracting topics",
+            "Mapping to chapters",
+            "Checking PYQ patterns",
+            "Building schedule",
+          ]
+            .map(
+              (s, i) =>
+                `<div id="ap-step-${i}" style="padding:4px 10px;border-radius:20px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:var(--text-muted);font-size:0.7rem;font-weight:700;transition:all .4s">${s}</div>`,
+            )
+            .join("")}
+        </div>
+      </div>`;
+
+    // Animate steps
+    let stepIdx = 0;
+    const stepAnim = setInterval(() => {
+      const el = document.getElementById(`ap-step-${stepIdx}`);
+      if (el) {
+        el.style.borderColor = "#f0b429";
+        el.style.color = "#f0b429";
+        el.style.background = "rgba(240,180,41,0.1)";
+      }
+      stepIdx++;
+      if (stepIdx >= 5) clearInterval(stepAnim);
+    }, 900);
+
+    try {
+      const daysLeft = Math.max(
+        1,
+        Math.round((new Date(examDate) - Date.now()) / 86400000),
+      );
+      const data = await apiPost("/autopilot", {
+        ..._apImgData,
+        classNum,
+        examDate,
+        dailyHours,
+        daysLeft,
+        focus,
+        subjectCounts: S.subjectCounts || {},
+        weakContext: Object.entries(S.subjectCounts || {})
+          .map(([k, v]) => `${k}:${v}`)
+          .join(", "),
+      });
+
+      clearInterval(stepAnim);
+
+      // Store as revision schedule so user can view it in Revision Plan too
+      S.revisionSchedule = {
+        ...data,
+        examDate,
+        classNum,
+        subjects: data.subjects || [],
+        dailyHours,
+        createdAt: Date.now(),
+        source: "autopilot",
+      };
+      saveState();
+
+      // Render results
+      const topics = data.topics || [];
+      const schedule = data.schedule || [];
+      const subjectList = data.subjects || [];
+
+      results.innerHTML = `
+        <!-- Success banner -->
+        <div style="background:rgba(15,202,140,0.08);border:1.5px solid rgba(15,202,140,0.25);border-radius:14px;padding:14px 16px;margin-bottom:16px;display:flex;align-items:center;gap:12px">
+          <span style="font-size:1.5rem">✅</span>
+          <div>
+            <div style="font-size:0.85rem;font-weight:900;color:#0fca8c">Plan ready — ${daysLeft} days to go</div>
+            <div style="font-size:0.75rem;color:var(--text-muted);margin-top:2px">${topics.length} topics detected across ${subjectList.length} subjects</div>
+          </div>
+        </div>
+
+        <!-- Stats row -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px">
+          ${[
+            ["📚", topics.length, "Topics found"],
+            ["📅", schedule.length, "Study days"],
+            ["⏱️", dailyHours + "h", "Per day"],
+          ]
+            .map(
+              ([
+                e,
+                v,
+                l,
+              ]) => `<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:12px;text-align:center">
+            <div style="font-size:1.1rem">${e}</div>
+            <div style="font-size:1.2rem;font-weight:900;color:var(--text)">${v}</div>
+            <div style="font-size:0.65rem;color:var(--text-muted)">${l}</div>
+          </div>`,
+            )
+            .join("")}
+        </div>
+
+        <!-- Topics detected -->
+        ${
+          topics.length > 0
+            ? `
+        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:14px;margin-bottom:16px">
+          <div style="font-size:0.7rem;font-weight:900;letter-spacing:.08em;color:var(--text-muted);text-transform:uppercase;margin-bottom:10px">Topics detected in your paper</div>
+          <div style="display:flex;flex-wrap:wrap;gap:7px">
+            ${topics.map((t) => `<span style="padding:4px 10px;border-radius:20px;background:rgba(240,180,41,0.1);border:1px solid rgba(240,180,41,0.25);color:#f0b429;font-size:0.72rem;font-weight:700">${t}</span>`).join("")}
+          </div>
+        </div>`
+            : ""
+        }
+
+        <!-- First 5 days of schedule preview -->
+        ${
+          schedule.length > 0
+            ? `
+        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:14px;margin-bottom:16px">
+          <div style="font-size:0.7rem;font-weight:900;letter-spacing:.08em;color:var(--text-muted);text-transform:uppercase;margin-bottom:10px">Your first ${Math.min(5, schedule.length)} days</div>
+          ${schedule
+            .slice(0, 5)
+            .map(
+              (day, i) => `
+            <div style="display:flex;gap:12px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,0.05)${i === Math.min(4, schedule.length - 1) ? ";border:none" : ""}">
+              <div style="width:36px;height:36px;border-radius:10px;background:rgba(240,180,41,0.12);border:1px solid rgba(240,180,41,0.25);display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:900;color:#f0b429;flex-shrink:0">D${i + 1}</div>
+              <div style="flex:1">
+                <div style="font-size:0.82rem;font-weight:700;color:var(--text)">${day.title || day.topic || "Study session"}</div>
+                <div style="font-size:0.72rem;color:var(--text-muted);margin-top:2px">${day.description || day.subject || ""}</div>
+              </div>
+              ${day.marks ? `<div style="font-size:0.7rem;font-weight:800;color:#f0b429;flex-shrink:0">${day.marks}M</div>` : ""}
+            </div>`,
+            )
+            .join("")}
+        </div>`
+            : ""
+        }
+
+        <!-- PYQ warning if topics repeat -->
+        ${
+          data.pyqAlert
+            ? `
+        <div style="background:rgba(247,113,79,0.08);border:1px solid rgba(247,113,79,0.2);border-radius:12px;padding:12px 14px;margin-bottom:16px;font-size:0.78rem;color:#f7714f">
+          ⚠️ ${data.pyqAlert}
+        </div>`
+            : ""
+        }
+
+        <!-- Actions -->
+        <div style="display:flex;gap:10px">
+          <button onclick="navigate('revision')" style="flex:1;padding:12px;border-radius:12px;border:none;background:linear-gradient(135deg,#06b6d4,#4f8ef7);color:#fff;font-size:0.82rem;font-weight:900;cursor:pointer;font-family:inherit">📅 View Full Plan</button>
+          <button onclick="apRemoveImage()" style="padding:12px 16px;border-radius:12px;border:1.5px solid rgba(255,255,255,0.12);background:transparent;color:var(--text-muted);font-size:0.82rem;font-weight:700;cursor:pointer;font-family:inherit">↺ New Paper</button>
+        </div>
+      `;
+
+      btn.textContent = "✅ Plan Generated";
+      btn.style.background = "linear-gradient(135deg,#0fca8c,#4f8ef7)";
+    } catch (e) {
+      clearInterval(stepAnim);
+      err.textContent = "Could not analyse paper: " + e.message;
+      btn.disabled = false;
+      btn.style.opacity = "1";
+      btn.textContent = "🚀 Analyse Paper & Build Plan";
+      results.innerHTML = "";
+    }
+  };
+}
+window.renderAutopilot = renderAutopilot;
