@@ -1177,12 +1177,10 @@ router.post("/autopilot", async (req, res) => {
     let response;
 
     if (pdfBase64) {
-      return res
-        .status(422)
-        .json({
-          error:
-            "PDF upload is not supported yet. Please take a photo of your question paper and upload that instead.",
-        });
+      return res.status(422).json({
+        error:
+          "PDF upload is not supported yet. Please take a photo of your question paper and upload that instead.",
+      });
     } else {
       // Image: use vision model
       response = await client.chat.completions.create({
