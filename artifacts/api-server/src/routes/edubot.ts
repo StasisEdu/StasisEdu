@@ -63,7 +63,6 @@ router.post("/solve", async (req, res) => {
     res.status(400).json({ error: "Missing fields" });
     return;
   }
-  const effectiveLang = lang || language;
 
   // Gibberish / invalid input detection
   const trimmedQ = question.trim().slice(0, 800);
@@ -96,6 +95,7 @@ router.post("/solve", async (req, res) => {
   const chapterClause = chapter
     ? ` Focus specifically on CBSE Chapter: ${chapter}.`
     : "";
+  const effectiveLang = lang || language;
   const isHindi = effectiveLang === "hi" || subject === "Hindi";
   const langClause = isHindi
     ? " IMPORTANT: Respond ENTIRELY in Hindi using Devanagari script — this includes the solution, every step, and the memory trick. Do not use any English words except for proper nouns or technical terms with no Hindi equivalent."
@@ -1042,7 +1042,7 @@ router.post("/revision-schedule", async (req, res) => {
     : "";
   const firstRevDay = Math.ceil(days * 0.7);
   const langInstruction = isHindi
-    ? "IMPORTANT: Write ALL task descriptions, tips, and schedule descriptions in Hindi (Devanagari script). Chapter names and subject names can remain in English."
+    ? "IMPORTANT: Write ALL task descriptions and tips in Hindi (Devanagari script). Chapter and subject names can stay in English."
     : "";
   const prompt = `You are an expert CBSE Class ${classNum} exam planner. ${daysLeft} days until exam on ${examDate}. ~${dailyHours} hrs/day. ${slotCtx}
 ${langInstruction}
@@ -1056,12 +1056,11 @@ Rules for the ${days}-day plan:
 1. Assign SPECIFIC chapter names AND exact sub-topics (e.g. "Quadratic Equations — Discriminant method, nature of roots, word problems")
 2. Give exact duration per task: "45 min", "1 hr", "1.5 hrs"
 3. Cover EVERY chapter at least once; revisit weak ones twice
-4. Weaker subjects (lower counts) get more time slots
-5. Days 1-${firstRevDay}: chapter-by-chapter systematic study with specific NCERT exercise numbers (e.g. "NCERT Ex 4.3 Q1-Q8")
+4. Weaker subjects get more time slots
+5. Days 1-${firstRevDay}: chapter-by-chapter study with NCERT exercise numbers (e.g. "NCERT Ex 4.3 Q1-Q8")
 6. Days ${firstRevDay + 1}-${days}: revision rounds, formula drills, mock tests
 7. Every 7th day: rest/light day (1 light task only)
-8. Mix task types each day: concept reading, solved examples, PYQ practice, formula writing, diagram practice
-9. Specify CBSE weightage focus: high-weightage chapters get 2x more tasks
+8. Mix task types: concept reading, solved examples, PYQ practice, formula writing
 
 Return ONLY valid JSON (no markdown):
 {
@@ -1073,8 +1072,8 @@ Return ONLY valid JSON (no markdown):
         {
           "subject": "Maths",
           "chapter": "Quadratic Equations",
-          "topics": "Discriminant method, nature of roots, word problems",
-          "task": "Read NCERT Ex 4.3 Q1-8 • Solve 5 PYQ Qs • Write discriminant formula + 3 examples",
+          "topics": "Discriminant method, nature of roots",
+          "task": "Read NCERT Ex 4.3 Q1-8 • Solve 5 PYQ Qs • Write discriminant formula",
           "duration": "1.5 hrs",
           "emoji": "📐",
           "priority": "high",
@@ -1083,10 +1082,8 @@ Return ONLY valid JSON (no markdown):
       ]
     }
   ],
-  "tips": ["5 specific actionable tips targeting their exact weakest chapters"],
-  "subjectSchedule": {
-    "Maths": ["Days 1-2: Real Numbers & Polynomials — HCF/LCM + zeroes theorem", "Days 3-4: Quadratic Equations — all methods + word problems"]
-  }
+  "tips": ["5 specific actionable tips"],
+  "subjectSchedule": {}
 }
 Dates in order: ${dateList.join(", ")}. dayType: revision | practice | mock-test | rest.`;
 
@@ -1107,125 +1104,33 @@ Dates in order: ${dateList.join(", ")}. dayType: revision | practice | mock-test
     } else {
       const fallbackDays = dateList.map((date, i) => ({
         date,
-        tasks: subjects.slice(0, dailyHours >= 4 ? 2 : 1).map((s) => ({
+        tasks: subjects.slice(0, 2).map((s) => ({
           subject: s,
           task:
             i % 7 === 6
-              ? isHindi ? "हल्का पुनरावलोकन + आराम" : "Light revision + rest"
-              : isHindi ? "मुख्य अवधारणाएं + अभ्यास प्रश्न" : "Revise key concepts + practice questions",
-          duration: `${Math.floor(dailyHours / Math.min(subjects.length, dailyHours >= 4 ? 2 : 1))} hrs`,
-          emoji: ["📐", "⚡", "🧪", "🌿", "📜", "🗺️", "⚖️", "💰", "📝", "🇮🇳"][
-            subjects.indexOf(s) % 10
-          ],
+              ? isHindi
+                ? "हल्का पुनरावलोकन"
+                : "Light revision"
+              : isHindi
+                ? "मुख्य अवधारणाएं + अभ्यास"
+                : "Revise key concepts + practice",
+          duration: "1 hr",
+          emoji: "📚",
         })),
       }));
       res.json({
         days: fallbackDays,
         tips: isHindi
-          ? ["पहले कमजोर अध्यायों पर ध्यान दें", "प्रत्येक अध्याय के 2 PYQ हल करें", "हर 5 दिन में मॉक टेस्ट लें"]
-          : ["Focus on weak chapters first", "Solve at least 2 PYQs per chapter", "Take a full mock test every 5 days"],
-        subjects,
-        examDate,
-        dailyHours,
-      });
-    }
-  } catch (e) {
-    req.log.error({ err: e }, "revision-schedule error");
-    res.status(500).json({ error: "AI error" });
-  }
-});
-  const days = Math.min(daysLeft, 14);
-  const dateList = Array.from({ length: days }, (_, i) => {
-    const d = new Date(Date.now() + i * 86400000);
-    return d.toISOString().split("T")[0];
-  });
-  const chapterContext = chapterMap
-    ? Object.entries(chapterMap)
-        .map(([subj, chs]) => `${subj}: ${(chs as string[]).join(", ")}`)
-        .join("\n")
-    : "";
-  const slotCtx = studySlots?.length
-    ? `Available study slots: ${studySlots.join(", ")} (school ${schoolStart || "?"}-${schoolEnd || "?"})`
-    : "";
-  const firstRevDay = Math.ceil(days * 0.7);
-  const prompt = `You are an expert CBSE Class ${classNum} exam planner. ${daysLeft} days until exam on ${examDate}. ~${dailyHours} hrs/day. ${slotCtx}
-Subjects: ${subjects.join(", ")}.
-Practice history (lower count = weaker): ${weakContext}
-
-Chapters available per subject:
-${chapterContext}
-
-Rules for the ${days}-day plan:
-1. Assign SPECIFIC chapter names (from the list above) to every task — never generic "revise chapter"
-2. Give exact duration per task: "45 min", "1 hr", "1.5 hrs", "2 hrs"
-3. Cover EVERY chapter at least once across the ${days} days
-4. Weaker subjects (lower counts) get more days/tasks
-5. Days 1-${firstRevDay}: systematic chapter-by-chapter revision; Days ${firstRevDay + 1}-${days}: revision rounds + mock tests
-6. Every 7th day: rest/light day (only 1 light task)
-7. Include: chapter read, practice Qs, formula drill, NCERT examples, and 1-2 full mock test days
-
-Return ONLY valid JSON (no markdown):
-{
-  "days": [
-    {
-      "date": "YYYY-MM-DD",
-      "dayType": "revision",
-      "tasks": [
-        {
-          "subject": "Maths",
-          "chapter": "Quadratic Equations",
-          "task": "Read NCERT + solve 10 PYQ practice questions + write all key formulas",
-          "duration": "1.5 hrs",
-          "emoji": "📐",
-          "priority": "high"
-        }
-      ]
-    }
-  ],
-  "tips": ["5 specific actionable tips targeting their weakest subjects"],
-  "subjectSchedule": {
-    "Maths": ["Days 1-2: Real Numbers & Polynomials", "Days 3-4: Quadratic Equations & AP"]
-  }
-}
-Dates in order: ${dateList.join(", ")}. dayType: revision | practice | mock-test | rest.`;
-
-  try {
-    const text = await ask(prompt, 2000);
-    const parsed = safeJson(text) as {
-      days?: unknown[];
-      tips?: string[];
-    } | null;
-    if (parsed?.days) {
-      res.json({
-        days: parsed.days,
-        tips: parsed.tips || [],
-        subjects,
-        examDate,
-        dailyHours,
-      });
-    } else {
-      // Fallback: simple alternating schedule
-      const fallbackDays = dateList.map((date, i) => ({
-        date,
-        tasks: subjects.slice(0, dailyHours >= 4 ? 2 : 1).map((s, si) => ({
-          subject: s,
-          task:
-            i % 7 === 6
-              ? "Light revision + rest"
-              : "Revise key concepts + practice questions",
-          duration: `${Math.floor(dailyHours / Math.min(subjects.length, dailyHours >= 4 ? 2 : 1))} hrs`,
-          emoji: ["📐", "⚡", "🧪", "🌿", "📜", "🗺️", "⚖️", "💰", "📝", "🇮🇳"][
-            subjects.indexOf(s) % 10
-          ],
-        })),
-      }));
-      res.json({
-        days: fallbackDays,
-        tips: [
-          "Focus on weak chapters first",
-          "Solve at least 2 PYQs per chapter",
-          "Take a full mock test every 5 days",
-        ],
+          ? [
+              "पहले कमजोर अध्यायों पर ध्यान दें",
+              "प्रत्येक अध्याय के 2 PYQ हल करें",
+              "हर 5 दिन में मॉक टेस्ट लें",
+            ]
+          : [
+              "Focus on weak chapters first",
+              "Solve 2 PYQs per chapter",
+              "Take a mock test every 5 days",
+            ],
         subjects,
         examDate,
         dailyHours,
@@ -1242,23 +1147,27 @@ Dates in order: ${dateList.join(", ")}. dayType: revision | practice | mock-test
 // ============================================================
 router.post("/chapter-summary", async (req, res) => {
   const { classNum, subject, chapter, lang, detailed } = req.body as {
-    classNum: string; subject: string; chapter: string;
-    lang?: string; detailed?: boolean;
+    classNum: string;
+    subject: string;
+    chapter: string;
+    lang?: string;
+    detailed?: boolean;
   };
   if (!classNum || !subject || !chapter) {
-    res.status(400).json({ error: "Missing fields" }); return;
+    res.status(400).json({ error: "Missing fields" });
+    return;
   }
   const isHindi = lang === "hi";
   const langClause = isHindi
     ? "IMPORTANT: Write the ENTIRE response in Hindi using Devanagari script."
     : "";
   const detailClause = detailed
-    ? "Be detailed (400-600 words). Include: key concepts, important definitions, all sub-topics, CBSE exam focus points, common mistakes, and a quick-revision bullet list at the end."
+    ? "Be detailed (400-600 words). Include: key concepts, definitions, sub-topics, CBSE exam focus points, common mistakes, and a quick-revision bullet list."
     : "Be concise (150-200 words).";
   const prompt = `You are a CBSE Class ${classNum} expert teacher. ${langClause}
 Write a chapter summary for: ${subject} — ${chapter}.
 ${detailClause}
-Format with clear headings. Use markdown (bold, bullets). Focus on CBSE board exam relevance.
+Format with clear headings. Use markdown. Focus on CBSE board exam relevance.
 Return as JSON: {"summary": "full markdown summary text"}`;
   try {
     const text = await ask(prompt, 1500);
@@ -1274,23 +1183,28 @@ Return as JSON: {"summary": "full markdown summary text"}`;
 // ============================================================
 router.post("/important-questions", async (req, res) => {
   const { classNum, subject, chapter, marks, lang } = req.body as {
-    classNum: string; subject: string; chapter: string;
-    marks?: string; lang?: string;
+    classNum: string;
+    subject: string;
+    chapter: string;
+    marks?: string;
+    lang?: string;
   };
   if (!classNum || !subject || !chapter) {
-    res.status(400).json({ error: "Missing fields" }); return;
+    res.status(400).json({ error: "Missing fields" });
+    return;
   }
   const isHindi = lang === "hi";
   const langClause = isHindi
     ? "IMPORTANT: Write ALL question text in Hindi using Devanagari script."
     : "";
-  const marksClause = marks && marks !== "All"
-    ? `Only include ${marks} questions.`
-    : "Include a mix of 1-mark, 2-mark, 3-mark, and 5-mark questions.";
+  const marksClause =
+    marks && marks !== "All"
+      ? `Only include ${marks} questions.`
+      : "Include a mix of 1-mark, 2-mark, 3-mark, and 5-mark questions.";
   const prompt = `You are a CBSE Class ${classNum} expert. ${langClause}
 Generate 10 most important exam questions for: ${subject} — ${chapter}.
 ${marksClause}
-Focus on frequently asked CBSE board exam questions, PYQ patterns, and high-weightage topics.
+Focus on frequently asked CBSE board exam questions and high-weightage topics.
 Return ONLY JSON: {"questions": [{"question": "...", "marks": 3, "type": "long answer"}]}`;
   try {
     const text = await ask(prompt, 1200);
@@ -1301,9 +1215,6 @@ Return ONLY JSON: {"questions": [{"question": "...", "marks": 3, "type": "long a
   }
 });
 
-// ============================================================
-// EXAM PAPER AUTOPILOT
-// ============================================================
 router.post("/autopilot", async (req, res) => {
   const {
     imageBase64,
