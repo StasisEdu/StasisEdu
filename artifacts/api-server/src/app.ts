@@ -3,6 +3,7 @@ import cors from "cors";
 import pinoHttp from "pino-http";
 import { clerkMiddleware } from "@clerk/express";
 import { publishableKeyFromHost } from "@clerk/shared/keys";
+import path from "path";
 import {
   CLERK_PROXY_PATH,
   clerkProxyMiddleware,
@@ -36,7 +37,7 @@ app.use(
 app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
 
 app.use(cors({ credentials: true, origin: true }));
-app.use(express.json());
+app.use(express.json({ limit: "20mb" }));
 app.use(express.urlencoded({ extended: true }));
 
 app.use(
@@ -49,5 +50,12 @@ app.use(
 );
 
 app.use("/api", router);
+
+// Serve built frontend
+const frontendDist = path.resolve(__dirname, "../../edubot-india/dist/public");
+app.use(express.static(frontendDist));
+app.get("*", (_req, res) => {
+  res.sendFile(path.join(frontendDist, "index.html"));
+});
 
 export default app;
