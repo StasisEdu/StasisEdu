@@ -70,12 +70,28 @@
         <div class="streak-wrap">🔥 <span id="streakCount">0</span></div>
         <div class="gems-wrap">💎 <span id="gemsCount">0</span></div>
         <button
-          id="themeToggle"
-          class="theme-toggle"
-          title="Toggle theme"
-          onclick="toggleTheme()"
+          id="themeBtn-dark"
+          class="theme-icon-btn"
+          title="Dark mode"
+          onclick="setTheme('dark')"
         >
           🌙
+        </button>
+        <button
+          id="themeBtn-light"
+          class="theme-icon-btn"
+          title="Light mode"
+          onclick="setTheme('light')"
+        >
+          ☀️
+        </button>
+        <button
+          id="themeBtn-eye"
+          class="theme-icon-btn"
+          title="Eye comfort mode"
+          onclick="setTheme('eye')"
+        >
+          🌿
         </button>
       </div>
     </header>
@@ -98,10 +114,7 @@
         <span class="nav-icon">📝</span>
         <span>Practice</span>
       </button>
-      <button class="nav-btn" data-page="saved" onclick="navigate('saved')">
-        <span class="nav-icon">💾</span>
-        <span>Saved</span>
-      </button>
+
       <button class="nav-btn" data-page="stats" onclick="navigate('stats')">
         <span class="nav-icon">📊</span>
         <span>Stats</span>
@@ -123,8 +136,8 @@
         data-page="resources"
         onclick="navigate('resources')"
       >
-        <span class="nav-icon">📄</span>
-        <span>Papers</span>
+        <span class="nav-icon">📚</span>
+        <span>Study</span>
       </button>
       <button class="nav-btn" data-page="leagues" onclick="navigate('leagues')">
         <span class="nav-icon">⚔️</span>
@@ -183,14 +196,11 @@
           >
         </button>
         <div id="featuresNavList" style="display: none; padding-left: 4px">
-          <button class="nav-btn" onclick="navigate('voice-doubt')">
-            <span class="nav-icon">🎙️</span><span>Voice Doubt</span>
+          <button class="nav-btn" onclick="navigate('ask-doubt')">
+            <span class="nav-icon">🤔</span><span>Ask a Doubt</span>
           </button>
           <button class="nav-btn" onclick="navigate('revision')">
             <span class="nav-icon">📅</span><span>Revision Plan</span>
-          </button>
-          <button class="nav-btn" onclick="navigate('trends')">
-            <span class="nav-icon">📊</span><span>PYQ Trends</span>
           </button>
           <button class="nav-btn" onclick="navigate('mock-test')">
             <span class="nav-icon">📝</span><span>Mock Test</span>
@@ -267,24 +277,36 @@
 
     <script type="module" src="/src/main.js"></script>
     <script>
-      const THEMES = ["dark", "light", "eye"];
-      const ICONS = { dark: "🌙", light: "☀️", eye: "🌿" };
       (function () {
         const saved = localStorage.getItem("stasis_theme") || "dark";
         if (saved !== "dark") document.documentElement.classList.add(saved);
       })();
-      function toggleTheme() {
+      function setTheme(t) {
         const html = document.documentElement;
-        const cur = localStorage.getItem("stasis_theme") || "dark";
-        const next = THEMES[(THEMES.indexOf(cur) + 1) % THEMES.length];
         html.classList.remove("light", "eye");
-        if (next !== "dark") html.classList.add(next);
-        localStorage.setItem("stasis_theme", next);
-        document.getElementById("themeToggle").textContent = ICONS[next];
+        if (t !== "dark") html.classList.add(t);
+        localStorage.setItem("stasis_theme", t);
+        _highlightThemeBtn(t);
+      }
+      function toggleTheme() {
+        const THEMES = ["dark", "light", "eye"];
+        const cur = localStorage.getItem("stasis_theme") || "dark";
+        setTheme(THEMES[(THEMES.indexOf(cur) + 1) % THEMES.length]);
+      }
+      function _highlightThemeBtn(active) {
+        ["dark", "light", "eye"].forEach(function (t) {
+          const btn = document.getElementById("themeBtn-" + t);
+          if (!btn) return;
+          btn.style.opacity = t === active ? "1" : "0.35";
+          btn.style.background =
+            t === active ? "rgba(255,255,255,0.14)" : "transparent";
+          btn.style.borderColor =
+            t === active ? "rgba(255,255,255,0.3)" : "transparent";
+        });
       }
       window.addEventListener("DOMContentLoaded", function () {
         const cur = localStorage.getItem("stasis_theme") || "dark";
-        document.getElementById("themeToggle").textContent = ICONS[cur];
+        _highlightThemeBtn(cur);
       });
     </script>
   </body>

@@ -94,6 +94,18 @@ function getClerkAvatarUrl() {
   return _clerkUser?.imageUrl || null;
 }
 
+async function logoutUser() {
+  if (!confirm("Sign out of your Google account?")) return;
+  try {
+    if (_clerk) await _clerk.signOut();
+  } catch (e) {}
+  _clerkUser = null;
+  _clerk = null;
+  localStorage.clear();
+  location.reload();
+}
+window.logoutUser = logoutUser;
+
 // ============================================================
 // CHAPTERS DATA
 // ============================================================
@@ -930,33 +942,17 @@ function showNameSplash(onDone) {
           <button id="continue-btn" style="width:100%;padding:15px;border-radius:50px;border:none;background:linear-gradient(135deg,#4f8ef7,#9b6dff);color:white;font-size:1rem;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 4px 24px rgba(79,142,247,0.35);transition:opacity 0.2s,transform 0.2s;margin-top:4px;">
             Continue Learning →
           </button>
-          <button id="switch-btn" style="background:none;border:none;color:#5a6a8a;font-size:0.85rem;cursor:pointer;font-family:inherit;transition:color 0.2s;padding:4px 8px;">
-            Switch account
+          <button id="switch-btn" style="background:none;border:none;color:#ef4444;font-size:0.82rem;cursor:pointer;font-family:inherit;transition:color 0.2s;padding:4px 8px;opacity:0.75;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.75'">
+            Sign out / Change account
           </button>
         </div>`;
 
       document.getElementById("continue-btn").onclick = () => dismiss(onDone);
-      document.getElementById("switch-btn").onclick = async () => {
-        if (_clerk && _clerkUser) {
-          try {
-            await _clerk.signOut();
-          } catch (e) {
-            /* ignore */
-          }
-          _clerkUser = null;
-        }
-        localStorage.removeItem("stasis_name");
-        localStorage.removeItem("stasis_performance");
-        localStorage.removeItem("stasis_state");
-        splash.remove();
-        showNameSplash(function () {
-          location.reload();
-        });
-      };
+      document.getElementById("switch-btn").onclick = () => logoutUser();
     } else {
       const classPills = CLASSES.map(
         (c) =>
-          `<button class="class-pill" data-class="${c}" style="padding:10px 14px;border-radius:12px;border:1px solid rgba(255,255,255,0.1);background:${c === selectedClass ? "linear-gradient(135deg,#4f8ef7,#9b6dff)" : "rgba(255,255,255,0.04)"};color:${c === selectedClass ? "#fff" : "#7a8aaa"};font-size:0.9rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s;min-width:44px;">${c}</button>`,
+          `<button class="class-pill" data-class="${c}" style="padding:10px 14px;border-radius:12px;border:${c === selectedClass ? (c === "10" ? "2px solid #4f8ef7" : "1px solid rgba(79,142,247,0.5)") : "1px solid rgba(255,255,255,0.1)"};background:${c === selectedClass ? "linear-gradient(135deg,#4f8ef7,#9b6dff)" : "rgba(255,255,255,0.04)"};color:${c === selectedClass ? "#fff" : "#7a8aaa"};font-size:${c === selectedClass && c === "10" ? "1rem" : "0.9rem"};font-weight:${c === selectedClass ? "900" : "700"};cursor:pointer;font-family:inherit;transition:all 0.15s;min-width:44px;${c === selectedClass && c === "10" ? "box-shadow:0 0 16px rgba(79,142,247,0.55);transform:scale(1.08);" : ""}">${c}${c === selectedClass && c === "10" ? " ✓" : ""}</button>`,
       ).join("");
 
       const hasClerk = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
@@ -1192,10 +1188,22 @@ const LANG = {
     math_title: "Math Challenge",
     math_desc: "5 mental math problems. Speed bonus under 10 seconds!",
     math_xp: "+10–20 XP per problem",
-    resources_title: "📚 Resources",
+    resources_title: "📚 Study Resources",
     papers_tab: "📄 Papers",
     notes_tab: "📒 Notes",
     formulas_tab: "🔢 Formulas",
+    nav_study: "Study",
+    ask_doubt: "Ask a Doubt",
+    snap_type: "📸 Snap & Type",
+    voice_tab: "🎙️ Voice",
+    study_resources: "Study Resources",
+    chapter_summary: "Chapter Summaries",
+    visual_explain: "Visual Explanations",
+    ncert_tab: "NCERT",
+    important_qs: "Important Questions",
+    saved_qs: "Saved Questions",
+    sign_out: "Sign Out",
+    change_account: "Sign out / Change account",
     onboard_title: "Let's Personalize Your Learning",
     onboard_sub:
       "Tell us your last exam score so we can adapt your questions and explanations",
@@ -1264,10 +1272,22 @@ const LANG = {
     math_title: "गणित चुनौती",
     math_desc: "5 मानसिक गणित समस्याएं। 10 सेकंड में बोनस XP!",
     math_xp: "+10–20 XP प्रति समस्या",
-    resources_title: "📚 संसाधन",
+    resources_title: "📚 अध्ययन संसाधन",
     papers_tab: "📄 प्रश्नपत्र",
     notes_tab: "📒 नोट्स",
     formulas_tab: "🔢 सूत्र",
+    nav_study: "अध्ययन",
+    ask_doubt: "संदेह पूछें",
+    snap_type: "📸 फोटो / टेक्स्ट",
+    voice_tab: "🎙️ आवाज़",
+    study_resources: "अध्ययन संसाधन",
+    chapter_summary: "अध्याय सारांश",
+    visual_explain: "दृश्य व्याख्याएं",
+    ncert_tab: "NCERT",
+    important_qs: "महत्वपूर्ण प्रश्न",
+    saved_qs: "सहेजे गए प्रश्न",
+    sign_out: "साइन आउट",
+    change_account: "साइन आउट / खाता बदलें",
     onboard_title: "अपनी पढ़ाई को व्यक्तिगत बनाएं",
     onboard_sub:
       "हमें अपना पिछला परीक्षा स्कोर बताएं ताकि हम प्रश्न आपके अनुसार ढाल सकें",
@@ -1286,10 +1306,10 @@ function applyNavLang() {
   const map = {
     home: t("nav_home"),
     practice: t("nav_practice"),
-    saved: t("nav_saved"),
     stats: t("nav_stats"),
     leaderboard: t("nav_ranks"),
     games: t("nav_games"),
+    resources: t("nav_study"),
     resources: t("nav_papers"),
   };
   document.querySelectorAll(".nav-btn[data-page]").forEach((btn) => {
@@ -2158,6 +2178,9 @@ function navigate(page, extra) {
       case "settings":
         renderSettings();
         break;
+      case "ask-doubt":
+        renderAskDoubt();
+        break;
       case "autopilot":
         renderAutopilot();
         break;
@@ -2603,10 +2626,9 @@ function renderLanding() {
       <div class="hp-section-label">All Tools</div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:12px;">
         ${[
-          { e: "📸", t: "Snap & Solve", p: "home", c: "#4f8ef7" },
-          { e: "🎙️", t: "Voice Doubt", p: "voice-doubt", c: "#ec4899" },
+          { e: "🤔", t: "Ask a Doubt", p: "ask-doubt", c: "#4f8ef7" },
+          { e: "📚", t: "Study Resources", p: "resources", c: "#ec4899" },
           { e: "📅", t: "Revision Plan", p: "revision", c: "#06b6d4" },
-          { e: "📊", t: "PYQ Trends", p: "trends", c: "#f97316" },
           { e: "🧠", t: "Mind Map", p: "mind-map", c: "#9b6dff" },
           { e: "🃏", t: "Flashcards", p: "flashcards", c: "#0fca8c" },
           { e: "⏱️", t: "Study Timer", p: "pomodoro", c: "#ec4899" },
@@ -2809,17 +2831,17 @@ function renderHome() {
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
         ${[
           {
-            emoji: "📸",
-            title: "Snap & Solve",
-            desc: "Photo → AI solution",
-            page: "home",
+            emoji: "🤔",
+            title: "Ask a Doubt",
+            desc: "Snap, type or speak",
+            page: "ask-doubt",
             accent: "#4f8ef7",
           },
           {
-            emoji: "🎙️",
-            title: "Voice Doubt",
-            desc: "Speak, AI answers",
-            page: "voice-doubt",
+            emoji: "📚",
+            title: "Study Resources",
+            desc: "Notes, NCERT, formulas",
+            page: "resources",
             accent: "#ec4899",
           },
           {
@@ -2833,7 +2855,7 @@ function renderHome() {
             emoji: "📊",
             title: "PYQ Trends",
             desc: "Board exam topics",
-            page: "trends",
+            page: "resources",
             accent: "#f97316",
           },
           {
@@ -4136,6 +4158,21 @@ function renderStats() {
       <div class="badges-grid">${BADGE_DEFS.map((b) => `<div class="badge-item ${S.badges[b.id] ? "earned" : "locked"}" title="${b.desc}"><div class="badge-emoji">${b.emoji}</div><div class="badge-name">${b.name}</div></div>`).join("")}</div>
     </div>
   `;
+  // Floating Ranks button
+  const fab = document.createElement("button");
+  fab.id = "stats-ranks-fab";
+  fab.title = "View Leaderboard";
+  fab.onclick = () => navigate("leaderboard");
+  fab.style.cssText =
+    "position:fixed;bottom:90px;right:16px;width:52px;height:52px;border-radius:50%;border:none;background:linear-gradient(135deg,#f0b429,#f97316);color:#fff;font-size:1.3rem;cursor:pointer;box-shadow:0 4px 20px rgba(240,180,41,0.55);z-index:900;display:flex;align-items:center;justify-content:center;transition:transform .2s";
+  fab.innerHTML = "🏆";
+  fab.onmouseover = () => {
+    fab.style.transform = "scale(1.12)";
+  };
+  fab.onmouseout = () => {
+    fab.style.transform = "";
+  };
+  document.getElementById("app").appendChild(fab);
 }
 
 function renderAIInsightsPrompt() {
@@ -4920,6 +4957,161 @@ window.showCreateRoom = showCreateRoom;
 window.showJoinRoom = showJoinRoom;
 
 // ============================================================
+// ASK A DOUBT — merges Snap & Solve + Voice Doubt
+// ============================================================
+function renderAskDoubt() {
+  const app = document.getElementById("app");
+  const lang = getLanguage();
+  const isHi = lang === "hi";
+  app.innerHTML = `
+    <style>
+      ._adb-tab{padding:10px 0;flex:1;border:none;border-bottom:2px solid transparent;background:none;color:var(--text-muted);font-weight:700;font-size:0.9rem;font-family:inherit;cursor:pointer;transition:all .18s}
+      ._adb-tab.active{color:#4f8ef7;border-bottom-color:#4f8ef7}
+    </style>
+    <h1 class="gradient-heading section-heading" style="background:linear-gradient(135deg,#4f8ef7,#ec4899);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">
+      ${isHi ? "🤔 संदेह पूछें" : "🤔 Ask a Doubt"}
+    </h1>
+    <div style="display:flex;gap:0;margin-bottom:20px;border-bottom:2px solid rgba(255,255,255,0.08)">
+      <button class="_adb-tab active" id="adb-tab-snap" onclick="switchDoubtTab('snap')">${isHi ? "📸 फोटो / टेक्स्ट" : "📸 Snap & Type"}</button>
+      <button class="_adb-tab" id="adb-tab-voice" onclick="switchDoubtTab('voice')">${isHi ? "🎙️ आवाज़" : "🎙️ Voice"}</button>
+    </div>
+    <div id="adb-content"></div>
+  `;
+  window.switchDoubtTab = (tab) => {
+    ["snap", "voice"].forEach((id) => {
+      const btn = document.getElementById("adb-tab-" + id);
+      if (btn) {
+        btn.classList.toggle("active", tab === id);
+      }
+    });
+    if (tab === "snap") renderSnapTab();
+    else renderVoiceTab();
+  };
+  window.renderSnapTab = () => {
+    const el = document.getElementById("adb-content");
+    if (!el) return;
+    const classNum = S.classPreference || "10";
+    const subj = S.subjectPreference || "Science";
+    const chaps = CHAPTERS[classNum]?.[subj] || [];
+    el.innerHTML = `
+      <div style="background:rgba(79,142,247,0.06);border:1.5px solid rgba(79,142,247,0.18);border-radius:18px;padding:20px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+          <div>
+            <div style="font-size:0.7rem;font-weight:800;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px">${isHi ? "विषय" : "Subject"}</div>
+            <select id="snap-subj" onchange="window._snapSubjChange()" style="width:100%;padding:8px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);background:rgba(30,30,50,0.9);color:var(--text);font-size:0.85rem;font-family:inherit">
+              ${["Maths", "Science", "Social Science", "English", "Hindi"].map((s) => `<option value="${s}" ${s === subj ? "selected" : ""}>${s}</option>`).join("")}
+            </select>
+          </div>
+          <div>
+            <div style="font-size:0.7rem;font-weight:800;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px">${isHi ? "अध्याय" : "Chapter"}</div>
+            <select id="snap-chap" style="width:100%;padding:8px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);background:rgba(30,30,50,0.9);color:var(--text);font-size:0.85rem;font-family:inherit">
+              <option value="">${isHi ? "— अध्याय चुनें —" : "— Select Chapter —"}</option>
+              ${chaps.map((c) => `<option value="${c}">${c}</option>`).join("")}
+            </select>
+          </div>
+        </div>
+        <textarea id="snap-q" placeholder="${isHi ? "यहाँ अपना प्रश्न लिखें..." : "Type your CBSE question here..."}" style="width:100%;min-height:100px;padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.04);color:var(--text);font-size:0.9rem;font-family:inherit;resize:vertical;box-sizing:border-box;margin-bottom:10px"></textarea>
+        <label style="display:block;margin-bottom:12px">
+          <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:6px">📷 ${isHi ? "फोटो अपलोड करें (वैकल्पिक)" : "Upload photo (optional)"}</div>
+          <input type="file" id="snap-img" accept="image/*" onchange="window._snapImgChange(this)" style="font-size:0.8rem;color:var(--text-muted)">
+        </label>
+        <div id="snap-img-preview" style="margin-bottom:10px"></div>
+        <button onclick="window._submitSnapDoubt()" class="btn btn-primary" style="width:100%;padding:13px;font-weight:900;background:linear-gradient(135deg,#4f8ef7,#9b6dff);border:none">
+          ${isHi ? "हल करें →" : "Solve →"}
+        </button>
+        <div id="snap-answer" style="display:none;margin-top:18px"></div>
+      </div>
+    `;
+    window._snapSubjChange = () => {
+      const s = document.getElementById("snap-subj")?.value;
+      const chapSel = document.getElementById("snap-chap");
+      if (!chapSel || !s) return;
+      const chs = CHAPTERS[classNum]?.[s] || [];
+      chapSel.innerHTML = `<option value="">${isHi ? "— अध्याय चुनें —" : "— Select Chapter —"}</option>${chs.map((c) => `<option value="${c}">${c}</option>`).join("")}`;
+    };
+    window._snapImgChange = (input) => {
+      const prev = document.getElementById("snap-img-preview");
+      if (!prev) return;
+      const file = input.files?.[0];
+      if (!file) {
+        prev.innerHTML = "";
+        window._imgData = null;
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        window._imgData = e.target.result;
+        prev.innerHTML = `<img src="${e.target.result}" style="max-width:100%;max-height:180px;border-radius:10px;border:1px solid rgba(255,255,255,0.1)">`;
+      };
+      reader.readAsDataURL(file);
+    };
+    window._submitSnapDoubt = async () => {
+      const q = document.getElementById("snap-q")?.value?.trim();
+      const subject = document.getElementById("snap-subj")?.value || subj;
+      const chapter = document.getElementById("snap-chap")?.value || "";
+      if (!q && !window._imgData) {
+        alert(
+          isHi
+            ? "प्रश्न लिखें या फोटो अपलोड करें"
+            : "Enter a question or upload a photo",
+        );
+        return;
+      }
+      const ansEl = document.getElementById("snap-answer");
+      if (ansEl) {
+        ansEl.style.display = "block";
+        ansEl.innerHTML = `<div style="text-align:center;padding:20px">${typingLoader()}</div>`;
+      }
+      try {
+        const body = {
+          question: q || "Solve this question from the image",
+          subject,
+          classNum,
+          chapter,
+          level: getPerf().level,
+          lang: getLanguage(),
+        };
+        if (window._imgData) body.imageData = window._imgData;
+        const data = await apiPost("/solve", body);
+        const md =
+          (data.solution || "") +
+          (data.steps?.length
+            ? "\n\n**Steps:**\n" +
+              data.steps.map((s, i) => `${i + 1}. ${s}`).join("\n")
+            : "") +
+          (data.examTip ? `\n\n💡 **Exam Tip:** ${data.examTip}` : "");
+        if (ansEl)
+          ansEl.innerHTML = `<div class="glass" style="padding:16px;border-radius:14px">${markdownToHtml(md)}</div>`;
+      } catch (e) {
+        if (ansEl)
+          ansEl.innerHTML = `<div style="color:var(--red);padding:12px">Error: ${e.message}</div>`;
+      }
+    };
+  };
+  window.renderVoiceTab = () => {
+    const el = document.getElementById("adb-content");
+    if (!el) return;
+    // Inline the voice doubt UI inside this tab
+    const classNum = S.classPreference || "10";
+    const subj = S.subjectPreference || "Science";
+    el.innerHTML = `
+      <div style="background:rgba(236,72,153,0.06);border:1.5px solid rgba(236,72,153,0.18);border-radius:18px;padding:20px;text-align:center">
+        <div style="font-size:0.85rem;color:var(--text-muted);margin-bottom:20px">${isHi ? "माइक दबाएं और बोलें, या नीचे लिखें" : "Press mic to speak, or type below"}</div>
+        <button id="vd-mic-btn" onclick="window.toggleVoiceRecording()" style="width:80px;height:80px;border-radius:50%;border:none;background:linear-gradient(135deg,#ec4899,#9b6dff);cursor:pointer;font-size:2rem;box-shadow:0 4px 24px rgba(236,72,153,0.5);transition:all .2s;display:inline-flex;align-items:center;justify-content:center;margin-bottom:14px">🎙️</button>
+        <div id="vd-status" style="font-size:0.78rem;color:var(--text-muted);margin-bottom:16px">${isHi ? "बोलने के लिए टैप करें" : "Tap to speak"}</div>
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <input id="vd-text-input" type="text" placeholder="${isHi ? "या यहाँ लिखें..." : "Or type your doubt here..."}" style="flex:1;padding:10px 14px;border-radius:12px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.05);color:var(--text);font-size:0.88rem;font-family:inherit">
+          <button onclick="window.submitVoiceDoubt(document.getElementById('vd-text-input').value)" class="btn btn-primary" style="background:linear-gradient(135deg,#ec4899,#9b6dff);border:none;padding:10px 16px;flex-shrink:0">${isHi ? "पूछें →" : "Ask →"}</button>
+        </div>
+        <div id="vd-answer" style="display:none;text-align:left;margin-top:14px"></div>
+      </div>
+    `;
+  };
+  renderSnapTab();
+}
+window.renderAskDoubt = renderAskDoubt;
+
+// ============================================================
 // VOICE DOUBT SOLVER
 // ============================================================
 function renderVoiceDoubt() {
@@ -5103,6 +5295,7 @@ window.submitVoiceDoubt = async (question) => {
       classNum,
       chapter,
       level: getPerf().level,
+      lang: getLanguage(),
     });
     const fullText = [data.solution, ...(data.steps || [])].join(". ");
     // Speak the answer
@@ -5464,6 +5657,7 @@ window.generateRevisionSchedule = async () => {
       studySlots: slots,
       chapterMap,
       studyFilter,
+      lang: getLanguage(),
     });
     S.revisionSchedule = {
       ...data,
@@ -5549,7 +5743,7 @@ function renderRevisionScheduleView(schedule) {
       <div style="display:flex;justify-content:center;flex-wrap:wrap;gap:6px">
         ${(schedule.subjects || []).map((s) => `<span style="background:${SUBJ_COLORS[s] || "#9b6dff"}18;border:1px solid ${SUBJ_COLORS[s] || "#9b6dff"}33;color:${SUBJ_COLORS[s] || "#9b6dff"};font-size:0.7rem;font-weight:800;padding:3px 10px;border-radius:20px">${s}</span>`).join("")}
       </div>
-      ${schedule.schoolStart ? `<div style="margin-top:8px;font-size:0.72rem;color:rgba(255,255,255,0.4)">🏫 School ${schedule.schoolStart}–${schedule.schoolEnd} · Slots: ${(schedule.studySlots || []).map((s) => ({ morning: "🌅 Morning", afternoon: "📚 After School", evening: "🌇 Evening", night: "🌙 Night" })[s] || s).join(", ")}</div>` : ""}
+      ${schedule.schoolStart ? `<div style="margin-top:8px;font-size:0.72rem;color:rgba(255,255,255,0.4)">   � School ${schedule.schoolStart}–${schedule.schoolEnd} · Slots: ${(schedule.studySlots || []).map((s) => ({ morning: "🌅 Morning", afternoon: "📚 After School", evening: "🌇 Evening", night: "🌙 Night" })[s] || s).join(", ")}</div>` : ""}
     </div>
 
     <!-- Subject schedule overview -->
@@ -5721,14 +5915,17 @@ const PYQ_TRENDS = {
   },
 };
 
-function renderTrendsAnalyser() {
-  const app = document.getElementById("app");
+function renderTrendsAnalyser(inline = false) {
+  const app = inline
+    ? document.getElementById("resource-tab-content")
+    : document.getElementById("app");
+  if (!app) return;
   const subjects = Object.keys(PYQ_TRENDS);
   const subj = subjects.includes(S.subjectPreference)
     ? S.subjectPreference
     : subjects[0];
   app.innerHTML = `
-    <button onclick="navigate('home')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.85rem;padding:0;font-family:inherit;margin-bottom:18px;display:block">‹ Back</button>
+    ${inline ? "" : `<button onclick="navigate('home')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.85rem;padding:0;font-family:inherit;margin-bottom:18px;display:block">‹ Back</button>`}
     <div style="font-size:1.4rem;font-weight:900;background:linear-gradient(135deg,#f97316,#f0b429);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:4px">📊 PYQ Trend Analyser</div>
     <div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:18px">Which chapters appeared most in last 5 years of CBSE boards — study smart</div>
     <!-- Subject tabs -->
@@ -6244,7 +6441,12 @@ window.generateMindMap = async () => {
   const app = document.getElementById("app");
   app.innerHTML = `<div style="text-align:center;padding:60px 20px">${typingLoader()}<div style="font-size:0.85rem;color:var(--text-muted);margin-top:12px">Building mind map...</div></div>`;
   try {
-    const data = await apiPost("/mind-map", { classNum, subject, chapter });
+    const data = await apiPost("/mind-map", {
+      classNum,
+      subject,
+      chapter,
+      lang: getLanguage(),
+    });
     renderMindMapSVG(data.tree, chapter, subject);
   } catch (e) {
     app.innerHTML = `<div style="padding:20px;color:var(--red)">Error: ${e.message}<br><br><button class="btn btn-secondary btn-sm" onclick="renderMindMapSetup()">Back</button></div>`;
@@ -6877,6 +7079,7 @@ window.generateFlashcards = async () => {
       subject,
       chapter,
       count,
+      lang: getLanguage(),
     });
     _fcState = {
       cards: data.cards,
@@ -7844,30 +8047,408 @@ function renderStep(str) {
 // ============================================================
 function renderResources() {
   const app = document.getElementById("app");
+  const isHi = getLanguage() === "hi";
+  const TABS = [
+    { id: "papers", label: isHi ? "📄 पेपर" : "📄 Papers" },
+    { id: "trends", label: isHi ? "📊 PYQ" : "📊 PYQ" },
+    { id: "notes", label: isHi ? "📒 नोट्स" : "📒 Notes" },
+    { id: "summary", label: isHi ? "📝 सारांश" : "📝 Summary" },
+    { id: "visual", label: isHi ? "🎬 वीडियो" : "🎬 Visual" },
+    { id: "ncert", label: isHi ? "📗 NCERT" : "📗 NCERT" },
+    { id: "formulas", label: isHi ? "🔢 सूत्र" : "🔢 Formulas" },
+    { id: "important", label: isHi ? "⭐ महत्वपूर्ण" : "⭐ Important" },
+    { id: "saved", label: isHi ? "💾 सहेजे" : "💾 Saved" },
+  ];
   app.innerHTML = `
-    <h1 class="gradient-heading section-heading">${t("resources_title")}</h1>
-    <div style="display:flex;gap:0;margin-bottom:20px;border-bottom:2px solid rgba(255,255,255,0.08)">
-      <button id="tab-papers" onclick="switchResourceTab('papers')" style="flex:1;padding:10px;background:none;border:none;color:#4f8ef7;font-weight:700;font-size:0.9rem;font-family:inherit;border-bottom:2px solid #4f8ef7;cursor:pointer;margin-bottom:-2px">${t("papers_tab")}</button>
-      <button id="tab-pdfs" onclick="switchResourceTab('pdfs')" style="flex:1;padding:10px;background:none;border:none;color:var(--text-muted);font-weight:700;font-size:0.9rem;font-family:inherit;border-bottom:2px solid transparent;cursor:pointer;margin-bottom:-2px">📥 Board PDFs</button>
-      <button id="tab-notes" onclick="switchResourceTab('notes')" style="flex:1;padding:10px;background:none;border:none;color:var(--text-muted);font-weight:700;font-size:0.9rem;font-family:inherit;border-bottom:2px solid transparent;cursor:pointer;margin-bottom:-2px">${t("notes_tab")}</button>
-      <button id="tab-formulas" onclick="switchResourceTab('formulas')" style="flex:1;padding:10px;background:none;border:none;color:var(--text-muted);font-weight:700;font-size:0.9rem;font-family:inherit;border-bottom:2px solid transparent;cursor:pointer;margin-bottom:-2px">${t("formulas_tab")}</button>
+    <h1 class="gradient-heading section-heading">📚 ${isHi ? "अध्ययन संसाधन" : "Study Resources"}</h1>
+    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:20px">
+      <div style="display:flex;gap:0;border-bottom:2px solid rgba(255,255,255,0.08);min-width:max-content">
+        ${TABS.map((tb, i) => `<button id="tab-${tb.id}" onclick="switchResourceTab('${tb.id}')" style="padding:10px 12px;background:none;border:none;white-space:nowrap;color:${i === 0 ? "#4f8ef7" : "var(--text-muted)"};font-weight:700;font-size:0.78rem;font-family:inherit;border-bottom:2px solid ${i === 0 ? "#4f8ef7" : "transparent"};cursor:pointer;margin-bottom:-2px;transition:all .18s">${tb.label}</button>`).join("")}
+      </div>
     </div>
     <div id="resource-tab-content"></div>
   `;
   window.switchResourceTab = (tab) => {
-    ["papers", "pdfs", "notes", "formulas"].forEach((id) => {
-      const el = document.getElementById("tab-" + id);
+    TABS.forEach((tb) => {
+      const el = document.getElementById("tab-" + tb.id);
       if (!el) return;
-      const active = tab === id;
+      const active = tab === tb.id;
       el.style.color = active ? "#4f8ef7" : "var(--text-muted)";
       el.style.borderBottomColor = active ? "#4f8ef7" : "transparent";
     });
-    if (tab === "papers") renderPapersTab();
-    else if (tab === "pdfs") renderPdfPapersTab();
-    else if (tab === "formulas") renderFormulasTab();
-    else renderNotesTab();
+    const fns = {
+      papers: renderPapersTab,
+      trends: renderStudyTrendsTab,
+      notes: renderNotesTab,
+      summary: renderSummaryTab,
+      visual: renderVisualTab,
+      ncert: renderNcertTab,
+      formulas: renderFormulasTab,
+      important: renderImportantQsTab,
+      saved: renderStudySavedTab,
+    };
+    (fns[tab] || renderPapersTab)();
   };
   switchResourceTab("papers");
+}
+
+// ── PYQ Trends tab (moved from standalone page) ──────────────
+function renderStudyTrendsTab() {
+  // reuse the existing trends analyser but inject into resource-tab-content
+  const el = document.getElementById("resource-tab-content");
+  if (!el) return;
+  // Temporarily swap app to render, then move innerHTML
+  const isHi = getLanguage() === "hi";
+  el.innerHTML = `<div id="trends-inner" style="padding:0"></div>`;
+  // Render the full trends content inline
+  renderTrendsAnalyser(true); // pass flag to render inline
+}
+
+// ── Chapter Summaries (AI) ────────────────────────────────────
+function renderSummaryTab() {
+  const el = document.getElementById("resource-tab-content");
+  if (!el) return;
+  const isHi = getLanguage() === "hi";
+  const classNum = S.classPreference || "10";
+  const subj = S.subjectPreference || "Science";
+  const chaps = CHAPTERS[classNum]?.[subj] || [];
+  el.innerHTML = `
+    <div style="background:rgba(155,109,255,0.06);border:1.5px solid rgba(155,109,255,0.2);border-radius:18px;padding:18px">
+      <div style="font-size:1rem;font-weight:900;color:#9b6dff;margin-bottom:14px">📝 ${isHi ? "अध्याय सारांश" : "Chapter Summaries"}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <select id="sum-subj" onchange="window._sumSubjChange()" style="padding:8px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);background:rgba(30,30,50,0.9);color:var(--text);font-size:0.85rem;font-family:inherit">
+          ${["Maths", "Science", "Social Science", "English", "Hindi"].map((s) => `<option value="${s}" ${s === subj ? "selected" : ""}>${s}</option>`).join("")}
+        </select>
+        <select id="sum-chap" style="padding:8px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);background:rgba(30,30,50,0.9);color:var(--text);font-size:0.85rem;font-family:inherit">
+          <option value="">${isHi ? "— अध्याय चुनें —" : "— Select Chapter —"}</option>
+          ${chaps.map((c) => `<option value="${c}">${c}</option>`).join("")}
+        </select>
+      </div>
+      <button onclick="window._genSummary()" class="btn btn-primary" style="width:100%;padding:12px;font-weight:900;background:linear-gradient(135deg,#9b6dff,#4f8ef7);border:none">${isHi ? "सारांश बनाएं →" : "Generate Summary →"}</button>
+      <div id="sum-result" style="margin-top:16px"></div>
+    </div>
+  `;
+  window._sumSubjChange = () => {
+    const s = document.getElementById("sum-subj")?.value;
+    const c = document.getElementById("sum-chap");
+    if (!c || !s) return;
+    const chs = CHAPTERS[classNum]?.[s] || [];
+    c.innerHTML = `<option value="">${isHi ? "— अध्याय चुनें —" : "— Select Chapter —"}</option>${chs.map((ch) => `<option value="${ch}">${ch}</option>`).join("")}`;
+  };
+  window._genSummary = async () => {
+    const subject = document.getElementById("sum-subj")?.value || subj;
+    const chapter = document.getElementById("sum-chap")?.value;
+    if (!chapter) {
+      alert(isHi ? "अध्याय चुनें" : "Please select a chapter");
+      return;
+    }
+    const res = document.getElementById("sum-result");
+    if (res)
+      res.innerHTML = `<div style="text-align:center;padding:20px">${typingLoader()}</div>`;
+    try {
+      const data = await apiPost("/chapter-summary", {
+        classNum,
+        subject,
+        chapter,
+        lang: getLanguage(),
+        detailed: true,
+      });
+      if (res)
+        res.innerHTML = `<div class="glass" style="padding:16px;border-radius:14px">${markdownToHtml(data.summary || data.content || "")}</div>`;
+    } catch (e) {
+      if (res)
+        res.innerHTML = `<div style="color:var(--red)">${e.message}</div>`;
+    }
+  };
+}
+
+// ── Visual Explanations (YouTube links) ───────────────────────
+function renderVisualTab() {
+  const el = document.getElementById("resource-tab-content");
+  if (!el) return;
+  const isHi = getLanguage() === "hi";
+  const classNum = S.classPreference || "10";
+  const VISUAL_LINKS = {
+    Science: {
+      "Chemical Reactions and Equations": {
+        yt: "https://www.youtube.com/results?search_query=CBSE+class+10+Chemical+Reactions+Equations+hindi+english",
+        desc: "Balancing equations, types of reactions",
+      },
+      "Life Processes": {
+        yt: "https://www.youtube.com/results?search_query=CBSE+class+10+Life+Processes+explanation",
+        desc: "Nutrition, respiration, transportation",
+      },
+      Electricity: {
+        yt: "https://www.youtube.com/results?search_query=CBSE+class+10+Electricity+chapter+explanation",
+        desc: "Ohm's law, circuits, resistance",
+      },
+      "Light – Reflection and Refraction": {
+        yt: "https://www.youtube.com/results?search_query=CBSE+class+10+Light+Reflection+Refraction",
+        desc: "Mirrors, lenses, ray diagrams",
+      },
+    },
+    Maths: {
+      "Real Numbers": {
+        yt: "https://www.youtube.com/results?search_query=CBSE+class+10+Real+Numbers+explanation",
+        desc: "Euclid's algorithm, irrational numbers",
+      },
+      Polynomials: {
+        yt: "https://www.youtube.com/results?search_query=CBSE+class+10+Polynomials+explanation",
+        desc: "Zeroes, division algorithm",
+      },
+      Triangles: {
+        yt: "https://www.youtube.com/results?search_query=CBSE+class+10+Triangles+similarity+proof",
+        desc: "Similarity, Pythagoras theorem",
+      },
+      "Quadratic Equations": {
+        yt: "https://www.youtube.com/results?search_query=CBSE+class+10+Quadratic+Equations+explanation",
+        desc: "Discriminant, factoring, formula",
+      },
+    },
+  };
+  const subj = S.subjectPreference || "Science";
+  const links = VISUAL_LINKS[subj] || {};
+  const subjects = ["Maths", "Science", "Social Science", "English", "Hindi"];
+  el.innerHTML = `
+    <div style="background:rgba(6,182,212,0.06);border:1.5px solid rgba(6,182,212,0.2);border-radius:18px;padding:18px">
+      <div style="font-size:1rem;font-weight:900;color:#06b6d4;margin-bottom:14px">🎬 ${isHi ? "दृश्य व्याख्याएं" : "Visual Explanations"}</div>
+      <div style="margin-bottom:14px">
+        <select onchange="window._switchVisualSubj(this.value)" style="padding:8px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);background:rgba(30,30,50,0.9);color:var(--text);font-size:0.85rem;font-family:inherit">
+          ${subjects.map((s) => `<option value="${s}" ${s === subj ? "selected" : ""}>${s}</option>`).join("")}
+        </select>
+      </div>
+      <div id="visual-list">
+        ${
+          Object.keys(links).length
+            ? Object.entries(links)
+                .map(
+                  ([ch, info]) => `
+          <a href="${info.yt}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:rgba(6,182,212,0.07);border:1px solid rgba(6,182,212,0.2);border-radius:14px;margin-bottom:10px;text-decoration:none;transition:border-color .18s" onmouseover="this.style.borderColor='rgba(6,182,212,0.5)'" onmouseout="this.style.borderColor='rgba(6,182,212,0.2)'">
+            <span style="font-size:1.6rem;flex-shrink:0">▶️</span>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:0.88rem;font-weight:800;color:var(--text)">${ch}</div>
+              <div style="font-size:0.72rem;color:var(--text-muted)">${info.desc}</div>
+            </div>
+            <span style="font-size:0.7rem;color:#06b6d4;font-weight:700">YouTube →</span>
+          </a>`,
+                )
+                .join("")
+            : `
+          <a href="https://www.youtube.com/results?search_query=CBSE+class+${classNum}+${encodeURIComponent(subj)}+explanation" target="_blank" rel="noopener" style="display:block;padding:16px;background:rgba(6,182,212,0.07);border:1px solid rgba(6,182,212,0.2);border-radius:14px;text-decoration:none;text-align:center;color:#06b6d4;font-weight:700">
+            🔍 ${isHi ? "YouTube पर खोजें" : "Search on YouTube"} — Class ${classNum} ${subj}
+          </a>`
+        }
+        <a href="https://www.youtube.com/@MagnetBrains" target="_blank" rel="noopener" style="display:block;padding:12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:12px;margin-top:12px;text-decoration:none;text-align:center;color:var(--text-muted);font-size:0.8rem">🎓 Magnet Brains CBSE Channel →</a>
+        <a href="https://www.youtube.com/@vedantu_9_10" target="_blank" rel="noopener" style="display:block;padding:12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:12px;margin-top:8px;text-decoration:none;text-align:center;color:var(--text-muted);font-size:0.8rem">🎓 Vedantu Class 9-10 Channel →</a>
+      </div>
+    </div>
+  `;
+  window._switchVisualSubj = (s) => {
+    const url = `https://www.youtube.com/results?search_query=CBSE+class+${classNum}+${encodeURIComponent(s)}+chapter+explanation`;
+    document.getElementById("visual-list").innerHTML =
+      `<a href="${url}" target="_blank" rel="noopener" style="display:block;padding:16px;background:rgba(6,182,212,0.07);border:1px solid rgba(6,182,212,0.2);border-radius:14px;text-decoration:none;text-align:center;color:#06b6d4;font-weight:700">🔍 ${isHi ? "YouTube पर खोजें" : "Search on YouTube"} — Class ${classNum} ${s}</a>`;
+  };
+}
+
+// ── NCERT Solutions & PDFs ────────────────────────────────────
+function renderNcertTab() {
+  const el = document.getElementById("resource-tab-content");
+  if (!el) return;
+  const isHi = getLanguage() === "hi";
+  const classNum = S.classPreference || "10";
+  const NCERT_BASE = "https://ncert.nic.in";
+  const BOOKS = {
+    10: [
+      {
+        subject: "Maths",
+        title: "Mathematics",
+        code: "jemh1",
+        pdf: `${NCERT_BASE}/textbook/textbook.htm?jemh1=0-15`,
+      },
+      {
+        subject: "Science",
+        title: "Science",
+        code: "jesc1",
+        pdf: `${NCERT_BASE}/textbook/textbook.htm?jesc1=0-16`,
+      },
+      {
+        subject: "Social Science",
+        title: "Contemporary India II",
+        code: "jess2",
+        pdf: `${NCERT_BASE}/textbook/textbook.htm?jess2=0-7`,
+      },
+      {
+        subject: "Social Science",
+        title: "India and the Contemporary World",
+        code: "jess3",
+        pdf: `${NCERT_BASE}/textbook/textbook.htm?jess3=0-5`,
+      },
+      {
+        subject: "Social Science",
+        title: "Understanding Economic Development",
+        code: "jess4",
+        pdf: `${NCERT_BASE}/textbook/textbook.htm?jess4=0-5`,
+      },
+      {
+        subject: "English",
+        title: "First Flight",
+        code: "jfst1",
+        pdf: `${NCERT_BASE}/textbook/textbook.htm?jfst1=0-11`,
+      },
+      {
+        subject: "Hindi",
+        title: "Kshitiz II",
+        code: "khst2",
+        pdf: `${NCERT_BASE}/textbook/textbook.htm?khst2=0-17`,
+      },
+    ],
+  };
+  const books = BOOKS[classNum] || BOOKS["10"];
+  el.innerHTML = `
+    <div style="background:rgba(15,202,140,0.06);border:1.5px solid rgba(15,202,140,0.2);border-radius:18px;padding:18px">
+      <div style="font-size:1rem;font-weight:900;color:#0fca8c;margin-bottom:6px">📗 ${isHi ? "NCERT पाठ्यपुस्तकें और हल" : "NCERT Textbooks & Solutions"}</div>
+      <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:16px">${isHi ? "आधिकारिक NCERT वेबसाइट से" : "Official NCERT website — ncert.nic.in"}</div>
+
+      <div style="font-size:0.7rem;font-weight:900;letter-spacing:.08em;color:#0fca8c;text-transform:uppercase;margin-bottom:10px">📥 ${isHi ? "Class" : "Class"} ${classNum} ${isHi ? "पाठ्यपुस्तक PDF" : "Textbook PDFs"}</div>
+      ${books
+        .map(
+          (b) => `
+        <a href="${b.pdf}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:11px 14px;background:rgba(15,202,140,0.07);border:1px solid rgba(15,202,140,0.2);border-radius:12px;margin-bottom:8px;text-decoration:none;transition:border-color .18s" onmouseover="this.style.borderColor='rgba(15,202,140,0.5)'" onmouseout="this.style.borderColor='rgba(15,202,140,0.2)'">
+          <span style="font-size:1.2rem">📘</span>
+          <div style="flex:1">
+            <div style="font-size:0.85rem;font-weight:800;color:var(--text)">${b.title}</div>
+            <div style="font-size:0.7rem;color:var(--text-muted)">${b.subject}</div>
+          </div>
+          <span style="font-size:0.7rem;color:#0fca8c;font-weight:700">Open PDF →</span>
+        </a>`,
+        )
+        .join("")}
+
+      <div style="font-size:0.7rem;font-weight:900;letter-spacing:.08em;color:#4f8ef7;text-transform:uppercase;margin-top:20px;margin-bottom:10px">💡 ${isHi ? "NCERT हल (आधिकारिक साइट)" : "NCERT Solutions (Official Site)"}</div>
+      <a href="https://ncert.nic.in/textbook.php" target="_blank" rel="noopener" style="display:block;padding:14px;background:rgba(79,142,247,0.08);border:1.5px solid rgba(79,142,247,0.25);border-radius:14px;text-decoration:none;text-align:center;color:#4f8ef7;font-weight:700;margin-bottom:8px">📖 ${isHi ? "NCERT पाठ्यपुस्तक देखें" : "Browse NCERT Textbooks"} →</a>
+      <a href="https://ncert.nic.in/exemplar-problems.php" target="_blank" rel="noopener" style="display:block;padding:14px;background:rgba(79,142,247,0.06);border:1px solid rgba(79,142,247,0.15);border-radius:14px;text-decoration:none;text-align:center;color:var(--text-muted);font-size:0.85rem">📐 ${isHi ? "NCERT Exemplar प्रश्न" : "NCERT Exemplar Problems"} →</a>
+    </div>
+  `;
+}
+
+// ── Important Questions (AI-generated) ────────────────────────
+function renderImportantQsTab() {
+  const el = document.getElementById("resource-tab-content");
+  if (!el) return;
+  const isHi = getLanguage() === "hi";
+  const classNum = S.classPreference || "10";
+  const subj = S.subjectPreference || "Science";
+  const chaps = CHAPTERS[classNum]?.[subj] || [];
+  el.innerHTML = `
+    <div style="background:rgba(240,180,41,0.06);border:1.5px solid rgba(240,180,41,0.2);border-radius:18px;padding:18px">
+      <div style="font-size:1rem;font-weight:900;color:#f0b429;margin-bottom:14px">⭐ ${isHi ? "महत्वपूर्ण प्रश्न" : "Important Questions"}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <select id="imp-subj" onchange="window._impSubjChange()" style="padding:8px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);background:rgba(30,30,50,0.9);color:var(--text);font-size:0.85rem;font-family:inherit">
+          ${["Maths", "Science", "Social Science", "English", "Hindi"].map((s) => `<option value="${s}" ${s === subj ? "selected" : ""}>${s}</option>`).join("")}
+        </select>
+        <select id="imp-chap" style="padding:8px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);background:rgba(30,30,50,0.9);color:var(--text);font-size:0.85rem;font-family:inherit">
+          <option value="">${isHi ? "— अध्याय चुनें —" : "— Select Chapter —"}</option>
+          ${chaps.map((c) => `<option value="${c}">${c}</option>`).join("")}
+        </select>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+        ${["1 Mark", "2 Marks", "3 Marks", "5 Marks", "All"].map((m) => `<button class="imp-marks-btn" data-m="${m}" onclick="window._setImpMarks('${m}')" style="padding:5px 12px;border-radius:20px;border:1.5px solid ${m === "All" ? "#f0b429" : "rgba(255,255,255,0.1)"};background:${m === "All" ? "rgba(240,180,41,0.18)" : "transparent"};color:${m === "All" ? "#f0b429" : "var(--text-muted)"};font-size:0.72rem;font-weight:800;cursor:pointer;font-family:inherit">${m}</button>`).join("")}
+      </div>
+      <button onclick="window._genImportantQs()" class="btn btn-primary" style="width:100%;padding:12px;font-weight:900;background:linear-gradient(135deg,#f0b429,#f97316);border:none">${isHi ? "महत्वपूर्ण प्रश्न लाएं →" : "Generate Important Questions →"}</button>
+      <div id="imp-result" style="margin-top:16px"></div>
+    </div>
+  `;
+  let _impMarks = "All";
+  window._setImpMarks = (m) => {
+    _impMarks = m;
+    document.querySelectorAll(".imp-marks-btn").forEach((btn) => {
+      const active = btn.dataset.m === m;
+      btn.style.borderColor = active ? "#f0b429" : "rgba(255,255,255,0.1)";
+      btn.style.background = active ? "rgba(240,180,41,0.18)" : "transparent";
+      btn.style.color = active ? "#f0b429" : "var(--text-muted)";
+    });
+  };
+  window._impSubjChange = () => {
+    const s = document.getElementById("imp-subj")?.value;
+    const c = document.getElementById("imp-chap");
+    if (!c || !s) return;
+    const chs = CHAPTERS[classNum]?.[s] || [];
+    c.innerHTML = `<option value="">${isHi ? "— अध्याय चुनें —" : "— Select Chapter —"}</option>${chs.map((ch) => `<option value="${ch}">${ch}</option>`).join("")}`;
+  };
+  window._genImportantQs = async () => {
+    const subject = document.getElementById("imp-subj")?.value || subj;
+    const chapter = document.getElementById("imp-chap")?.value;
+    if (!chapter) {
+      alert(isHi ? "अध्याय चुनें" : "Please select a chapter");
+      return;
+    }
+    const res = document.getElementById("imp-result");
+    if (res)
+      res.innerHTML = `<div style="text-align:center;padding:20px">${typingLoader()}</div>`;
+    try {
+      const data = await apiPost("/important-questions", {
+        classNum,
+        subject,
+        chapter,
+        marks: _impMarks,
+        lang: getLanguage(),
+      });
+      const qs = data.questions || [];
+      if (res)
+        res.innerHTML =
+          qs
+            .map(
+              (q, i) => `
+        <div style="background:rgba(240,180,41,0.06);border:1px solid rgba(240,180,41,0.2);border-radius:14px;padding:14px;margin-bottom:10px">
+          <div style="display:flex;align-items:flex-start;gap:10px">
+            <span style="font-size:0.7rem;font-weight:900;color:#f0b429;flex-shrink:0;padding-top:2px">Q${i + 1}</span>
+            <div style="flex:1">
+              <div style="font-size:0.88rem;color:var(--text);line-height:1.5">${escapeHtml(q.question || q)}</div>
+              ${q.marks ? `<div style="font-size:0.68rem;color:#f0b429;margin-top:5px;font-weight:700">[${q.marks} ${isHi ? "अंक" : "Marks"}]</div>` : ""}
+            </div>
+          </div>
+        </div>`,
+            )
+            .join("") ||
+          `<div style="color:var(--text-muted);text-align:center;padding:16px">${isHi ? "कोई प्रश्न नहीं मिले" : "No questions found"}</div>`;
+    } catch (e) {
+      if (res)
+        res.innerHTML = `<div style="color:var(--red)">${e.message}</div>`;
+    }
+  };
+}
+
+// ── Saved Questions (moved from nav) ─────────────────────────
+function renderStudySavedTab() {
+  const el = document.getElementById("resource-tab-content");
+  if (!el) return;
+  // Inject renderSaved output into the tab
+  const temp = document.createElement("div");
+  const orig = document.getElementById("app");
+  const origHTML = orig.innerHTML;
+  renderSaved();
+  const savedHTML = document.getElementById("app").innerHTML;
+  orig.innerHTML = origHTML; // restore resources page
+  // Re-attach tab listeners
+  const TABS = [
+    "papers",
+    "trends",
+    "notes",
+    "summary",
+    "visual",
+    "ncert",
+    "formulas",
+    "important",
+    "saved",
+  ];
+  TABS.forEach((tb) => {
+    const btn = document.getElementById("tab-" + tb);
+    if (btn) {
+      btn.style.color = tb === "saved" ? "#4f8ef7" : "var(--text-muted)";
+      btn.style.borderBottomColor = tb === "saved" ? "#4f8ef7" : "transparent";
+    }
+  });
+  document.getElementById("resource-tab-content").innerHTML = savedHTML;
 }
 
 function renderPapersTab() {
@@ -9263,6 +9844,9 @@ window.closePaper = () => {
 // FORMULAS TAB – Math & Science quick reference
 // ============================================================
 function renderFormulasTab() {
+  const _ftContainer =
+    document.getElementById("resource-tab-content") ||
+    document.getElementById("app");
   const COLORS = [
     "#f0b429",
     "#0fca8c",
@@ -11596,7 +12180,11 @@ function renderSettings() {
       row(
         "Theme",
         "Current: <b>${curThemeName}</b>",
-        `<button onclick="toggleTheme();renderSettings()" style="padding:6px 14px;border-radius:20px;border:1.5px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.06);color:var(--text);font-size:0.78rem;font-weight:700;cursor:pointer;font-family:inherit">Switch →</button>`,
+        `<div style="display:flex;gap:6px">
+          <button onclick="setTheme('dark');renderSettings()" style="padding:6px 12px;border-radius:20px;border:1.5px solid ${theme === "dark" ? "#4f8ef7" : "rgba(255,255,255,0.12)"};background:${theme === "dark" ? "rgba(79,142,247,0.18)" : "transparent"};color:${theme === "dark" ? "#4f8ef7" : "var(--text-muted)"};font-size:0.75rem;font-weight:700;cursor:pointer;font-family:inherit">🌙 Dark</button>
+          <button onclick="setTheme('light');renderSettings()" style="padding:6px 12px;border-radius:20px;border:1.5px solid ${theme === "light" ? "#f0b429" : "rgba(255,255,255,0.12)"};background:${theme === "light" ? "rgba(240,180,41,0.18)" : "transparent"};color:${theme === "light" ? "#f0b429" : "var(--text-muted)"};font-size:0.75rem;font-weight:700;cursor:pointer;font-family:inherit">☀️ Light</button>
+          <button onclick="setTheme('eye');renderSettings()" style="padding:6px 12px;border-radius:20px;border:1.5px solid ${theme === "eye" ? "#0fca8c" : "rgba(255,255,255,0.12)"};background:${theme === "eye" ? "rgba(15,202,140,0.18)" : "transparent"};color:${theme === "eye" ? "#0fca8c" : "var(--text-muted)"};font-size:0.75rem;font-weight:700;cursor:pointer;font-family:inherit">🌿 Eye</button>
+        </div>`,
       ),
     )}
 
@@ -11632,6 +12220,15 @@ function renderSettings() {
         `<button onclick="window._sResetEye()" style="margin-top:10px;padding:6px 16px;border-radius:20px;border:1.5px solid rgba(255,255,255,0.12);background:transparent;color:var(--text-muted);font-size:0.75rem;font-weight:700;cursor:pointer;font-family:inherit">Reset eye comfort</button>`,
     )}
 
+    ${sect(
+      "👤",
+      "Account",
+      row(
+        "Signed in as",
+        "${S.name || 'Guest'}",
+        `<button onclick="logoutUser()" style="padding:6px 14px;border-radius:20px;border:1.5px solid rgba(239,68,68,0.4);background:rgba(239,68,68,0.08);color:#ef4444;font-size:0.78rem;font-weight:700;cursor:pointer;font-family:inherit">Sign Out</button>`,
+      ),
+    )}
     <button onclick="window._sSave()" style="width:100%;padding:14px;border-radius:14px;border:none;background:linear-gradient(135deg,#4f8ef7,#9b6dff);color:#fff;font-size:0.9rem;font-weight:900;cursor:pointer;font-family:inherit;margin-top:4px;margin-bottom:32px">Save Settings</button>
   `;
 

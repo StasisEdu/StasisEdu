@@ -731,6 +731,13 @@ body::before {
   color: var(--text-muted);
 }
 .theme-toggle:hover { background: var(--surface-hover); border-color: var(--border-bright); }
+.theme-icon-btn {
+  background: transparent; border: 1px solid transparent;
+  border-radius: 8px; width: 30px; height: 30px; font-size: 0.9rem;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all 0.18s; flex-shrink: 0; opacity: 0.35;
+}
+.theme-icon-btn:hover { opacity: 1 !important; background: var(--surface-hover) !important; }
 
 /* ── DIFFICULTY PICKER ──────────────────────────────────── */
 ._dpo {
